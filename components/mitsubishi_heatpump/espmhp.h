@@ -15,7 +15,7 @@
  * - ESPHome 1.19.1 or greater
  */
 
-//#define USE_CALLBACKS
+#define USE_CALLBACKS
 
 #include "esphome.h"
 #include "esphome/core/preferences.h"
@@ -23,6 +23,7 @@
 #include "pidcontroller.h"
 
 #include "HeatPump.h"
+
 using namespace esphome;
 
 #ifndef ESPMHP_H
@@ -138,12 +139,27 @@ class MitsubishiHeatPump : public PollingComponent, public climate::Climate {
         // Retrieve the HardwareSerial pointer from friend and subclasses.
         HardwareSerial *hw_serial_;
         int baud_ = 0;
-        PIDController *pidController;
 
         bool same_float(const float left, const float right);
         void update_setpoint(float value);
+        
         bool isComponentActive();
+        bool isDeviceActive(heatpumpSettings *currentSettings);
+
         void run_workflows();
+
+        PIDController *pidController;
+        uint32_t lastInternalPowerUpdate = esphome::millis();
+        bool internalPowerOff = false;
+
+        void internalTurnOn();
+        void internalTurnOff();
+
+        void dump_heat_pump_details();
+
+        bool settingsUpdated = false;
+        bool statusUpdated = false;
+        bool isSetupComplete = false;
 };
 
 #endif
