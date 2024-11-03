@@ -307,6 +307,7 @@ namespace devicestate {
         this->deviceState = deviceState;
 
         this->device_state_connected->publish_state(this->hp->isConnected());
+        this->internal_power_on->publish_state(this->internalPowerOn);
         this->device_state_active->publish_state(this->deviceState.active);
         this->device_set_point->publish_state(this->deviceState.targetTemperature);
 
