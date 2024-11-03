@@ -21,9 +21,9 @@
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/core/preferences.h"
 
-#include "esphome/components/pid/pid_controller.h"
-
 #include <chrono>
+
+#include "pidcontroller.h"
 
 #include "devicestate.h"
 

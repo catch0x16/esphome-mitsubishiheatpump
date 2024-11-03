@@ -10,7 +10,7 @@ namespace devicestate {
 
     bool deviceStatusEqual(DeviceStatus left, DeviceStatus right) {
         return left.operating == right.operating &&
-            devicestate::same_float(left.currentTemperature, right.currentTemperature, 0.1f);
+            devicestate::same_float(left.currentTemperature, right.currentTemperature, 0.01f);
     }
 
     bool deviceStateEqual(DeviceState left, DeviceState right) {
@@ -20,7 +20,7 @@ namespace devicestate {
             left.swingMode == right.swingMode &&
             left.verticalSwingMode == right.verticalSwingMode &&
             left.horizontalSwingMode == right.horizontalSwingMode &&
-            devicestate::same_float(left.targetTemperature, right.targetTemperature, 0.1f);
+            devicestate::same_float(left.targetTemperature, right.targetTemperature, 0.01f);
     }
 
     bool isDeviceActive(heatpumpSettings *currentSettings) {

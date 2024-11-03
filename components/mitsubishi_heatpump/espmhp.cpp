@@ -882,8 +882,10 @@ void MitsubishiHeatPump::run_workflows() {
 
     this->ensure_pid_target();
 
+    ESP_LOGI(TAG, "PIDController update current: %.2f", this->current_temperature);
     const float setPointCorrection = this->pidController->update(this->current_temperature);
     this->pid_set_point_correction->publish_state(setPointCorrection);
+    ESP_LOGI(TAG, "PIDController set point target: %.2f", this->pidController->getTarget());
     ESP_LOGI(TAG, "PIDController set point correction: %.2f", setPointCorrection);
 
     const DeviceState deviceState = this->dsm->getDeviceState();
@@ -908,6 +910,14 @@ void MitsubishiHeatPump::run_workflows() {
                 this->dsm->internalTurnOff();
                 return;
             }
+
+            /*
+            this->dsm->setTargetTemperature(setPointCorrection);
+            // and the heat pump:
+            if (!this->dsm->commit()) {
+                ESP_LOGW(TAG, "Failed to update device state");
+            }
+            */
             break;
         }
         case climate::CLIMATE_ACTION_COOLING: {
@@ -925,6 +935,14 @@ void MitsubishiHeatPump::run_workflows() {
                 this->dsm->internalTurnOff();
                 return;
             }
+
+            /*
+            this->dsm->setTargetTemperature(setPointCorrection);
+            // and the heat pump:
+            if (!this->dsm->commit()) {
+                ESP_LOGW(TAG, "Failed to update device state");
+            }
+            */
             break;
         }
         case climate::CLIMATE_ACTION_IDLE: {
