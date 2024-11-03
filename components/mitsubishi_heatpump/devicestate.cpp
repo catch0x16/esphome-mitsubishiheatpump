@@ -1,8 +1,9 @@
 #include "devicestate.h"
 
 #include "espmhp.h"
-#include "floats.h"
 using namespace esphome;
+
+#include "floats.h"
 
 namespace devicestate {
     static const char* TAG = "DeviceStateManager"; // Logging tag
