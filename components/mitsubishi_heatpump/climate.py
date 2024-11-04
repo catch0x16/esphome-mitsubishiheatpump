@@ -227,7 +227,6 @@ CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
     }
 ).extend(cv.COMPONENT_SCHEMA)
 
-
 @coroutine
 def to_code(config):
     serial = HARDWARE_UART_TO_SERIAL[PLATFORM_ESP8266][config[CONF_HARDWARE_UART]]

@@ -32,8 +32,6 @@
 #ifndef ESPMHP_H
 #define ESPMHP_H
 
-static const char* TAG = "MitsubishiHeatPump"; // Logging tag
-
 static const char* ESPMHP_VERSION = "2.5.0";
 
 /* If polling interval is greater than 9 seconds, the HeatPump
@@ -48,14 +46,6 @@ static const float   ESPMHP_TARGET_TEMPERATURE_STEP = 0.5; // temperature settin
                                                     // in degrees C
 static const float   ESPMHP_CURRENT_TEMPERATURE_STEP = 0.1; // temperature setting step,
                                                     // in degrees C
-
-static const float hysterisisUnderOff = 0.25; // in degrees C
-static const float hysterisisOverOn = 0.25; // in degrees C
-
-//P=4.09 I=0.058 D=3.38
-static const float p = 4.0;
-static const float i = 0.02;
-static const float d = 0.1;
 
 class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::climate::Climate {
     public:
@@ -221,9 +211,6 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
 
         float min_temp;
         float max_temp;
-
-        PIDController *pidController;
-        void ensure_pid_target();
 };
 
 #endif

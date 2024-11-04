@@ -6,6 +6,15 @@ using namespace esphome;
 #include "floats.h"
 
 namespace devicestate {
+
+    //P=4.09 I=0.058 D=3.38
+    static const float p = 4.0;
+    static const float i = 0.02;
+    static const float d = 0.1;
+
+    static const float hysterisisUnderOff = 0.25; // in degrees C
+    static const float hysterisisOverOn = 0.25; // in degrees C
+
     static const char* TAG = "DeviceStateManager"; // Logging tag
 
     bool deviceStatusEqual(DeviceStatus left, DeviceStatus right) {
@@ -226,6 +235,9 @@ namespace devicestate {
 
     DeviceStateManager::DeviceStateManager(
       ConnectionMetadata connectionMetadata,
+      uint32_t updateInterval,
+      float minTemp,
+      float maxTemp,
       esphome::binary_sensor::BinarySensor* internal_power_on,
       esphome::binary_sensor::BinarySensor* device_state_connected,
       esphome::binary_sensor::BinarySensor* device_state_active,
@@ -234,7 +246,8 @@ namespace devicestate {
       esphome::binary_sensor::BinarySensor* device_status_operating,
       esphome::sensor::Sensor* device_status_current_temperature,
       esphome::sensor::Sensor* device_status_compressor_frequency,
-      esphome::sensor::Sensor* device_status_last_updated
+      esphome::sensor::Sensor* device_status_last_updated,
+      esphome::sensor::Sensor* pid_set_point_correction
     ) {
         this->connectionMetadata = connectionMetadata;
         this->disconnected = 0;
@@ -248,12 +261,25 @@ namespace devicestate {
         this->device_status_current_temperature = device_status_current_temperature;
         this->device_status_compressor_frequency = device_status_compressor_frequency;
         this->device_status_last_updated = device_status_last_updated;
+        this->pid_set_point_correction = pid_set_point_correction;
 
         this->deviceStateLastUpdated = 0;
         this->deviceStatusLastUpdated = 0;
 
         ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
         this->hp = new HeatPump();
+
+        this->minTemp = minTemp;
+        this->maxTemp = maxTemp;
+        this->pidController = new PIDController(
+            p,
+            i,
+            d,
+            updateInterval,
+            (this->maxTemp + this->minTemp) / 2.0, // Set target to mid point of min/max
+            this->minTemp,
+            this->maxTemp
+        );
 
         #ifdef USE_CALLBACKS
             hp->setSettingsChangedCallback(
@@ -386,18 +412,21 @@ namespace devicestate {
         this->hpStatusChanged(currentStatus);
     #endif
 
-        if (this->isInitialized()) {
-            DeviceState deviceState = this->getDeviceState();
-            if (!this->hp->isConnected()) {
-                this->disconnected += 1;
-                ESP_LOGW(TAG, "Device not connected: %d", this->disconnected);
-                if (this->disconnected >= 500) {
-                    this->connect();
-                    this->disconnected = 0;
-                }
-            } else {
+        if (!this->isInitialized()) {
+            ESP_LOGW(TAG, "Not yet initialized, skipping update");
+            return;
+        }
+
+        DeviceState deviceState = this->getDeviceState();
+        if (!this->hp->isConnected()) {
+            this->disconnected += 1;
+            ESP_LOGW(TAG, "Device not connected: %d", this->disconnected);
+            if (this->disconnected >= 500) {
+                this->connect();
                 this->disconnected = 0;
             }
+        } else {
+            this->disconnected = 0;
         }
     }
 
@@ -467,6 +496,7 @@ namespace devicestate {
             this->lastInternalPowerUpdate = end;
             this->internalPowerOn = true;
             this->internal_power_on->publish_state(this->internalPowerOn);
+            this->pidController->resetState();
             ESP_LOGW(TAG, "Performed internal turn on!");
             return true;
         } else {
@@ -602,11 +632,19 @@ namespace devicestate {
     }
 
     void DeviceStateManager::setTargetTemperature(float value) {
+        if ((value < this->minTemp) || (value > this->maxTemp)) {
+            return;
+        }
+
         if (devicestate::same_float(value, this->getTargetTemperature(), 0.01f)) {
             return;
         }
 
         this->hp->setTemperature(value);
+
+        ESP_LOGI(TAG, "PID Target temp changing from %f to %f", this->pidController->getTarget(), value);
+        this->pidController->setTarget(value);
+        this->pidController->resetState();
     }
 
     void DeviceStateManager::setRemoteTemperature(float current) {
@@ -663,5 +701,79 @@ namespace devicestate {
         ESP_LOGI(TAG, "Heatpump Settings");
         heatpumpSettings currentSettings = this->hp->getSettings();
         this->log_heatpump_settings(currentSettings);
+    }
+
+    void DeviceStateManager::runHysteresisWorkflow(const DeviceState deviceState, const float currentTemperature) {
+        switch(deviceState.mode) {
+            case devicestate::DeviceMode::DeviceMode_Heat: {
+                const float delta = currentTemperature - deviceState.targetTemperature;
+                if (!deviceState.active) {
+                    if (-delta > (2 * hysterisisOverOn)) {
+                        ESP_LOGI(TAG, "Turn on while heating: delta={%f} current={%f} targetTemperature={%f}", delta, currentTemperature, deviceState.targetTemperature);
+                        this->internalTurnOn();
+                    }
+                    return;
+                }
+
+                if (delta > hysterisisUnderOff) {
+                    ESP_LOGI(TAG, "Turn off while heating: delta={%f} current={%f} targetTemperature={%f}", delta, currentTemperature, deviceState.targetTemperature);
+                    this->internalTurnOff();
+                    return;
+                }
+
+                break;
+            }
+            case devicestate::DeviceMode::DeviceMode_Cool: {
+                const float delta = deviceState.targetTemperature - currentTemperature;
+                if (!deviceState.active) {
+                    if (-delta > (2 * hysterisisOverOn)) {
+                        ESP_LOGI(TAG, "Turn on while cooling: delta={%f} current={%f} targetTemperature={%f}", delta, currentTemperature, deviceState.targetTemperature);
+                        this->internalTurnOn();
+                    }
+                    return;
+                }
+
+                if (delta > hysterisisUnderOff) {
+                    ESP_LOGI(TAG, "Turn off while cooling: delta={%f} current={%f} targetTemperature={%f}", delta, currentTemperature, deviceState.targetTemperature);
+                    this->internalTurnOff();
+                    return;
+                }
+
+                break;
+            }
+            default: {
+                ESP_LOGI(TAG, "Doing nothing in current mode (%d): current={%f} targetTemperature={%f}", deviceState.mode, currentTemperature, deviceState.targetTemperature);
+            }
+        }
+    }
+
+    void DeviceStateManager::runPIDControllerWorkflow(const DeviceState deviceState, const float currentTemperature) {
+        ESP_LOGI(TAG, "PIDController update current: %.2f", currentTemperature);
+        const float setPointCorrection = this->pidController->update(currentTemperature);
+        this->pid_set_point_correction->publish_state(setPointCorrection);
+        ESP_LOGI(TAG, "PIDController set point target: %.2f", this->pidController->getTarget());
+        ESP_LOGI(TAG, "PIDController set point correction: %.2f", setPointCorrection);
+
+        if (!devicestate::same_float(setPointCorrection, deviceState.targetTemperature, 0.01f)) {
+            ESP_LOGW(TAG, "Adjusting setpoint: correction={%f} current={%f} targetTemperature={%f}", setPointCorrection, currentTemperature, deviceState.targetTemperature);
+            this->setTargetTemperature(setPointCorrection);
+            if (!this->commit()) {
+                ESP_LOGW(TAG, "Failed to update device state");
+            }
+        }
+    }
+
+    void DeviceStateManager::runWorkflows(const float currentTemperature) {
+        const DeviceState deviceState = this->getDeviceState();
+        this->device_state_active->publish_state(deviceState.active);
+        ESP_LOGD(TAG, "Device active on workflow: deviceState.active={%s} internalPowerOn={%s}", YESNO(deviceState.active), YESNO(this->isInternalPowerOn()));
+        if (deviceState.active != this->isInternalPowerOn()) {
+            // It's possible the state change from on to off (or vice versa) has
+            // not taken effect yet.  Log the details and continue.
+            this->dump_state();
+        }
+
+        this->runHysteresisWorkflow(deviceState, currentTemperature);
+        //this->runPIDControllerWorkflow(deviceState, currentTemperature);
     }
 }

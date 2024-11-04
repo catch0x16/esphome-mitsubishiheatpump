@@ -10,7 +10,10 @@
 
 #include <chrono>
 
+#include "pidcontroller.h"
+
 namespace devicestate {
+
   enum DeviceMode {
     DeviceMode_Heat,
     DeviceMode_Cool,
@@ -98,6 +101,9 @@ namespace devicestate {
   class DeviceStateManager {
     private:
       ConnectionMetadata connectionMetadata;
+      float minTemp;
+      float maxTemp;
+
       int disconnected;
 
       esphome::binary_sensor::BinarySensor* internal_power_on;
@@ -109,6 +115,7 @@ namespace devicestate {
       esphome::sensor::Sensor* device_status_current_temperature;
       esphome::sensor::Sensor* device_status_compressor_frequency;
       esphome::sensor::Sensor* device_status_last_updated;
+      esphome::sensor::Sensor* pid_set_point_correction;
 
       // HeatPump object using the underlying Arduino library.
       HeatPump* hp;
@@ -124,15 +131,23 @@ namespace devicestate {
       DeviceStatus deviceStatus;
       int deviceStatusLastUpdated;
 
+      PIDController *pidController;
+
       bool connect();
 
       void hpSettingsChanged();
       void hpStatusChanged(heatpumpStatus currentStatus);
       static void log_packet(byte* packet, unsigned int length, char* packetDirection);
 
+      void runPIDControllerWorkflow(const DeviceState deviceState, const float currentTemperature);
+      void runHysteresisWorkflow(const DeviceState deviceState, const float currentTemperature);
+
     public:
       DeviceStateManager(
         ConnectionMetadata connectionMetadata,
+        const uint32_t updateInterval,
+        const float minTemp,
+        const float maxTemp,
         esphome::binary_sensor::BinarySensor* internal_power_on,
         esphome::binary_sensor::BinarySensor* device_state_connected,
         esphome::binary_sensor::BinarySensor* device_state_active,
@@ -141,7 +156,8 @@ namespace devicestate {
         esphome::binary_sensor::BinarySensor* device_status_operating,
         esphome::sensor::Sensor* device_status_current_temperature,
         esphome::sensor::Sensor* device_status_compressor_frequency,
-        esphome::sensor::Sensor* device_status_last_updated
+        esphome::sensor::Sensor* device_status_last_updated,
+        esphome::sensor::Sensor* pid_set_point_correction
       );
 
       DeviceStatus getDeviceStatus();
@@ -181,6 +197,8 @@ namespace devicestate {
       void setTargetTemperature(float target);
 
       void setRemoteTemperature(float current);
+
+      void runWorkflows(const float currentTemperature);
 
       void dump_state();
       void log_heatpump_settings(heatpumpSettings currentSettings);
