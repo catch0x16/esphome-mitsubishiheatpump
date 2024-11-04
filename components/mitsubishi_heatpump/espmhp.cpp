@@ -277,7 +277,6 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
     switch (this->mode) {
         case climate::CLIMATE_MODE_COOL:
             this->dsm->setCool();
-            internal_power_on->publish_state(this->dsm->isInternalPowerOn());
 
             if (has_mode){
                 if (cool_setpoint.has_value() && !has_temp) {
@@ -290,7 +289,6 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
             break;
         case climate::CLIMATE_MODE_HEAT:
             this->dsm->setHeat();
-            internal_power_on->publish_state(this->dsm->isInternalPowerOn());
 
             if (has_mode){
                 if (heat_setpoint.has_value() && !has_temp) {
@@ -303,7 +301,6 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
             break;
         case climate::CLIMATE_MODE_DRY:
             this->dsm->setDry();
-            internal_power_on->publish_state(this->dsm->isInternalPowerOn());
 
             if (has_mode){
                 this->action = climate::CLIMATE_ACTION_DRYING;
@@ -312,7 +309,6 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
             break;
         case climate::CLIMATE_MODE_HEAT_COOL:
             this->dsm->setAuto();
-            internal_power_on->publish_state(this->dsm->isInternalPowerOn());
 
             if (has_mode){
                 if (auto_setpoint.has_value() && !has_temp) {
@@ -325,7 +321,6 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
             break;
         case climate::CLIMATE_MODE_FAN_ONLY:
             this->dsm->setFan();
-            internal_power_on->publish_state(this->dsm->isInternalPowerOn());
 
             if (has_mode){
                 this->action = climate::CLIMATE_ACTION_FAN;
@@ -336,7 +331,6 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
         default:
             if (has_mode){
                 this->dsm->turnOff();
-                internal_power_on->publish_state(this->dsm->isInternalPowerOn());
                 this->action = climate::CLIMATE_ACTION_OFF;
                 updated = true;
             }
@@ -352,7 +346,6 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
         updated = true;
     }
 
-    //const char* FAN_MAP[6]         = {"AUTO", "QUIET", "1", "2", "3", "4"};
     if (call.get_fan_mode().has_value()) {
         ESP_LOGV("control", "Requested fan mode is %s",
                  climate::climate_fan_mode_to_string(*call.get_fan_mode()));
@@ -393,7 +386,6 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
     }
 
     ESP_LOGV(TAG, "in the swing mode stage");
-    //const char* VANE_MAP[7]        = {"AUTO", "1", "2", "3", "4", "5", "SWING"};
     if (call.get_swing_mode().has_value()) {
         ESP_LOGV(TAG, "control - requested swing mode is %s",
                 climate::climate_swing_mode_to_string(*call.get_swing_mode()));
@@ -439,12 +431,6 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
 }
 
 void MitsubishiHeatPump::updateDevice() {
-    /*
-     * ************ HANDLE POWER AND MODE CHANGES ***********
-     * https://github.com/geoffdavis/HeatPump/blob/stream/src/HeatPump.h#L125
-     * const char* POWER_MAP[2]       = {"OFF", "ON"};
-     * const char* MODE_MAP[5]        = {"HEAT", "DRY", "COOL", "FAN", "AUTO"};
-     */
     const DeviceState deviceState = this->dsm->getDeviceState();
     const DeviceStatus deviceStatus = this->dsm->getDeviceStatus();
     if (devicestate::deviceStateEqual(this->lastDeviceState, deviceState) &&
@@ -453,6 +439,7 @@ void MitsubishiHeatPump::updateDevice() {
         ESP_LOGI(TAG, "Skipping updateDevice due to no change");
         return;
     }
+
     ESP_LOGI(TAG, "Running updateDevice...");
     this->remote_temperature_updated = false;
     this->lastDeviceState = deviceState;
@@ -563,13 +550,6 @@ void MitsubishiHeatPump::updateDevice() {
     }
 
     ESP_LOGD(TAG, "Climate mode is: %i", this->mode);
-
-    /*
-     * ******* HANDLE FAN CHANGES ********
-     *
-     * const char* FAN_MAP[6]         = {"AUTO", "QUIET", "1", "2", "3", "4"};
-     */
-
     switch (deviceState.fanMode) {
         case FanMode::FanMode_Quiet:
             this->fan_mode = climate::CLIMATE_FAN_DIFFUSE;
@@ -586,9 +566,6 @@ void MitsubishiHeatPump::updateDevice() {
     }
     ESP_LOGD(TAG, "Fan mode is: %i", this->fan_mode.value_or(-1));
 
-    /* ******** HANDLE MITSUBISHI VANE CHANGES ********
-     * const char* VANE_MAP[7]        = {"AUTO", "1", "2", "3", "4", "5", "SWING"};
-     */
     switch (deviceState.swingMode) {
         case SwingMode::SwingMode_Both:
             this->swing_mode = climate::CLIMATE_SWING_BOTH;
@@ -641,9 +618,6 @@ void MitsubishiHeatPump::updateDevice() {
     }
     ESP_LOGD(TAG, "Horizontal vane mode is: %s", horizontalSwingModeToString(deviceState.horizontalSwingMode));
 
-    /*
-     * ******** HANDLE TARGET TEMPERATURE CHANGES ********
-     */
     this->update_setpoint(deviceState.targetTemperature);
     ESP_LOGI(TAG, "Target temp is: %f", this->target_temperature);
 
@@ -743,6 +717,34 @@ void MitsubishiHeatPump::setup() {
             YESNO((void *)this->get_hw_serial_() == (void *)&Serial)
     );
 
+    this->min_temp = ESPMHP_MIN_TEMPERATURE;
+    if (this->visual_min_temperature_override_.has_value()) {
+        this->min_temp = this->visual_min_temperature_override_.value();
+    }
+    this->max_temp = ESPMHP_MAX_TEMPERATURE;
+    if (this->visual_max_temperature_override_.has_value()) {
+        this->max_temp = this->visual_max_temperature_override_.value();
+    }
+
+    ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
+    this->dsm = new devicestate::DeviceStateManager(
+        connectionMetadata,
+        this->get_update_interval(),
+        this->min_temp,
+        this->max_temp,
+
+        this->internal_power_on,
+        this->device_state_connected,
+        this->device_state_active,
+        this->device_set_point,
+        this->device_state_last_updated,
+        this->device_status_operating,
+        this->device_status_current_temperature,
+        this->device_status_compressor_frequency,
+        this->device_status_last_updated,
+        this->pid_set_point_correction
+    );
+
     ESP_LOGCONFIG(TAG, "Calling dsm->initialize()");
     if (!this->dsm->initialize()) {
         ESP_LOGCONFIG(
@@ -751,15 +753,6 @@ void MitsubishiHeatPump::setup() {
                 " Marking MitsubishiHeatPump component as failed."
         );
         this->mark_failed();
-    }
-
-    this->min_temp = ESPMHP_MIN_TEMPERATURE;
-    if (this->visual_min_temperature_override_.has_value()) {
-        this->min_temp = this->visual_min_temperature_override_.value();
-    }
-    this->max_temp = ESPMHP_MAX_TEMPERATURE;
-    if (this->visual_max_temperature_override_.has_value()) {
-        this->max_temp = this->visual_max_temperature_override_.value();
     }
 
     // create various setpoint persistence:
@@ -783,26 +776,6 @@ void MitsubishiHeatPump::setup() {
         this->vertical_swing_state_ = "auto";
         this->horizontal_swing_state_ = "auto";
     }
-
-    ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
-    this->dsm = new devicestate::DeviceStateManager(
-        connectionMetadata,
-        this->get_update_interval(),
-        this->min_temp,
-        this->max_temp,
-
-        this->internal_power_on,
-        this->device_state_connected,
-        this->device_state_active,
-        this->device_set_point,
-        this->device_state_last_updated,
-        this->device_status_operating,
-        this->device_status_current_temperature,
-        this->device_status_compressor_frequency,
-        this->device_status_last_updated,
-        this->pid_set_point_correction
-    );
-
 
     this->dump_config();
 }

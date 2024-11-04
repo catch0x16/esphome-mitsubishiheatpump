@@ -59,6 +59,9 @@
         "variant": "cpp",
         "vector": "cpp",
         "algorithm": "cpp",
-        "__memory": "cpp"
+        "__memory": "cpp",
+        "memory": "cpp",
+        "print": "cpp",
+        "stack": "cpp"
     }
 }

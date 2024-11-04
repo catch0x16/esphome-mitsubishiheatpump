@@ -139,8 +139,15 @@ namespace devicestate {
       void hpStatusChanged(heatpumpStatus currentStatus);
       static void log_packet(byte* packet, unsigned int length, char* packetDirection);
 
+      bool shouldThrottle(uint32_t end);
+      bool internalTurnOn();
+      bool internalTurnOff();
+
       void runPIDControllerWorkflow(const DeviceState deviceState, const float currentTemperature);
       void runHysteresisWorkflow(const DeviceState deviceState, const float currentTemperature);
+
+      void dump_state();
+      void log_heatpump_settings(heatpumpSettings currentSettings);
 
     public:
       DeviceStateManager(
@@ -187,10 +194,6 @@ namespace devicestate {
       void turnOn(DeviceMode mode);
       void turnOff();
 
-      bool shouldThrottle(uint32_t end);
-      bool internalTurnOn();
-      bool internalTurnOff();
-
       float getCurrentTemperature();
 
       float getTargetTemperature();
@@ -199,9 +202,6 @@ namespace devicestate {
       void setRemoteTemperature(float current);
 
       void runWorkflows(const float currentTemperature);
-
-      void dump_state();
-      void log_heatpump_settings(heatpumpSettings currentSettings);
   };
 }
 #endif

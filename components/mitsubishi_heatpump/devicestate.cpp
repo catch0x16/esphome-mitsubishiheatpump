@@ -70,6 +70,9 @@ namespace devicestate {
     }
 
     const char* verticalSwingModeToString(VerticalSwingMode mode) {
+        /* ******** HANDLE MITSUBISHI VANE CHANGES ********
+        * const char* VANE_MAP[7]        = {"AUTO", "1", "2", "3", "4", "5", "SWING"};
+        */
         switch(mode) {
             case VerticalSwingMode::VerticalSwingMode_Swing:
                 return "SWING";
@@ -134,6 +137,11 @@ namespace devicestate {
     }
 
     FanMode toFanMode(heatpumpSettings *currentSettings) {
+        /*
+        * ******* HANDLE FAN CHANGES ********
+        *
+        * const char* FAN_MAP[6]         = {"AUTO", "QUIET", "1", "2", "3", "4"};
+        */
         if (strcmp(currentSettings->fan, "QUIET") == 0) {
             return FanMode::FanMode_Quiet;
         } else if (strcmp(currentSettings->fan, "1") == 0) {
@@ -250,7 +258,8 @@ namespace devicestate {
       esphome::sensor::Sensor* pid_set_point_correction
     ) {
         this->connectionMetadata = connectionMetadata;
-        this->disconnected = 0;
+        this->minTemp = minTemp;
+        this->maxTemp = maxTemp;
 
         this->internal_power_on = internal_power_on;
         this->device_state_connected = device_state_connected;
@@ -263,14 +272,13 @@ namespace devicestate {
         this->device_status_last_updated = device_status_last_updated;
         this->pid_set_point_correction = pid_set_point_correction;
 
+        this->disconnected = 0;
         this->deviceStateLastUpdated = 0;
         this->deviceStatusLastUpdated = 0;
 
         ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
         this->hp = new HeatPump();
 
-        this->minTemp = minTemp;
-        this->maxTemp = maxTemp;
         this->pidController = new PIDController(
             p,
             i,
@@ -413,7 +421,6 @@ namespace devicestate {
     #endif
 
         if (!this->isInitialized()) {
-            ESP_LOGW(TAG, "Not yet initialized, skipping update");
             return;
         }
 
@@ -742,7 +749,7 @@ namespace devicestate {
                 break;
             }
             default: {
-                ESP_LOGI(TAG, "Doing nothing in current mode (%d): current={%f} targetTemperature={%f}", deviceState.mode, currentTemperature, deviceState.targetTemperature);
+                ESP_LOGI(TAG, "Doing nothing in current mode (%s): current={%f} targetTemperature={%f}", deviceModeToString(deviceState.mode), currentTemperature, deviceState.targetTemperature);
             }
         }
     }
