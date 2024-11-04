@@ -643,15 +643,16 @@ namespace devicestate {
             return;
         }
 
-        if (devicestate::same_float(value, this->getTargetTemperature(), 0.01f)) {
-            return;
+        if (!devicestate::same_float(value, this->getTargetTemperature(), 0.01f)) {
+            ESP_LOGI(TAG, "Device target temp changing from %f to %f", this->getTargetTemperature(), value);
+            this->hp->setTemperature(value);
         }
 
-        this->hp->setTemperature(value);
-
-        ESP_LOGI(TAG, "PID Target temp changing from %f to %f", this->pidController->getTarget(), value);
-        this->pidController->setTarget(value);
-        this->pidController->resetState();
+        if (!devicestate::same_float(value, this->pidController->getTarget(), 0.01f)) {
+            ESP_LOGI(TAG, "PID target temp changing from %f to %f", this->pidController->getTarget(), value);
+            this->pidController->setTarget(value);
+            this->pidController->resetState();
+        }
     }
 
     void DeviceStateManager::setRemoteTemperature(float current) {
@@ -763,10 +764,14 @@ namespace devicestate {
 
         if (!devicestate::same_float(setPointCorrection, deviceState.targetTemperature, 0.01f)) {
             ESP_LOGW(TAG, "Adjusting setpoint: correction={%f} current={%f} targetTemperature={%f}", setPointCorrection, currentTemperature, deviceState.targetTemperature);
+            /*
             this->setTargetTemperature(setPointCorrection);
             if (!this->commit()) {
                 ESP_LOGW(TAG, "Failed to update device state");
             }
+            */
+        } else {
+            ESP_LOGW(TAG, "Skipping setpoint adjustment: correction={%f} current={%f} targetTemperature={%f}", setPointCorrection, currentTemperature, deviceState.targetTemperature);
         }
     }
 
@@ -781,6 +786,6 @@ namespace devicestate {
         }
 
         this->runHysteresisWorkflow(deviceState, currentTemperature);
-        //this->runPIDControllerWorkflow(deviceState, currentTemperature);
+        this->runPIDControllerWorkflow(deviceState, currentTemperature);
     }
 }

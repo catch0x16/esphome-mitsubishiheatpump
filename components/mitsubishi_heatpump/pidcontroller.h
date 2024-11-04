@@ -29,31 +29,29 @@ class PIDController {
         int sampleTime;
 
         void setTunings(const float p, const float i, const float d);
-        void setOutputLimits(float outputMin, float outputMax);
+        void setOutputLimits(const float outputMin, const float outputMax);
 
-        float applyOutputLimits(float output);
+        float applyOutputLimits(const float output);
 
     public:
         PIDController(
-            float p,
-            float i,
-            float d,
-            int sampleTime,
-            float target,
-            float outputMin,
-            float outputMax
+            const float p,
+            const float i,
+            const float d,
+            const int sampleTime,
+            const float target,
+            const float outputMin,
+            const float outputMax
         );
 
         float getOutputMin();
         float getOutputMax();
 
         float getTarget();
-        void setTarget(float target);
-        float update(float input);
+        void setTarget(const float target);
+        float update(const float input);
         void resetState();
-        void setSampleTime(int sampleTime);
-
-        void dumpConfig();
+        void setSampleTime(const int sampleTime);
 };
 
 #endif

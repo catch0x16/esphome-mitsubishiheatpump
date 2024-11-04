@@ -12,13 +12,13 @@ float roundToDecimals(const float value, const int n) {
 }
 
 PIDController::PIDController(
-    float p,
-    float i,
-    float d,
-    int sampleTime,
-    float target,
-    float outputMin,
-    float outputMax
+    const float p,
+    const float i,
+    const float d,
+    const int sampleTime,
+    const float target,
+    const float outputMin,
+    const float outputMax
 ) {
     this->sampleTime = sampleTime;
     this->setTunings(p, i, d);
@@ -26,7 +26,7 @@ PIDController::PIDController(
     this->setTarget(target);
 }
 
-float PIDController::update(float input) {
+float PIDController::update(const float input) {
     if (!this->lastInput.has_value()) {
         this->lastInput = input;
     }
@@ -53,11 +53,11 @@ float PIDController::update(float input) {
     return this->output;
 }
 
-void PIDController::setTarget(float target) {
+void PIDController::setTarget(const float target) {
     this->target = target;
 }
 
-void PIDController::setOutputLimits(float min, float max) {
+void PIDController::setOutputLimits(const float min, const float max) {
     if (min > max) {
         // throw new std::invalid_argument("Minimum output limit cannot be bigger than maximum");
         return;
@@ -105,7 +105,7 @@ void PIDController::resetState() {
     this->lastInput.reset();
 }
 
-float PIDController::applyOutputLimits(float output) {
+float PIDController::applyOutputLimits(const float output) {
     if (output > this->outputMax) {
         return this->outputMax;
     }
