@@ -813,7 +813,7 @@ namespace devicestate {
             this->dump_state();
         }
 
-        //this->runHysteresisWorkflow(deviceState, currentTemperature);
+        this->runHysteresisWorkflow(deviceState, currentTemperature);
         this->runPIDControllerWorkflow(deviceState, currentTemperature);
     }
 }
