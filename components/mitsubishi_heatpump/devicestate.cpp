@@ -15,6 +15,9 @@ namespace devicestate {
     static const float hysterisisUnderOff = 0.25; // in degrees C
     static const float hysterisisOverOn = 0.25; // in degrees C
 
+    static const float maxAdjustmentUnder = 2.0;
+    static const float maxAdjustmentOver = 2.0;
+
     static const char* TAG = "DeviceStateManager"; // Logging tag
 
     bool deviceStatusEqual(DeviceStatus left, DeviceStatus right) {
@@ -336,6 +339,9 @@ namespace devicestate {
                 ESP_LOGW(TAG, "Initializing internalPowerOn state from %s to %s", ONOFF(this->internalPowerOn), ONOFF(deviceState.active));
                 this->internalPowerOn = deviceState.active;
             }
+            ESP_LOGW(TAG, "Initializing targetTemperature state from %f to %f", this->targetTemperature, deviceState.targetTemperature);
+            this->internalSetTargetTemperature(deviceState.targetTemperature);
+
             this->settingsInitialized = true;
         }
         this->deviceState = deviceState;
@@ -635,27 +641,35 @@ namespace devicestate {
     }
 
     float DeviceStateManager::getTargetTemperature() {
-        return this->deviceState.targetTemperature;
+        return this->targetTemperature;
     }
 
-    void DeviceStateManager::setTargetTemperature(float value) {
+    void DeviceStateManager::internalSetCorrectedTemperature(const float value) {
+        ESP_LOGI(TAG, "Corrected target temp changing from %f to %f", this->correctedTargetTemperature, value);
+        this->correctedTargetTemperature = value;
+        this->hp->setTemperature(this->correctedTargetTemperature);
+    }
+
+    void DeviceStateManager::internalSetTargetTemperature(const float value) {
+        this->targetTemperature = value;
+        this->correctedTargetTemperature = this->targetTemperature;
+        this->ensurePIDTarget();
+    }
+
+    void DeviceStateManager::setTargetTemperature(const float value) {
         if ((value < this->minTemp) || (value > this->maxTemp)) {
             return;
         }
 
-        if (!devicestate::same_float(value, this->getTargetTemperature(), 0.01f)) {
-            ESP_LOGI(TAG, "Device target temp changing from %f to %f", this->getTargetTemperature(), value);
-            this->hp->setTemperature(value);
-        }
-
-        if (!devicestate::same_float(value, this->pidController->getTarget(), 0.01f)) {
-            ESP_LOGI(TAG, "PID target temp changing from %f to %f", this->pidController->getTarget(), value);
-            this->pidController->setTarget(value);
-            this->pidController->resetState();
+        if (!devicestate::same_float(value, this->targetTemperature, 0.01f)) {
+            this->internalSetTargetTemperature(value);
+            
+            ESP_LOGI(TAG, "Device target temp changing from %f to %f", this->targetTemperature, value);
+            this->hp->setTemperature(this->targetTemperature);
         }
     }
 
-    void DeviceStateManager::setRemoteTemperature(float current) {
+    void DeviceStateManager::setRemoteTemperature(const float current) {
         if (devicestate::same_float(current, this->getCurrentTemperature(), 0.01f)) {
             return;
         }
@@ -755,24 +769,38 @@ namespace devicestate {
         }
     }
 
-    void DeviceStateManager::runPIDControllerWorkflow(const DeviceState deviceState, const float currentTemperature) {
-        ESP_LOGI(TAG, "PIDController update current: %.2f", currentTemperature);
-        const float setPointCorrection = this->pidController->update(currentTemperature);
-        this->pid_set_point_correction->publish_state(setPointCorrection);
-        ESP_LOGI(TAG, "PIDController set point target: %.2f", this->pidController->getTarget());
-        ESP_LOGI(TAG, "PIDController set point correction: %.2f", setPointCorrection);
+    void DeviceStateManager::ensurePIDTarget() {
+         if (devicestate::same_float(this->targetTemperature, this->pidController->getTarget(), 0.01f)) {
+            return;
+        }
 
-        if (!devicestate::same_float(setPointCorrection, deviceState.targetTemperature, 0.01f)) {
-            ESP_LOGW(TAG, "Adjusting setpoint: correction={%f} current={%f} targetTemperature={%f}", setPointCorrection, currentTemperature, deviceState.targetTemperature);
-            /*
-            this->setTargetTemperature(setPointCorrection);
+        ESP_LOGI(TAG, "PID target temp changing from %f to %f", this->pidController->getTarget(), this->targetTemperature);
+        this->pidController->setTarget(this->targetTemperature);
+        this->pidController->resetState();
+    }
+
+    void DeviceStateManager::runPIDControllerWorkflow(const DeviceState deviceState, const float currentTemperature) {
+        this->ensurePIDTarget();
+
+        ESP_LOGI(TAG, "PIDController update current: %.2f", currentTemperature);
+        const float setPointCorrectionProposed = this->pidController->update(currentTemperature);
+        const float setPointCorrection =
+            devicestate::clamp(setPointCorrectionProposed, this->targetTemperature - maxAdjustmentUnder, this->targetTemperature + maxAdjustmentOver);
+
+        if (!devicestate::same_float(setPointCorrection, this->correctedTargetTemperature, 0.01f)) {
+            ESP_LOGW(TAG, "Adjusting setpoint: oldCorrection={%f} newCorrection={%f} current={%f} deviceTarget={%f} componentTarget={%f}", this->correctedTargetTemperature, setPointCorrection, currentTemperature, deviceState.targetTemperature, this->targetTemperature);
+            
+            this->internalSetCorrectedTemperature(setPointCorrection);
             if (!this->commit()) {
                 ESP_LOGW(TAG, "Failed to update device state");
             }
-            */
         } else {
-            ESP_LOGW(TAG, "Skipping setpoint adjustment: correction={%f} current={%f} targetTemperature={%f}", setPointCorrection, currentTemperature, deviceState.targetTemperature);
+            ESP_LOGW(TAG, "Skipping setpoint adjustment: oldCorrection={%f} newCorrection={%f} current={%f} deviceTarget={%f} componentTarget={%f}", this->correctedTargetTemperature, setPointCorrection, currentTemperature, deviceState.targetTemperature, this->targetTemperature);
         }
+
+        ESP_LOGI(TAG, "PIDController set point target: %.2f", this->targetTemperature);
+        ESP_LOGI(TAG, "PIDController set point correction: %.2f", this->correctedTargetTemperature);
+        this->pid_set_point_correction->publish_state(this->correctedTargetTemperature);
     }
 
     void DeviceStateManager::runWorkflows(const float currentTemperature) {
@@ -785,7 +813,7 @@ namespace devicestate {
             this->dump_state();
         }
 
-        this->runHysteresisWorkflow(deviceState, currentTemperature);
+        //this->runHysteresisWorkflow(deviceState, currentTemperature);
         this->runPIDControllerWorkflow(deviceState, currentTemperature);
     }
 }

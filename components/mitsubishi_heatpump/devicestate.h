@@ -123,6 +123,9 @@ namespace devicestate {
       uint32_t lastInternalPowerUpdate = esphome::millis();
       bool internalPowerOn;
 
+      float targetTemperature = -1;
+      float correctedTargetTemperature = -1;
+
       bool settingsInitialized;
       DeviceState deviceState;
       int deviceStateLastUpdated;
@@ -137,17 +140,20 @@ namespace devicestate {
 
       void hpSettingsChanged();
       void hpStatusChanged(heatpumpStatus currentStatus);
-      static void log_packet(byte* packet, unsigned int length, char* packetDirection);
 
       bool shouldThrottle(uint32_t end);
       bool internalTurnOn();
       bool internalTurnOff();
+      void internalSetTargetTemperature(const float value);
+      void internalSetCorrectedTemperature(const float value);
+      void ensurePIDTarget();
 
-      void runPIDControllerWorkflow(const DeviceState deviceState, const float currentTemperature);
       void runHysteresisWorkflow(const DeviceState deviceState, const float currentTemperature);
+      void runPIDControllerWorkflow(const DeviceState deviceState, const float currentTemperature);
 
       void dump_state();
       void log_heatpump_settings(heatpumpSettings currentSettings);
+      static void log_packet(byte* packet, unsigned int length, char* packetDirection);
 
     public:
       DeviceStateManager(
@@ -197,9 +203,9 @@ namespace devicestate {
       float getCurrentTemperature();
 
       float getTargetTemperature();
-      void setTargetTemperature(float target);
+      void setTargetTemperature(const float target);
 
-      void setRemoteTemperature(float current);
+      void setRemoteTemperature(const float current);
 
       void runWorkflows(const float currentTemperature);
   };

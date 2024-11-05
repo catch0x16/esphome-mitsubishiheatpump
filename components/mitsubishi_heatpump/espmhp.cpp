@@ -460,10 +460,16 @@ void MitsubishiHeatPump::updateDevice() {
         switch (deviceState.mode) {
             case DeviceMode::DeviceMode_Heat:
                 this->mode = climate::CLIMATE_MODE_HEAT;
-                if (heat_setpoint != deviceState.targetTemperature) {
-                    ESP_LOGW(TAG, "Head Setpoint diff: HA %.2f / HP %.2f", heat_setpoint, deviceState.targetTemperature);
-                    heat_setpoint = deviceState.targetTemperature;
-                    save(deviceState.targetTemperature, heat_storage);
+                if (!this->isInitialized && heat_setpoint.has_value()) {
+                    ESP_LOGW(TAG, "Initializing target temp with Heat Setpoint: %.2f", auto_setpoint);
+                    this->update_setpoint(heat_setpoint.value());
+                    this->isInitialized = true;
+                } else {
+                    if (!devicestate::same_float(heat_setpoint.value(), this->dsm->getTargetTemperature(), 0.01f)) {
+                        ESP_LOGW(TAG, "Heat Setpoint diff: HA %.2f / HP %.2f", heat_setpoint, this->dsm->getTargetTemperature());
+                        heat_setpoint = this->dsm->getTargetTemperature();
+                        save(this->dsm->getTargetTemperature(), heat_storage);
+                    }
                 }
 
                 if (deviceStatus.operating) {
@@ -490,10 +496,16 @@ void MitsubishiHeatPump::updateDevice() {
                 break;
             case DeviceMode::DeviceMode_Cool:
                 this->mode = climate::CLIMATE_MODE_COOL;
-                if (cool_setpoint != deviceState.targetTemperature) {
-                    ESP_LOGW(TAG, "Cool Setpoint diff: HA %.2f / HP %.2f", cool_setpoint, deviceState.targetTemperature);
-                    cool_setpoint = deviceState.targetTemperature;
-                    save(deviceState.targetTemperature, cool_storage);
+                if (!this->isInitialized && cool_setpoint.has_value()) {
+                    ESP_LOGW(TAG, "Initializing target temp with Cool Setpoint: %.2f", auto_setpoint);
+                    this->update_setpoint(cool_setpoint.value());
+                    this->isInitialized = true;
+                } else {
+                    if (!devicestate::same_float(cool_setpoint.value(), this->dsm->getTargetTemperature(), 0.01f)) {
+                        ESP_LOGW(TAG, "Cool Setpoint diff: HA %.2f / HP %.2f", cool_setpoint, this->dsm->getTargetTemperature());
+                        cool_setpoint = this->dsm->getTargetTemperature();
+                        save(this->dsm->getTargetTemperature(), cool_storage);
+                    }
                 }
 
                 if (deviceStatus.operating) {
@@ -511,10 +523,16 @@ void MitsubishiHeatPump::updateDevice() {
                 this->action = climate::CLIMATE_ACTION_FAN;
                 break;
             case DeviceMode::DeviceMode_Auto:
-                if (auto_setpoint != deviceState.targetTemperature) {
-                    ESP_LOGW(TAG, "Auto Setpoint diff: HA %.2f / HP %.2f", auto_setpoint, deviceState.targetTemperature);
-                    auto_setpoint = deviceState.targetTemperature;
-                    save(deviceState.targetTemperature, auto_storage);
+                if (!this->isInitialized && auto_setpoint.has_value()) {
+                    ESP_LOGW(TAG, "Initializing target temp with Auto Setpoint: %.2f", auto_setpoint);
+                    this->update_setpoint(auto_setpoint.value());
+                    this->isInitialized = true;
+                } else {
+                    if (!devicestate::same_float(auto_setpoint.value(), this->dsm->getTargetTemperature(), 0.01f)) {
+                        ESP_LOGW(TAG, "Auto Setpoint diff: HA %.2f / HP %.2f", auto_setpoint.value(), this->dsm->getTargetTemperature());
+                        auto_setpoint = this->dsm->getTargetTemperature();
+                        save(this->dsm->getTargetTemperature(), auto_storage);
+                    }
                 }
 
                 if (deviceStatus.operating) {
@@ -618,8 +636,8 @@ void MitsubishiHeatPump::updateDevice() {
     }
     ESP_LOGD(TAG, "Horizontal vane mode is: %s", horizontalSwingModeToString(deviceState.horizontalSwingMode));
 
-    this->update_setpoint(deviceState.targetTemperature);
-    ESP_LOGI(TAG, "Target temp is: %f", this->target_temperature);
+    //this->update_setpoint(this->dsm->getTargetTemperature());
+    this->target_temperature = this->dsm->getTargetTemperature();
 
     /*
      * ******** Publish state back to ESPHome. ********
@@ -820,11 +838,6 @@ bool MitsubishiHeatPump::isComponentActive() {
 }
 
 void MitsubishiHeatPump::update_setpoint(const float value) {
-    if (devicestate::same_float(this->target_temperature, value, 0.01f)) {
-        ESP_LOGD(TAG, "Target temp unchanged: current={%f} updated={%f}", this->target_temperature, value);
-        return;
-    }
-
     ESP_LOGI(TAG, "Target temp changing from %f to %f", this->target_temperature, value);
     this->target_temperature = value;
     this->dsm->setTargetTemperature(value);
