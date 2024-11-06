@@ -645,8 +645,9 @@ namespace devicestate {
     }
 
     void DeviceStateManager::internalSetCorrectedTemperature(const float value) {
-        ESP_LOGI(TAG, "Corrected target temp changing from %f to %f", this->correctedTargetTemperature, value);
-        this->correctedTargetTemperature = value;
+        const float adjustedCorrectedTemperature = devicestate::clamp(value, this->minTemp, this->maxTemp);
+        ESP_LOGI(TAG, "Corrected target temp changing from %f to %f", this->correctedTargetTemperature, adjustedCorrectedTemperature);
+        this->correctedTargetTemperature = adjustedCorrectedTemperature;
         this->hp->setTemperature(this->correctedTargetTemperature);
     }
 
@@ -657,23 +658,17 @@ namespace devicestate {
     }
 
     void DeviceStateManager::setTargetTemperature(const float value) {
-        if ((value < this->minTemp) || (value > this->maxTemp)) {
-            return;
-        }
+        const float adjustedTargetTemperature = devicestate::clamp(value, this->minTemp, this->maxTemp);
 
-        if (!devicestate::same_float(value, this->targetTemperature, 0.01f)) {
-            this->internalSetTargetTemperature(value);
+        if (!devicestate::same_float(adjustedTargetTemperature, this->targetTemperature, 0.01f)) {
+            this->internalSetTargetTemperature(adjustedTargetTemperature);
             
-            ESP_LOGI(TAG, "Device target temp changing from %f to %f", this->targetTemperature, value);
+            ESP_LOGI(TAG, "Device target temp changing from %f to %f", this->targetTemperature, adjustedTargetTemperature);
             this->hp->setTemperature(this->targetTemperature);
         }
     }
 
     void DeviceStateManager::setRemoteTemperature(const float current) {
-        if (devicestate::same_float(current, this->getCurrentTemperature(), 0.01f)) {
-            return;
-        }
-
         this->hp->setRemoteTemperature(current);
     }
 
