@@ -8,7 +8,7 @@ using namespace esphome;
 namespace devicestate {
 
     //P=4.09 I=0.058 D=3.38
-    static const float p = 4.0;
+    static const float p = 1.25;
     static const float i = 0.02;
     static const float d = 0.1;
 
@@ -509,7 +509,6 @@ namespace devicestate {
             this->lastInternalPowerUpdate = end;
             this->internalPowerOn = true;
             this->internal_power_on->publish_state(this->internalPowerOn);
-            this->pidController->resetState();
             ESP_LOGW(TAG, "Performed internal turn on!");
             return true;
         } else {
