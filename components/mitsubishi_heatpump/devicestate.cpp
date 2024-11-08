@@ -7,11 +7,6 @@ using namespace esphome;
 
 namespace devicestate {
 
-    //P=4.09 I=0.058 D=3.38
-    static const float p = 1.25;
-    static const float i = 0.02;
-    static const float d = 0.1;
-
     static const float hysterisisUnderOff = 0.25; // in degrees C
     static const float hysterisisOverOn = 0.25; // in degrees C
 
@@ -246,9 +241,12 @@ namespace devicestate {
 
     DeviceStateManager::DeviceStateManager(
       ConnectionMetadata connectionMetadata,
-      uint32_t updateInterval,
-      float minTemp,
-      float maxTemp,
+      const uint32_t updateInterval,
+      const float minTemp,
+      const float maxTemp,
+      const float p,
+      const float i,
+      const float d,
       esphome::binary_sensor::BinarySensor* internal_power_on,
       esphome::binary_sensor::BinarySensor* device_state_connected,
       esphome::binary_sensor::BinarySensor* device_state_active,
@@ -719,7 +717,8 @@ namespace devicestate {
         this->log_heatpump_settings(currentSettings);
     }
 
-    void DeviceStateManager::runHysteresisWorkflow(const DeviceState deviceState, const float currentTemperature) {
+    void DeviceStateManager::runHysteresisWorkflow(const float currentTemperature) {
+        const DeviceState deviceState = this->getDeviceState();
         switch(deviceState.mode) {
             case devicestate::DeviceMode::DeviceMode_Heat: {
                 const float delta = currentTemperature - deviceState.targetTemperature;
@@ -770,17 +769,19 @@ namespace devicestate {
 
         ESP_LOGI(TAG, "PID target temp changing from %f to %f", this->pidController->getTarget(), this->targetTemperature);
         this->pidController->setTarget(this->targetTemperature);
+        const float adjustedMin = devicestate::clamp(this->targetTemperature - maxAdjustmentUnder, this->minTemp, this->maxTemp);
+        const float adjustedMax = devicestate::clamp(this->targetTemperature + maxAdjustmentOver, this->minTemp, this->maxTemp);
+        this->pidController->setOutputLimits(adjustedMin, adjustedMax);
         this->pidController->resetState();
     }
 
-    void DeviceStateManager::runPIDControllerWorkflow(const DeviceState deviceState, const float currentTemperature) {
+    void DeviceStateManager::runPIDControllerWorkflow(const float currentTemperature) {
+        const DeviceState deviceState = this->getDeviceState();
+
         this->ensurePIDTarget();
-
         ESP_LOGI(TAG, "PIDController update current: %.2f", currentTemperature);
-        const float setPointCorrectionProposed = this->pidController->update(currentTemperature);
-        const float setPointCorrection =
-            devicestate::clamp(setPointCorrectionProposed, this->targetTemperature - maxAdjustmentUnder, this->targetTemperature + maxAdjustmentOver);
-
+        
+        const float setPointCorrection = this->pidController->update(currentTemperature);
         if (!devicestate::same_float(setPointCorrection, this->correctedTargetTemperature, 0.01f)) {
             ESP_LOGW(TAG, "Adjusting setpoint: oldCorrection={%f} newCorrection={%f} current={%f} deviceTarget={%f} componentTarget={%f}", this->correctedTargetTemperature, setPointCorrection, currentTemperature, deviceState.targetTemperature, this->targetTemperature);
             
@@ -798,6 +799,15 @@ namespace devicestate {
     }
 
     void DeviceStateManager::runWorkflows(const float currentTemperature) {
+        /*
+        uint32_t now = esphome::millis();
+        uint32_t timeEllapsed = now - this->lastRunWorkflows;
+        if (timeEllapsed > 50) {
+            ESP_LOGW(TAG, "Run worflow last run (%" PRIu32 " ms).", (timeEllapsed));
+        }
+        this->lastRunWorkflows = now;
+        */
+
         const DeviceState deviceState = this->getDeviceState();
         this->device_state_active->publish_state(deviceState.active);
         ESP_LOGD(TAG, "Device active on workflow: deviceState.active={%s} internalPowerOn={%s}", YESNO(deviceState.active), YESNO(this->isInternalPowerOn()));
@@ -807,7 +817,7 @@ namespace devicestate {
             this->dump_state();
         }
 
-        this->runHysteresisWorkflow(deviceState, currentTemperature);
-        this->runPIDControllerWorkflow(deviceState, currentTemperature);
+        this->runHysteresisWorkflow(currentTemperature);
+        this->runPIDControllerWorkflow(currentTemperature);
     }
 }

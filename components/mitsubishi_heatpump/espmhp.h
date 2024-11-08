@@ -85,6 +85,10 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         // Set the TX pin. Must be called before setup() to have any effect.
         void set_tx_pin(int);
 
+        void set_kp(float kp) { this->kp_ = kp; }
+        void set_ki(float ki) { this->ki_ = ki; }
+        void set_kd(float kd) { this->kd_ = kd; }
+
         // handle a change in device;
         void updateDevice();
 
@@ -193,6 +197,10 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         int rx_pin_ = -1;
         int tx_pin_ = -1;
         bool operating_ = false;
+
+        float kp_;
+        float ki_;
+        float kd_;
 
         bool isInitialized = false;
 

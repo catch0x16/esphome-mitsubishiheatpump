@@ -120,6 +120,8 @@ namespace devicestate {
       // HeatPump object using the underlying Arduino library.
       HeatPump* hp;
 
+      //uint32_t lastRunWorkflows = esphome::millis();
+
       uint32_t lastInternalPowerUpdate = esphome::millis();
       bool internalPowerOn;
 
@@ -148,8 +150,8 @@ namespace devicestate {
       void internalSetCorrectedTemperature(const float value);
       void ensurePIDTarget();
 
-      void runHysteresisWorkflow(const DeviceState deviceState, const float currentTemperature);
-      void runPIDControllerWorkflow(const DeviceState deviceState, const float currentTemperature);
+      void runHysteresisWorkflow(const float currentTemperature);
+      void runPIDControllerWorkflow(const float currentTemperature);
 
       void dump_state();
       void log_heatpump_settings(heatpumpSettings currentSettings);
@@ -161,6 +163,9 @@ namespace devicestate {
         const uint32_t updateInterval,
         const float minTemp,
         const float maxTemp,
+        const float p,
+        const float i,
+        const float d,
         esphome::binary_sensor::BinarySensor* internal_power_on,
         esphome::binary_sensor::BinarySensor* device_state_connected,
         esphome::binary_sensor::BinarySensor* device_state_active,

@@ -34,11 +34,22 @@ CONF_DEVICE_STATUS_LAST_UPDATED = "device_status_last_updated"
 CONF_DEVICE_SET_POINT = "device_set_point"
 CONF_PID_SET_POINT_CORRECTION = "pid_set_point_correction"
 
+CONF_CONTROL_PARAMETERS = "control_parameters"
+CONF_KP = "kp"
+CONF_KI = "ki"
+CONF_KD = "kd"
+
 CONF_HORIZONTAL_SWING_SELECT = "horizontal_vane_select"
 CONF_VERTICAL_SWING_SELECT = "vertical_vane_select"
 DEFAULT_CLIMATE_MODES = ["HEAT_COOL", "COOL", "HEAT", "DRY", "FAN_ONLY"]
 DEFAULT_FAN_MODES = ["AUTO", "DIFFUSE", "LOW", "MEDIUM", "MIDDLE", "HIGH"]
 DEFAULT_SWING_MODES = ["OFF", "VERTICAL"]
+
+# P=4.09 I=0.058 D=3.38
+DEFAULT_KP = 4.0
+DEFAULT_KI = 0.02
+DEFAULT_KD = 0.01
+
 HORIZONTAL_SWING_OPTIONS = [
     "auto",
     "swing",
@@ -212,6 +223,13 @@ CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
         cv.Optional(CONF_PID_SET_POINT_CORRECTION, default=PID_SET_POINT_CORRECTION_DEFAULT): PID_SET_POINT_CORRECTION_SCHEMA,
         cv.Optional(CONF_DEVICE_SET_POINT, default=DEVICE_SET_POINT_DEFAULT): DEVICE_SET_POINT_SCHEMA,
         
+        cv.Required(CONF_CONTROL_PARAMETERS): cv.Schema(
+            {
+                cv.Required(CONF_KP): cv.float_,
+                cv.Optional(CONF_KI, default=0.0): cv.float_,
+                cv.Optional(CONF_KD, default=0.0): cv.float_,
+            }
+        ),
 
         # Optionally override the supported ClimateTraits.
         cv.Optional(CONF_SUPPORTS, default={}): cv.Schema(
@@ -291,6 +309,11 @@ def to_code(config):
     yield sensor.register_sensor(var.device_status_last_updated, config[CONF_DEVICE_STATUS_LAST_UPDATED])
     yield sensor.register_sensor(var.pid_set_point_correction, config[CONF_PID_SET_POINT_CORRECTION])
     yield sensor.register_sensor(var.device_set_point, config[CONF_DEVICE_SET_POINT])
+
+    params = config[CONF_CONTROL_PARAMETERS]
+    cg.add(var.set_kp(params[CONF_KP]))
+    cg.add(var.set_ki(params[CONF_KI]))
+    cg.add(var.set_kd(params[CONF_KD]))
 
     cg.add_library(
         name="HeatPump",

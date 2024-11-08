@@ -750,7 +750,9 @@ void MitsubishiHeatPump::setup() {
         this->get_update_interval(),
         this->min_temp,
         this->max_temp,
-
+        this->kp_,
+        this->ki_,
+        this->kd_,
         this->internal_power_on,
         this->device_state_connected,
         this->device_state_active,
@@ -826,6 +828,7 @@ void MitsubishiHeatPump::dump_config() {
     ESP_LOGI(TAG, "  Saved heat: %.1f", heat_setpoint.value_or(-1));
     ESP_LOGI(TAG, "  Saved cool: %.1f", cool_setpoint.value_or(-1));
     ESP_LOGI(TAG, "  Saved auto: %.1f", auto_setpoint.value_or(-1));
+    ESP_LOGI(TAG, "  Update interval: %d", this->get_update_interval());
 }
 
 void MitsubishiHeatPump::dump_state() {

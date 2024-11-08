@@ -28,9 +28,6 @@ class PIDController {
         std::optional<float> lastInput;
         int sampleTime;
 
-        void setTunings(const float p, const float i, const float d);
-        void setOutputLimits(const float outputMin, const float outputMax);
-
         float applyOutputLimits(const float output);
 
     public:
@@ -52,6 +49,8 @@ class PIDController {
         float update(const float input);
         void resetState();
         void setSampleTime(const int sampleTime);
+        void setTunings(const float p, const float i, const float d);
+        void setOutputLimits(const float outputMin, const float outputMax);
 };
 
 #endif
