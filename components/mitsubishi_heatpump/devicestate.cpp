@@ -818,6 +818,6 @@ namespace devicestate {
         }
 
         this->runHysteresisWorkflow(currentTemperature);
-        this->runPIDControllerWorkflow(currentTemperature);
+        //this->runPIDControllerWorkflow(currentTemperature);
     }
 }

@@ -52,24 +52,31 @@ void calculateMultipleUpdates() {
 }
 
 void simulate() {
-    float p = 0.5;
-    float i = 0.02;
+    float p = 1.35;
+    float i = 0.005;
     float d = 0.01;
+    float target = 20;
     PIDController *pid = new PIDController(
       p,
       i,
       d,
       2000,
-      20,
-      16,
-      31
+      target,
+      target - 2.0,
+      target + 2.0
     );
 
-    float epsilon = 0.051;
+    float epsilon = 0.017;
     float current = 17;
-    for (int i = 0; i<100; i++) {
+    for (int i = 0; i<1000; i++) {
       std::cout<<i<<": "<<current<<" "<<pid->update(current)<<"\n";
-      current += epsilon;
+      if ((current < (target + 1)) && ((i >= 66 ||  i <= 100) || (i >= 155 || i <= 275) || (i >= 400 || i <= 489))) {
+        current += epsilon;
+      }
+
+      if ((current > target) && ((i >= 666 || i <= 700) || (i >= 755 || i <= 805) || (i >= 900 || i <= 976))) {
+        current -= epsilon;
+      }
     }
 }
 
