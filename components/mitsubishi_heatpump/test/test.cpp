@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "../pidcontroller.h"
+#include "../floats.h"
 
 void roundToDecimals_tests() {
     std::cout<<roundToDecimals(0, 0)<<"==0\n";
@@ -52,10 +53,10 @@ void calculateMultipleUpdates() {
 }
 
 void simulate() {
-    float p = 1.35;
-    float i = 0.005;
-    float d = 0.01;
-    float target = 20;
+    float p = 0.1;
+    float i = 0.0006;
+    float d = 0.0;
+    float target = 21;
     PIDController *pid = new PIDController(
       p,
       i,
@@ -67,9 +68,10 @@ void simulate() {
     );
 
     float epsilon = 0.017;
-    float current = 17;
-    for (int i = 0; i<1000; i++) {
-      std::cout<<i<<": "<<current<<" "<<pid->update(current)<<"\n";
+    float current = 20;
+    for (int i = 0; i<1; i++) {
+      const float adjustment = pid->update(current);
+      std::cout<<i<<": current={"<<current<<"} target={"<<target<<"} adjusted={"<<adjustment<<"}\n";
       if ((current < (target + 1)) && ((i >= 66 ||  i <= 100) || (i >= 155 || i <= 275) || (i >= 400 || i <= 489))) {
         current += epsilon;
       }
@@ -78,6 +80,10 @@ void simulate() {
         current -= epsilon;
       }
     }
+}
+
+void testSameFloat() {
+  std::cout<<devicestate::same_float(21.100000, 21.308987, 0.001f)<<"==1";
 }
 
 int main() {
@@ -91,6 +97,7 @@ int main() {
     handlesNegativeIntegral();
     std::cout<<"\n";
     calculateMultipleUpdates();
+    simulate();
   */
- simulate();
+  testSameFloat();
 }

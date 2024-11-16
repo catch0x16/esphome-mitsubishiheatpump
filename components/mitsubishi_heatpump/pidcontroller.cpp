@@ -3,6 +3,7 @@
 #include <cmath>
 #include <optional>
 #include <stdexcept>
+#include <iostream>
 
 using namespace std;
 
@@ -24,6 +25,7 @@ PIDController::PIDController(
     this->setTunings(p, i, d);
     this->setOutputLimits(outputMin, outputMax);
     this->setTarget(target);
+    this->resetState();
 }
 
 float PIDController::update(const float input) {
@@ -31,21 +33,27 @@ float PIDController::update(const float input) {
         this->lastInput = input;
     }
 
-    if (this->outputSum != this->outputSum) {
-        this->outputSum = 0.0f;
-    }
-
+    // 1 = 21 - 20
     const float error = this->target - input;
-    const float inputDelta = input - this->lastInput.value();
+    //std::cout<<this->target - input<<" = "<<this->target<<" - "<<input<<"\n";
 
+    // 0 = 20 - 20
+    const float inputDelta = input - this->lastInput.value();
+    //std::cout<<input - this->lastInput.value()<<" = "<<input<<" - "<<this->lastInput.value()<<"\n";
+
+    const float originalOutputSum = this->outputSum;
+    // 0.0006 = (0.0006 * 1)
     this->outputSum += (this->ki * error);
+    //std::cout<<this->outputSum<<" = "<<originalOutputSum<<" + ("<<this->ki<<" * "<<error<<")\n";
     this->outputSum = this->applyOutputLimits(this->outputSum);
 
-
+    // 0.1 = 0.1 * 1
     float output = this->kp * error;
 
+    // 0.1006 = 0.1 + 0.0006 - 0.0 * 0
     output += this->outputSum - this->kd * inputDelta;
 
+    // 0.1006
     this->output = this->applyOutputLimits(output);
 
     // Update state variables
@@ -101,7 +109,7 @@ float PIDController::getTarget() {
 }
 
 void PIDController::resetState() {
-    this->outputSum = 0.0f;
+    this->outputSum = this->target; // Start adjusting from target
     this->lastInput.reset();
 }
 

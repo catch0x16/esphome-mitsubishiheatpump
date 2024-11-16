@@ -780,7 +780,7 @@ namespace devicestate {
         ESP_LOGI(TAG, "PIDController update current: %.2f", currentTemperature);
         
         const float setPointCorrection = this->pidController->update(currentTemperature);
-        if (!devicestate::same_float(setPointCorrection, this->correctedTargetTemperature, 0.01f)) {
+        if (!devicestate::same_float(setPointCorrection, this->correctedTargetTemperature)) {
             ESP_LOGW(TAG, "Adjusting setpoint: oldCorrection={%f} newCorrection={%f} current={%f} deviceTarget={%f} componentTarget={%f}", this->correctedTargetTemperature, setPointCorrection, currentTemperature, deviceState.targetTemperature, this->targetTemperature);
             
             this->internalSetCorrectedTemperature(setPointCorrection);
@@ -815,7 +815,7 @@ namespace devicestate {
             this->dump_state();
         }
 
-        this->runHysteresisWorkflow(currentTemperature);
-        //this->runPIDControllerWorkflow(currentTemperature);
+        //this->runHysteresisWorkflow(currentTemperature);
+        this->runPIDControllerWorkflow(currentTemperature);
     }
 }
