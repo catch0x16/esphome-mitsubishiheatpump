@@ -104,6 +104,11 @@ namespace devicestate {
       float minTemp;
       float maxTemp;
 
+      float maxAdjustmentUnder;
+      float maxAdjustmentOver;
+      float hysterisisUnderOff;
+      float hysterisisOverOn;
+
       int disconnected;
 
       esphome::binary_sensor::BinarySensor* internal_power_on;
@@ -166,6 +171,10 @@ namespace devicestate {
         const float p,
         const float i,
         const float d,
+        const float maxAdjustmentUnder,
+        const float maxAdjustmentOver,
+        const float hysterisisUnderOff,
+        const float hysterisisOverOn,
         esphome::binary_sensor::BinarySensor* internal_power_on,
         esphome::binary_sensor::BinarySensor* device_state_connected,
         esphome::binary_sensor::BinarySensor* device_state_active,

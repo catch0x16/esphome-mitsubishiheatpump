@@ -7,12 +7,6 @@ using namespace esphome;
 
 namespace devicestate {
 
-    static const float hysterisisUnderOff = 0.25; // in degrees C
-    static const float hysterisisOverOn = 0.25; // in degrees C
-
-    static const float maxAdjustmentUnder = 2.0;
-    static const float maxAdjustmentOver = 2.0;
-
     static const char* TAG = "DeviceStateManager"; // Logging tag
 
     bool deviceStatusEqual(DeviceStatus left, DeviceStatus right) {
@@ -247,6 +241,10 @@ namespace devicestate {
       const float p,
       const float i,
       const float d,
+      const float maxAdjustmentUnder,
+      const float maxAdjustmentOver,
+      const float hysterisisUnderOff,
+      const float hysterisisOverOn,
       esphome::binary_sensor::BinarySensor* internal_power_on,
       esphome::binary_sensor::BinarySensor* device_state_connected,
       esphome::binary_sensor::BinarySensor* device_state_active,
@@ -261,6 +259,11 @@ namespace devicestate {
         this->connectionMetadata = connectionMetadata;
         this->minTemp = minTemp;
         this->maxTemp = maxTemp;
+
+        this->maxAdjustmentUnder = maxAdjustmentUnder;
+        this->maxAdjustmentOver = maxAdjustmentOver;
+        this->hysterisisUnderOff = hysterisisUnderOff;
+        this->hysterisisOverOn = hysterisisOverOn;
 
         this->internal_power_on = internal_power_on;
         this->device_state_connected = device_state_connected;
@@ -287,7 +290,9 @@ namespace devicestate {
             updateInterval,
             (this->maxTemp + this->minTemp) / 2.0, // Set target to mid point of min/max
             this->minTemp,
-            this->maxTemp
+            this->maxTemp,
+            this->maxAdjustmentOver,
+            this->maxAdjustmentUnder
         );
 
         #ifdef USE_CALLBACKS
@@ -721,14 +726,14 @@ namespace devicestate {
             case devicestate::DeviceMode::DeviceMode_Heat: {
                 const float delta = currentTemperature - deviceState.targetTemperature;
                 if (!deviceState.active) {
-                    if (-delta > (2 * hysterisisOverOn)) {
+                    if (-delta > this->hysterisisOverOn) {
                         ESP_LOGI(TAG, "Turn on while heating: delta={%f} current={%f} targetTemperature={%f}", delta, currentTemperature, deviceState.targetTemperature);
                         this->internalTurnOn();
                     }
                     return;
                 }
 
-                if (delta > hysterisisUnderOff) {
+                if (delta > this->hysterisisUnderOff) {
                     ESP_LOGI(TAG, "Turn off while heating: delta={%f} current={%f} targetTemperature={%f}", delta, currentTemperature, deviceState.targetTemperature);
                     this->internalTurnOff();
                     return;
@@ -739,14 +744,14 @@ namespace devicestate {
             case devicestate::DeviceMode::DeviceMode_Cool: {
                 const float delta = deviceState.targetTemperature - currentTemperature;
                 if (!deviceState.active) {
-                    if (-delta > (2 * hysterisisOverOn)) {
+                    if (-delta > this->hysterisisOverOn) {
                         ESP_LOGI(TAG, "Turn on while cooling: delta={%f} current={%f} targetTemperature={%f}", delta, currentTemperature, deviceState.targetTemperature);
                         this->internalTurnOn();
                     }
                     return;
                 }
 
-                if (delta > hysterisisUnderOff) {
+                if (delta > this->hysterisisUnderOff) {
                     ESP_LOGI(TAG, "Turn off while cooling: delta={%f} current={%f} targetTemperature={%f}", delta, currentTemperature, deviceState.targetTemperature);
                     this->internalTurnOff();
                     return;
@@ -767,10 +772,6 @@ namespace devicestate {
 
         ESP_LOGI(TAG, "PID target temp changing from %f to %f", this->pidController->getTarget(), this->targetTemperature);
         this->pidController->setTarget(this->targetTemperature);
-        const float adjustedMin = devicestate::clamp(this->targetTemperature - maxAdjustmentUnder, this->minTemp, this->maxTemp);
-        const float adjustedMax = devicestate::clamp(this->targetTemperature + maxAdjustmentOver, this->minTemp, this->maxTemp);
-        this->pidController->setOutputLimits(adjustedMin, adjustedMax);
-        this->pidController->resetState();
     }
 
     void DeviceStateManager::runPIDControllerWorkflow(const float currentTemperature) {

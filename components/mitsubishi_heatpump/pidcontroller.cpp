@@ -1,5 +1,7 @@
 #include "pidcontroller.h"
 
+#include "floats.h"
+
 #include <cmath>
 #include <optional>
 #include <stdexcept>
@@ -19,11 +21,19 @@ PIDController::PIDController(
     const int sampleTime,
     const float target,
     const float outputMin,
-    const float outputMax
+    const float outputMax,
+    const float maxAdjustmentOver,
+    const float maxAdjustmentUnder
 ) {
+    this->outputMin = outputMin;
+    this->adjustedMin = this->outputMin;
+    this->outputMax = outputMax;
+    this->adjustedMax = this->outputMax;
+    this->maxAdjustmentOver = maxAdjustmentOver;
+    this->maxAdjustmentUnder = maxAdjustmentUnder;
+
     this->sampleTime = sampleTime;
     this->setTunings(p, i, d);
-    this->setOutputLimits(outputMin, outputMax);
     this->setTarget(target);
 }
 
@@ -62,17 +72,13 @@ float PIDController::update(const float input) {
 
 void PIDController::setTarget(const float target) {
     this->target = target;
+    this->adjustOutputLimits();
     this->resetState();
 }
 
-void PIDController::setOutputLimits(const float min, const float max) {
-    if (min > max) {
-        // throw new std::invalid_argument("Minimum output limit cannot be bigger than maximum");
-        return;
-    }
-
-    this->outputMin = min;
-    this->outputMax = max;
+void PIDController::adjustOutputLimits() {
+    this->adjustedMin = devicestate::clamp(this->target - this->maxAdjustmentUnder, this->outputMin, this->outputMax);
+    this->adjustedMax = devicestate::clamp(this->target + this->maxAdjustmentOver, this->outputMin, this->outputMax);
 
     // Apply to current state
     this->output = this->applyOutputLimits(this->output);
@@ -114,11 +120,11 @@ void PIDController::resetState() {
 }
 
 float PIDController::applyOutputLimits(const float output) {
-    if (output > this->outputMax) {
-        return this->outputMax;
+    if (output > this->adjustedMax) {
+        return this->adjustedMax;
     }
-    if (output < this->outputMin) {
-        return this->outputMin;
+    if (output < this->adjustedMin) {
+        return this->adjustedMin;
     }
     return output;
 }
