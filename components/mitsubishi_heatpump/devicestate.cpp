@@ -508,6 +508,7 @@ namespace devicestate {
 
         this->hp->setModeSetting(deviceMode);
         this->hp->setPowerSetting("ON");
+        this->hp->setTemperature(this->correctedTargetTemperature);
         if (this->commit()) {
             this->lastInternalPowerUpdate = end;
             this->internalPowerOn = true;

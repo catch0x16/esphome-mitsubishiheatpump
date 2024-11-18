@@ -332,4 +332,3 @@ def to_code(config):
         repository="https://github.com/SwiCago/HeatPump#5d1e146771d2f458907a855bf9d5d4b9bf5ff033",
         version=None, # this appears to be ignored?
     )
-
