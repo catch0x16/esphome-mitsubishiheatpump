@@ -35,7 +35,6 @@ PIDController::PIDController(
     this->sampleTime = sampleTime;
     this->setTunings(p, i, d);
     this->setTarget(target);
-    this->resetState();
 }
 
 float PIDController::update(const float input) {
@@ -74,6 +73,7 @@ float PIDController::update(const float input) {
 void PIDController::setTarget(const float target) {
     this->target = target;
     this->adjustOutputLimits();
+    this->resetState();
 }
 
 void PIDController::adjustOutputLimits() {
