@@ -45,7 +45,6 @@ MitsubishiHeatPump::MitsubishiHeatPump(
     internal_power_on = new esphome::binary_sensor::BinarySensor();
     device_state_connected = new esphome::binary_sensor::BinarySensor();
     device_state_active = new esphome::binary_sensor::BinarySensor();
-    device_state_last_updated = new esphome::sensor::Sensor();
     device_status_operating = new esphome::binary_sensor::BinarySensor();
     device_status_current_temperature = new esphome::sensor::Sensor();
     device_status_current_temperature->set_unit_of_measurement("°C");
@@ -57,7 +56,6 @@ MitsubishiHeatPump::MitsubishiHeatPump(
     device_status_kwh->set_unit_of_measurement("kWh");
     device_status_runtime_hours = new esphome::sensor::Sensor();
     device_status_runtime_hours->set_unit_of_measurement("h");
-    device_status_last_updated = new esphome::sensor::Sensor();
     pid_set_point_correction = new esphome::sensor::Sensor();
     pid_set_point_correction->set_unit_of_measurement("°C");
     pid_set_point_correction->set_accuracy_decimals(1);
@@ -766,14 +764,12 @@ void MitsubishiHeatPump::setup() {
         this->device_state_connected,
         this->device_state_active,
         this->device_set_point,
-        this->device_state_last_updated,
         this->device_status_operating,
         this->device_status_current_temperature,
         this->device_status_compressor_frequency,
         this->device_status_input_power,
         this->device_status_kwh,
         this->device_status_runtime_hours,
-        this->device_status_last_updated,
         this->pid_set_point_correction
     );
 

@@ -11,7 +11,11 @@ namespace devicestate {
 
     bool deviceStatusEqual(DeviceStatus left, DeviceStatus right) {
         return left.operating == right.operating &&
-            devicestate::same_float(left.currentTemperature, right.currentTemperature, 0.01f);
+            devicestate::same_float(left.currentTemperature, right.currentTemperature, 0.01f) &&
+            devicestate::same_float(left.compressorFrequency, right.compressorFrequency, 0.01f) &&
+            devicestate::same_float(left.inputPower, right.inputPower, 0.01f) &&
+            devicestate::same_float(left.kWh, right.kWh, 0.01f) &&
+            devicestate::same_float(left.runtimeHours, right.runtimeHours, 0.01f);
     }
 
     bool deviceStateEqual(DeviceState left, DeviceState right) {
@@ -252,14 +256,12 @@ namespace devicestate {
       esphome::binary_sensor::BinarySensor* device_state_connected,
       esphome::binary_sensor::BinarySensor* device_state_active,
       esphome::sensor::Sensor* device_set_point,
-      esphome::sensor::Sensor* device_state_last_updated,
       esphome::binary_sensor::BinarySensor* device_status_operating,
       esphome::sensor::Sensor* device_status_current_temperature,
       esphome::sensor::Sensor* device_status_compressor_frequency,
       esphome::sensor::Sensor* device_status_input_power,
       esphome::sensor::Sensor* device_status_kwh,
       esphome::sensor::Sensor* device_status_runtime_hours,
-      esphome::sensor::Sensor* device_status_last_updated,
       esphome::sensor::Sensor* pid_set_point_correction
     ) {
         this->connectionMetadata = connectionMetadata;
@@ -275,14 +277,12 @@ namespace devicestate {
         this->device_state_connected = device_state_connected;
         this->device_state_active = device_state_active;
         this->device_set_point = device_set_point;
-        this->device_state_last_updated = device_state_last_updated;
         this->device_status_operating = device_status_operating;
         this->device_status_current_temperature = device_status_current_temperature;
         this->device_status_compressor_frequency = device_status_compressor_frequency;
         this->device_status_input_power = device_status_input_power;
         this->device_status_kwh = device_status_kwh;
         this->device_status_runtime_hours = device_status_runtime_hours;
-        this->device_status_last_updated = device_status_last_updated;
         this->pid_set_point_correction = pid_set_point_correction;
 
         this->disconnected = 0;
@@ -362,9 +362,6 @@ namespace devicestate {
         this->internal_power_on->publish_state(this->internalPowerOn);
         this->device_state_active->publish_state(this->deviceState.active);
         this->device_set_point->publish_state(this->deviceState.targetTemperature);
-
-        this->deviceStateLastUpdated += 1;
-        this->device_state_last_updated->publish_state(this->deviceStateLastUpdated);
     }
 
     /**
@@ -376,17 +373,19 @@ namespace devicestate {
             ESP_LOGW(TAG, "HeatPump status initialized.");
         }
 
-        this->deviceStatus = devicestate::toDeviceStatus(&currentStatus);
+        const DeviceStatus newDeviceStatus = devicestate::toDeviceStatus(&currentStatus);
+        if (devicestate::deviceStatusEqual(this->deviceStatus, newDeviceStatus)) {
+            return;
+        }
 
+        ESP_LOGI(TAG, "HeatPump device status updated.");
+        this->deviceStatus = newDeviceStatus;
         this->device_status_operating->publish_state(this->deviceStatus.operating);
         this->device_status_current_temperature->publish_state(this->deviceStatus.currentTemperature);
         this->device_status_compressor_frequency->publish_state(this->deviceStatus.compressorFrequency);
         this->device_status_input_power->publish_state(this->deviceStatus.inputPower);
         this->device_status_kwh->publish_state(this->deviceStatus.kWh);
         this->device_status_runtime_hours->publish_state(this->deviceStatus.runtimeHours);
-
-        this->deviceStatusLastUpdated += 1;
-        this->device_status_last_updated->publish_state(this->deviceStatusLastUpdated);
     }
 
     void DeviceStateManager::log_packet(byte* packet, unsigned int length, char* packetDirection) {
