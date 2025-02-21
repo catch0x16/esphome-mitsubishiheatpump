@@ -73,7 +73,10 @@ namespace devicestate {
   struct DeviceStatus {
     bool operating;
     float currentTemperature;
-    int compressorFrequency;
+    float compressorFrequency;
+    float inputPower;
+    float kWh;
+    float runtimeHours;
   };
   bool deviceStatusEqual(DeviceStatus left, DeviceStatus right);
   DeviceStatus toDeviceState(heatpumpStatus *currentStatus);

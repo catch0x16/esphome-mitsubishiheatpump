@@ -212,6 +212,9 @@ namespace devicestate {
         deviceStatus.currentTemperature = currentStatus->roomTemperature;
         deviceStatus.operating = currentStatus->operating;
         deviceStatus.compressorFrequency = currentStatus->compressorFrequency;
+        deviceStatus.inputPower = currentStatus->inputPower;
+        deviceStatus.kWh = currentStatus->kWh;
+        deviceStatus.runtimeHours = currentStatus->runtimeHours;
         return deviceStatus;
     }
 
@@ -372,6 +375,12 @@ namespace devicestate {
         this->device_status_operating->publish_state(this->deviceStatus.operating);
         this->device_status_current_temperature->publish_state(this->deviceStatus.currentTemperature);
         this->device_status_compressor_frequency->publish_state(this->deviceStatus.compressorFrequency);
+
+        ESP_LOGI("hpStatusChanged", "[compressorFrequency] %f", this->deviceStatus.compressorFrequency);
+        ESP_LOGI("hpStatusChanged", "[inputPower] %f", this->deviceStatus.inputPower);
+        ESP_LOGI("hpStatusChanged", "[kWh] %f", this->deviceStatus.kWh);
+        ESP_LOGI("hpStatusChanged", "[runtimeHours] %f", this->deviceStatus.runtimeHours);
+
 
         this->deviceStatusLastUpdated += 1;
         this->device_status_last_updated->publish_state(this->deviceStatusLastUpdated);
