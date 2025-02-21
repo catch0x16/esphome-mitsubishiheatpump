@@ -113,7 +113,8 @@ DEVICE_STATE_LAST_UPDATED_SCHEMA = sensor.sensor_schema(sensor.Sensor,
 )
 
 PID_SET_POINT_CORRECTION_SCHEMA = sensor.sensor_schema(sensor.Sensor,
-    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
+    unit_of_measurement="°C"
 )
 
 DEVICE_STATUS_OPERATING_SCHEMA = binary_sensor.binary_sensor_schema(binary_sensor.BinarySensor,
@@ -121,7 +122,8 @@ DEVICE_STATUS_OPERATING_SCHEMA = binary_sensor.binary_sensor_schema(binary_senso
 )
 
 DEVICE_STATUS_CURRENT_TEMPERATURE_SCHEMA = sensor.sensor_schema(sensor.Sensor,
-    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
+    unit_of_measurement="°C"
 )
 
 DEVICE_STATUS_COMPRESSOR_FREQUENCY_SCHEMA = sensor.sensor_schema(sensor.Sensor,
@@ -133,11 +135,13 @@ DEVICE_STATUS_INPUT_POWER_SCHEMA = sensor.sensor_schema(sensor.Sensor,
 )
 
 DEVICE_STATUS_KWH_SCHEMA = sensor.sensor_schema(sensor.Sensor,
-    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
+    unit_of_measurement="kWh"
 )
 
 DEVICE_STATUS_RUNTIME_HOURS_SCHEMA = sensor.sensor_schema(sensor.Sensor,
-    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
+    unit_of_measurement="h"
 )
 
 DEVICE_STATUS_LAST_UPDATED_SCHEMA = sensor.sensor_schema(sensor.Sensor,
@@ -145,11 +149,8 @@ DEVICE_STATUS_LAST_UPDATED_SCHEMA = sensor.sensor_schema(sensor.Sensor,
 )
 
 DEVICE_SET_POINT_SCHEMA = sensor.sensor_schema(sensor.Sensor,
-    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
-)
-
-DEVICE_SET_POINT_SCHEMA = sensor.sensor_schema(sensor.Sensor,
-    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
+    unit_of_measurement="°C"
 )
 
 INTERNAL_POWER_ON_DEFAULT = INTERNAL_POWER_ON_SCHEMA({
