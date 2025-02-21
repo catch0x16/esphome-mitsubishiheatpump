@@ -62,6 +62,7 @@
         "__memory": "cpp",
         "memory": "cpp",
         "print": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "__availability": "cpp"
     }
 }
