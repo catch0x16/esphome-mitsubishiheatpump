@@ -30,6 +30,9 @@ CONF_DEVICE_STATE_LAST_UPDATED = "device_state_last_updated"
 CONF_DEVICE_STATUS_OPERATING = "device_status_operating"
 CONF_DEVICE_STATUS_CURRENT_TEMPERATURE = "device_status_current_temperature"
 CONF_DEVICE_STATUS_COMPRESSOR_FREQUENCY = "device_status_compressor_frequency"
+CONF_DEVICE_STATUS_INPUT_POWER = "device_status_input_power"
+CONF_DEVICE_STATUS_KWH = "device_status_kwh"
+CONF_DEVICE_STATUS_RUNTIME_HOURS = "device_status_runtime_hours"
 CONF_DEVICE_STATUS_LAST_UPDATED = "device_status_last_updated"
 CONF_DEVICE_SET_POINT = "device_set_point"
 CONF_PID_SET_POINT_CORRECTION = "pid_set_point_correction"
@@ -125,6 +128,18 @@ DEVICE_STATUS_COMPRESSOR_FREQUENCY_SCHEMA = sensor.sensor_schema(sensor.Sensor,
     entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
 )
 
+DEVICE_STATUS_INPUT_POWER_SCHEMA = sensor.sensor_schema(sensor.Sensor,
+    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+)
+
+DEVICE_STATUS_KWH_SCHEMA = sensor.sensor_schema(sensor.Sensor,
+    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+)
+
+DEVICE_STATUS_RUNTIME_HOURS_SCHEMA = sensor.sensor_schema(sensor.Sensor,
+    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+)
+
 DEVICE_STATUS_LAST_UPDATED_SCHEMA = sensor.sensor_schema(sensor.Sensor,
     entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
 )
@@ -138,52 +153,67 @@ DEVICE_SET_POINT_SCHEMA = sensor.sensor_schema(sensor.Sensor,
 )
 
 INTERNAL_POWER_ON_DEFAULT = INTERNAL_POWER_ON_SCHEMA({
-    CONF_ID: "internal_power_on",
+    CONF_ID: CONF_INTERNAL_POWER_ON,
     CONF_NAME: "Internal power on"
 })
 
 DEVICE_STATE_CONNECTED_DEFAULT = DEVICE_STATE_CONNECTED_SCHEMA({
-    CONF_ID: "device_state_connected",
+    CONF_ID: CONF_DEVICE_STATE_CONNECTED,
     CONF_NAME: "Device state connected"
 })
 
 DEVICE_STATE_ACTIVE_DEFAULT = DEVICE_STATE_ACTIVE_SCHEMA({
-    CONF_ID: "device_state_active",
+    CONF_ID: CONF_DEVICE_STATE_ACTIVE,
     CONF_NAME: "Device state active"
 })
 
 DEVICE_STATE_LAST_UPDATED_DEFAULT = DEVICE_STATE_LAST_UPDATED_SCHEMA({
-    CONF_ID: "device_state_last_updated",
+    CONF_ID: CONF_DEVICE_STATE_LAST_UPDATED,
     CONF_NAME: "Device state last updated"
 })
 
 PID_SET_POINT_CORRECTION_DEFAULT = PID_SET_POINT_CORRECTION_SCHEMA({
-    CONF_ID: "pid_set_point_correction",
+    CONF_ID: CONF_PID_SET_POINT_CORRECTION,
     CONF_NAME: "PID Set Point Correction"
 })
 
 DEVICE_STATUS_OPERATING_DEFAULT = DEVICE_STATUS_OPERATING_SCHEMA({
-    CONF_ID: "device_status_operating",
+    CONF_ID: CONF_DEVICE_STATUS_OPERATING,
     CONF_NAME: "Device status operating"
 })
 
 DEVICE_STATUS_CURRENT_TEMPERATURE_DEFAULT = DEVICE_STATUS_CURRENT_TEMPERATURE_SCHEMA({
-    CONF_ID: "device_status_current_temperature",
+    CONF_ID: CONF_DEVICE_STATUS_CURRENT_TEMPERATURE,
     CONF_NAME: "Device current temperature"
 })
 
 DEVICE_STATUS_COMPRESSOR_FREQUENCY_DEFAULT = DEVICE_STATUS_COMPRESSOR_FREQUENCY_SCHEMA({
-    CONF_ID: "device_status_compressor_frequency",
+    CONF_ID: CONF_DEVICE_STATUS_COMPRESSOR_FREQUENCY,
     CONF_NAME: "Device status compressor frequency"
 })
 
+DEVICE_STATUS_INPUT_POWER_DEFAULT = DEVICE_STATUS_INPUT_POWER_SCHEMA({
+    CONF_ID: CONF_DEVICE_STATUS_INPUT_POWER,
+    CONF_NAME: "Device status input power"
+})
+
+DEVICE_STATUS_KWH_DEFAULT = DEVICE_STATUS_KWH_SCHEMA({
+    CONF_ID: CONF_DEVICE_STATUS_KWH,
+    CONF_NAME: "Device status kWh"
+})
+
+DEVICE_STATUS_RUNTIME_HOURS_DEFAULT = DEVICE_STATUS_RUNTIME_HOURS_SCHEMA({
+    CONF_ID: CONF_DEVICE_STATUS_RUNTIME_HOURS,
+    CONF_NAME: "Device status runtime hours"
+})
+
 DEVICE_STATUS_LAST_UPDATED_DEFAULT = DEVICE_STATUS_LAST_UPDATED_SCHEMA({
-    CONF_ID: "device_status_last_updated",
+    CONF_ID: CONF_DEVICE_STATUS_LAST_UPDATED,
     CONF_NAME: "Device status last updated"
 })
 
 DEVICE_SET_POINT_DEFAULT = DEVICE_SET_POINT_SCHEMA({
-    CONF_ID: "device_set_point",
+    CONF_ID: CONF_DEVICE_SET_POINT,
     CONF_NAME: "Device Set Point"
 })
 
@@ -194,6 +224,9 @@ DEVICE_STATE_LAST_UPDATED_DEFAULT[CONF_INTERNAL] = False
 DEVICE_STATUS_OPERATING_DEFAULT[CONF_INTERNAL] = False
 DEVICE_STATUS_CURRENT_TEMPERATURE_DEFAULT[CONF_INTERNAL] = False
 DEVICE_STATUS_COMPRESSOR_FREQUENCY_DEFAULT[CONF_INTERNAL] = False
+DEVICE_STATUS_INPUT_POWER_DEFAULT[CONF_INTERNAL] = False
+DEVICE_STATUS_KWH_DEFAULT[CONF_INTERNAL] = False
+DEVICE_STATUS_RUNTIME_HOURS_DEFAULT[CONF_INTERNAL] = False
 DEVICE_STATUS_LAST_UPDATED_DEFAULT[CONF_INTERNAL] = False
 PID_SET_POINT_CORRECTION_DEFAULT[CONF_INTERNAL] = False
 DEVICE_SET_POINT_DEFAULT[CONF_INTERNAL] = False
@@ -223,6 +256,9 @@ CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
         cv.Optional(CONF_DEVICE_STATUS_OPERATING, default=DEVICE_STATUS_OPERATING_DEFAULT): DEVICE_STATUS_OPERATING_SCHEMA,
         cv.Optional(CONF_DEVICE_STATUS_CURRENT_TEMPERATURE, default=DEVICE_STATUS_CURRENT_TEMPERATURE_DEFAULT): DEVICE_STATUS_CURRENT_TEMPERATURE_SCHEMA,
         cv.Optional(CONF_DEVICE_STATUS_COMPRESSOR_FREQUENCY, default=DEVICE_STATUS_COMPRESSOR_FREQUENCY_DEFAULT): DEVICE_STATUS_COMPRESSOR_FREQUENCY_SCHEMA,
+        cv.Optional(CONF_DEVICE_STATUS_INPUT_POWER, default=DEVICE_STATUS_INPUT_POWER_DEFAULT): DEVICE_STATUS_INPUT_POWER_SCHEMA,
+        cv.Optional(CONF_DEVICE_STATUS_KWH, default=DEVICE_STATUS_KWH_DEFAULT): DEVICE_STATUS_KWH_SCHEMA,
+        cv.Optional(CONF_DEVICE_STATUS_RUNTIME_HOURS, default=DEVICE_STATUS_RUNTIME_HOURS_DEFAULT): DEVICE_STATUS_RUNTIME_HOURS_SCHEMA,
         cv.Optional(CONF_DEVICE_STATUS_LAST_UPDATED, default=DEVICE_STATUS_LAST_UPDATED_DEFAULT): DEVICE_STATUS_LAST_UPDATED_SCHEMA,
         cv.Optional(CONF_PID_SET_POINT_CORRECTION, default=PID_SET_POINT_CORRECTION_DEFAULT): PID_SET_POINT_CORRECTION_SCHEMA,
         cv.Optional(CONF_DEVICE_SET_POINT, default=DEVICE_SET_POINT_DEFAULT): DEVICE_SET_POINT_SCHEMA,
@@ -314,6 +350,9 @@ def to_code(config):
     yield binary_sensor.register_binary_sensor(var.device_status_operating, config[CONF_DEVICE_STATUS_OPERATING])
     yield sensor.register_sensor(var.device_status_current_temperature, config[CONF_DEVICE_STATUS_CURRENT_TEMPERATURE])
     yield sensor.register_sensor(var.device_status_compressor_frequency, config[CONF_DEVICE_STATUS_COMPRESSOR_FREQUENCY])
+    yield sensor.register_sensor(var.device_status_input_power, config[CONF_DEVICE_STATUS_INPUT_POWER])
+    yield sensor.register_sensor(var.device_status_kwh, config[CONF_DEVICE_STATUS_KWH])
+    yield sensor.register_sensor(var.device_status_runtime_hours, config[CONF_DEVICE_STATUS_RUNTIME_HOURS])
     yield sensor.register_sensor(var.device_status_last_updated, config[CONF_DEVICE_STATUS_LAST_UPDATED])
     yield sensor.register_sensor(var.pid_set_point_correction, config[CONF_PID_SET_POINT_CORRECTION])
     yield sensor.register_sensor(var.device_set_point, config[CONF_DEVICE_SET_POINT])
@@ -329,6 +368,6 @@ def to_code(config):
 
     cg.add_library(
         name="HeatPump",
-        repository="https://github.com/catch0x16/HeatPump#af06a5d2c2abe6baf49a40c63d913515136a9941",
+        repository="https://github.com/catch0x16/HeatPump#2ecfb978f70251604579720a836f9495990be4fd",
         version=None, # this appears to be ignored?
     )

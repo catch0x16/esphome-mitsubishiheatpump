@@ -256,6 +256,9 @@ namespace devicestate {
       esphome::binary_sensor::BinarySensor* device_status_operating,
       esphome::sensor::Sensor* device_status_current_temperature,
       esphome::sensor::Sensor* device_status_compressor_frequency,
+      esphome::sensor::Sensor* device_status_input_power,
+      esphome::sensor::Sensor* device_status_kwh,
+      esphome::sensor::Sensor* device_status_runtime_hours,
       esphome::sensor::Sensor* device_status_last_updated,
       esphome::sensor::Sensor* pid_set_point_correction
     ) {
@@ -276,6 +279,9 @@ namespace devicestate {
         this->device_status_operating = device_status_operating;
         this->device_status_current_temperature = device_status_current_temperature;
         this->device_status_compressor_frequency = device_status_compressor_frequency;
+        this->device_status_input_power = device_status_input_power;
+        this->device_status_kwh = device_status_kwh;
+        this->device_status_runtime_hours = device_status_runtime_hours;
         this->device_status_last_updated = device_status_last_updated;
         this->pid_set_point_correction = pid_set_point_correction;
 
@@ -375,6 +381,9 @@ namespace devicestate {
         this->device_status_operating->publish_state(this->deviceStatus.operating);
         this->device_status_current_temperature->publish_state(this->deviceStatus.currentTemperature);
         this->device_status_compressor_frequency->publish_state(this->deviceStatus.compressorFrequency);
+        this->device_status_input_power->publish_state(this->deviceStatus.inputPower);
+        this->device_status_kwh->publish_state(this->deviceStatus.kWh);
+        this->device_status_runtime_hours->publish_state(this->deviceStatus.runtimeHours);
 
         this->deviceStatusLastUpdated += 1;
         this->device_status_last_updated->publish_state(this->deviceStatusLastUpdated);
@@ -390,7 +399,12 @@ namespace devicestate {
             packetHex += textBuf;
         }
         
-        ESP_LOGV(TAG, "PKT: [%s] %s", packetDirection, packetHex.c_str());
+        if (strcmp(packetDirection, "packetRecv") == 0) {
+            const char* packetName = HeatPump::lookupRecvPacketName(packet);
+            ESP_LOGV(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
+        } else {
+            ESP_LOGV(TAG, "PKT: [%s] %s", packetDirection, packetHex.c_str());
+        }
     }
 
     bool DeviceStateManager::isInitialized() {

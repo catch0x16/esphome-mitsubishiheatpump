@@ -765,6 +765,9 @@ void MitsubishiHeatPump::setup() {
         this->device_status_operating,
         this->device_status_current_temperature,
         this->device_status_compressor_frequency,
+        this->device_status_input_power,
+        this->device_status_kwh,
+        this->device_status_runtime_hours,
         this->device_status_last_updated,
         this->pid_set_point_correction
     );
