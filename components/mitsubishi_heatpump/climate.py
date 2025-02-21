@@ -136,12 +136,16 @@ DEVICE_STATUS_INPUT_POWER_SCHEMA = sensor.sensor_schema(sensor.Sensor,
 
 DEVICE_STATUS_KWH_SCHEMA = sensor.sensor_schema(sensor.Sensor,
     entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
-    unit_of_measurement="kWh"
+    unit_of_measurement="kWh",
+    device_class='energy',
+    state_class="total_increasing"
 )
 
 DEVICE_STATUS_RUNTIME_HOURS_SCHEMA = sensor.sensor_schema(sensor.Sensor,
     entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
-    unit_of_measurement="h"
+    unit_of_measurement="h",
+    device_class='duration',
+    state_class="total_increasing"
 )
 
 DEVICE_STATUS_LAST_UPDATED_SCHEMA = sensor.sensor_schema(sensor.Sensor,
