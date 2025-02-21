@@ -286,8 +286,6 @@ namespace devicestate {
         this->pid_set_point_correction = pid_set_point_correction;
 
         this->disconnected = 0;
-        this->deviceStateLastUpdated = 0;
-        this->deviceStatusLastUpdated = 0;
 
         ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
         this->hp = new HeatPump();
