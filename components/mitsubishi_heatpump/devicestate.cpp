@@ -376,12 +376,6 @@ namespace devicestate {
         this->device_status_current_temperature->publish_state(this->deviceStatus.currentTemperature);
         this->device_status_compressor_frequency->publish_state(this->deviceStatus.compressorFrequency);
 
-        ESP_LOGI("hpStatusChanged", "[compressorFrequency] %f", this->deviceStatus.compressorFrequency);
-        ESP_LOGI("hpStatusChanged", "[inputPower] %f", this->deviceStatus.inputPower);
-        ESP_LOGI("hpStatusChanged", "[kWh] %f", this->deviceStatus.kWh);
-        ESP_LOGI("hpStatusChanged", "[runtimeHours] %f", this->deviceStatus.runtimeHours);
-
-
         this->deviceStatusLastUpdated += 1;
         this->device_status_last_updated->publish_state(this->deviceStatusLastUpdated);
     }
@@ -711,7 +705,6 @@ namespace devicestate {
         ESP_LOGI(TAG, "  active: %s", TRUEFALSE(this->deviceState.active));
         ESP_LOGI(TAG, "  mode: %s", devicestate::deviceModeToString(this->deviceState.mode));
         ESP_LOGI(TAG, "  targetTemperature: %f", this->deviceState.targetTemperature);
-        
 
         /*
         struct DeviceStatus {
@@ -724,7 +717,10 @@ namespace devicestate {
         ESP_LOGI(TAG, "  roomTemperature: %.2f", this->deviceStatus.currentTemperature);
         ESP_LOGI(TAG, "  operating: %s", TRUEFALSE(this->deviceStatus.operating));
         ESP_LOGI(TAG, "  compressorFrequency: %f", this->deviceStatus.compressorFrequency);
-        
+        ESP_LOGI(TAG, "  inputPower: %f", this->deviceStatus.inputPower);
+        ESP_LOGI(TAG, "  kWh: %f", this->deviceStatus.kWh);
+        ESP_LOGI(TAG, "  runtimeHours: %f", this->deviceStatus.runtimeHours);
+
         ESP_LOGI(TAG, "Heatpump Settings");
         heatpumpSettings currentSettings = this->hp->getSettings();
         this->log_heatpump_settings(currentSettings);
