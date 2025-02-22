@@ -121,7 +121,9 @@ DEVICE_STATUS_CURRENT_TEMPERATURE_SCHEMA = sensor.sensor_schema(sensor.Sensor,
 )
 
 DEVICE_STATUS_COMPRESSOR_FREQUENCY_SCHEMA = sensor.sensor_schema(sensor.Sensor,
-    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
+    unit_of_measurement="Hz",
+    state_class="measurement"
 )
 
 DEVICE_STATUS_INPUT_POWER_SCHEMA = sensor.sensor_schema(sensor.Sensor,

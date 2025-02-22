@@ -50,7 +50,9 @@ MitsubishiHeatPump::MitsubishiHeatPump(
     device_status_current_temperature->set_unit_of_measurement("°C");
     device_status_current_temperature->set_accuracy_decimals(1);
     device_status_compressor_frequency = new esphome::sensor::Sensor();
+    device_status_compressor_frequency->set_unit_of_measurement("Hz");
     device_status_compressor_frequency->set_device_class("frequency");
+    device_status_compressor_frequency->set_accuracy_decimals(1);
     device_status_input_power = new esphome::sensor::Sensor();
     device_status_kwh = new esphome::sensor::Sensor();
     device_status_kwh->set_unit_of_measurement("kWh");
