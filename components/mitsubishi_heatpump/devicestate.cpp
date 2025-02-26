@@ -298,8 +298,8 @@ namespace devicestate {
             (this->maxTemp + this->minTemp) / 2.0, // Set target to mid point of min/max
             this->minTemp,
             this->maxTemp,
-            this->maxAdjustmentOver * 2.0, // We are allowing an over-adjustment at pidcontroller and offsetting later
-            this->maxAdjustmentUnder
+            this->maxAdjustmentOver + this->hysterisisUnderOff,
+            this->maxAdjustmentUnder -  - this->hysterisisUnderOff
         );
 
         #ifdef USE_CALLBACKS
@@ -791,7 +791,7 @@ namespace devicestate {
         this->pidController->setTarget(this->targetTemperature);
     }
 
-    void DeviceStateManager::runPIDControllerWorkflow(const float currentTemperature) {
+    void DeviceStateManager::runPIDControllerWorkflow(const float currentTemperature, const float correctionOffset) {
         const DeviceState deviceState = this->getDeviceState();
 
         this->ensurePIDTarget();
@@ -800,21 +800,6 @@ namespace devicestate {
         const float setPointCorrection = this->pidController->update(currentTemperature);
         if (!devicestate::same_float(setPointCorrection, this->correctedTargetTemperature)) {
             ESP_LOGW(TAG, "Adjusting setpoint: oldCorrection={%f} newCorrection={%f} current={%f} deviceTarget={%f} componentTarget={%f}", this->correctedTargetTemperature, setPointCorrection, currentTemperature, deviceState.targetTemperature, this->targetTemperature);
-            
-            int correctionOffset = 0;
-            const DeviceState deviceState = this->getDeviceState();
-            switch(deviceState.mode) {
-                case devicestate::DeviceMode::DeviceMode_Heat: {
-                    // Heating: 70 - 2.0 = 68.0;
-                    correctionOffset = this->maxAdjustmentUnder;
-                    break;
-                }
-                case devicestate::DeviceMode::DeviceMode_Cool: {
-                    // Cooling: 70 + 2.0 = 72.0;
-                    correctionOffset = -this->maxAdjustmentUnder;
-                    break;
-                }
-            }
 
             this->internalSetCorrectedTemperature(setPointCorrection - correctionOffset);
             if (!this->commit()) {
@@ -839,6 +824,25 @@ namespace devicestate {
         this->lastRunWorkflows = now;
         */
 
+        float correctionOffset = 0.0;
+        const DeviceState deviceState = this->getDeviceState();
+        switch(deviceState.mode) {
+            case devicestate::DeviceMode::DeviceMode_Heat: {
+                // Heating: 70 - 0.25 = 68.0;
+                correctionOffset = this->hysterisisUnderOff;
+                break;
+            }
+            case devicestate::DeviceMode::DeviceMode_Cool: {
+                // Cooling: 70 + 0.25 = 72.0;
+                correctionOffset = -this->hysterisisUnderOff;
+                break;
+            }
+            default: {
+                // No need to run workflows unless heating or cooling.
+                return;
+            }
+        }
+
         const DeviceState deviceState = this->getDeviceState();
         this->device_state_active->publish_state(deviceState.active);
         ESP_LOGD(TAG, "Device active on workflow: deviceState.active={%s} internalPowerOn={%s}", YESNO(deviceState.active), YESNO(this->isInternalPowerOn()));
@@ -849,6 +853,6 @@ namespace devicestate {
         }
 
         this->runHysteresisWorkflow(currentTemperature);
-        this->runPIDControllerWorkflow(currentTemperature);
+        this->runPIDControllerWorkflow(currentTemperature, correctionOffset);
     }
 }
