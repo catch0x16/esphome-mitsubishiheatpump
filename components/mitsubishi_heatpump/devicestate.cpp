@@ -824,8 +824,16 @@ namespace devicestate {
         this->lastRunWorkflows = now;
         */
 
-        float correctionOffset = 0.0;
         const DeviceState deviceState = this->getDeviceState();
+        this->device_state_active->publish_state(deviceState.active);
+        ESP_LOGD(TAG, "Device active on workflow: deviceState.active={%s} internalPowerOn={%s}", YESNO(deviceState.active), YESNO(this->isInternalPowerOn()));
+        if (deviceState.active != this->isInternalPowerOn()) {
+            // It's possible the state change from on to off (or vice versa) has
+            // not taken effect yet.  Log the details and continue.
+            this->dump_state();
+        }
+
+        float correctionOffset = 0.0;
         switch(deviceState.mode) {
             case devicestate::DeviceMode::DeviceMode_Heat: {
                 // Heating: 70 - 0.25 = 68.0;
@@ -841,15 +849,6 @@ namespace devicestate {
                 // No need to run workflows unless heating or cooling.
                 return;
             }
-        }
-
-        const DeviceState deviceState = this->getDeviceState();
-        this->device_state_active->publish_state(deviceState.active);
-        ESP_LOGD(TAG, "Device active on workflow: deviceState.active={%s} internalPowerOn={%s}", YESNO(deviceState.active), YESNO(this->isInternalPowerOn()));
-        if (deviceState.active != this->isInternalPowerOn()) {
-            // It's possible the state change from on to off (or vice versa) has
-            // not taken effect yet.  Log the details and continue.
-            this->dump_state();
         }
 
         this->runHysteresisWorkflow(currentTemperature);
