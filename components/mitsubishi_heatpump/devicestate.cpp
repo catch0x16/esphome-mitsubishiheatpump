@@ -298,7 +298,7 @@ namespace devicestate {
             (this->maxTemp + this->minTemp) / 2.0, // Set target to mid point of min/max
             this->minTemp,
             this->maxTemp,
-            this->maxAdjustmentOver,
+            this->maxAdjustmentOver * 2.0 // We are allowing an over-adjustment at pidcontroller and offsetting later,
             this->maxAdjustmentUnder
         );
 
@@ -805,11 +805,13 @@ namespace devicestate {
             const DeviceState deviceState = this->getDeviceState();
             switch(deviceState.mode) {
                 case devicestate::DeviceMode::DeviceMode_Heat: {
-                    correctionOffset = this->hysterisisUnderOff;
+                    // Heating: 70 - 2.0 = 68.0;
+                    correctionOffset = this->maxAdjustmentUnder;
                     break;
                 }
                 case devicestate::DeviceMode::DeviceMode_Cool: {
-                    correctionOffset = -this->hysterisisUnderOff;
+                    // Cooling: 70 + 2.0 = 72.0;
+                    correctionOffset = -this->maxAdjustmentUnder;
                     break;
                 }
             }
