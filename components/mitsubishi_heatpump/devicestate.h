@@ -158,7 +158,7 @@ namespace devicestate {
       void ensurePIDTarget();
 
       void runHysteresisWorkflow(const float currentTemperature);
-      void runPIDControllerWorkflow(const float currentTemperature);
+      void runPIDControllerWorkflow(const float currentTemperature, const float correctionOffset);
 
       void dump_state();
       void log_heatpump_settings(heatpumpSettings currentSettings);
