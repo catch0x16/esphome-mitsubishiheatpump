@@ -737,6 +737,15 @@ namespace devicestate {
         this->log_heatpump_settings(currentSettings);
     }
 
+    void DeviceStateManager::ensurePIDTarget() {
+         if (devicestate::same_float(this->targetTemperature, this->pidController->getTarget(), 0.01f)) {
+            return;
+        }
+
+        ESP_LOGI(TAG, "PID target temp changing from %f to %f", this->pidController->getTarget(), this->targetTemperature);
+        this->pidController->setTarget(this->targetTemperature);
+    }
+
     void DeviceStateManager::runHysteresisWorkflow(const float currentTemperature) {
         const DeviceState deviceState = this->getDeviceState();
         switch(deviceState.mode) {
@@ -780,15 +789,6 @@ namespace devicestate {
                 ESP_LOGI(TAG, "Doing nothing in current mode (%s): current={%f} targetTemperature={%f}", deviceModeToString(deviceState.mode), currentTemperature, deviceState.targetTemperature);
             }
         }
-    }
-
-    void DeviceStateManager::ensurePIDTarget() {
-         if (devicestate::same_float(this->targetTemperature, this->pidController->getTarget(), 0.01f)) {
-            return;
-        }
-
-        ESP_LOGI(TAG, "PID target temp changing from %f to %f", this->pidController->getTarget(), this->targetTemperature);
-        this->pidController->setTarget(this->targetTemperature);
     }
 
     void DeviceStateManager::runPIDControllerWorkflow(const float currentTemperature, const float correctionOffset) {
@@ -845,10 +845,6 @@ namespace devicestate {
                 // Cooling: 70 + 0.25 = 72.0;
                 correctionOffset = -this->hysterisisUnderOff;
                 break;
-            }
-            default: {
-                // No need to run workflows unless heating or cooling.
-                return;
             }
         }
 
