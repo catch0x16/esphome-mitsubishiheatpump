@@ -798,15 +798,16 @@ namespace devicestate {
         ESP_LOGI(TAG, "PIDController update current: %.2f", currentTemperature);
         
         const float setPointCorrection = this->pidController->update(currentTemperature);
-        if (!devicestate::same_float(setPointCorrection, this->correctedTargetTemperature)) {
-            ESP_LOGW(TAG, "Adjusting setpoint: oldCorrection={%f} newCorrection={%f} current={%f} deviceTarget={%f} componentTarget={%f}", this->correctedTargetTemperature, setPointCorrection, currentTemperature, deviceState.targetTemperature, this->targetTemperature);
+        const float setPointCorrectionOffset = setPointCorrection - correctionOffset;
+        if (!devicestate::same_float(setPointCorrectionOffset, this->correctedTargetTemperature)) {
+            ESP_LOGW(TAG, "Adjusting setpoint: oldCorrection={%f} newCorrection={%f} current={%f} deviceTarget={%f} componentTarget={%f}", this->correctedTargetTemperature, setPointCorrectionOffset, currentTemperature, deviceState.targetTemperature, this->targetTemperature);
 
-            this->internalSetCorrectedTemperature(setPointCorrection - correctionOffset);
+            this->internalSetCorrectedTemperature(setPointCorrectionOffset);
             if (!this->commit()) {
                 ESP_LOGW(TAG, "Failed to update device state");
             }
         } else {
-            ESP_LOGW(TAG, "Skipping setpoint adjustment: oldCorrection={%f} newCorrection={%f} current={%f} deviceTarget={%f} componentTarget={%f}", this->correctedTargetTemperature, setPointCorrection, currentTemperature, deviceState.targetTemperature, this->targetTemperature);
+            ESP_LOGW(TAG, "Skipping setpoint adjustment: oldCorrection={%f} newCorrection={%f} current={%f} deviceTarget={%f} componentTarget={%f}", this->correctedTargetTemperature, setPointCorrectionOffset, currentTemperature, deviceState.targetTemperature, this->targetTemperature);
         }
 
         ESP_LOGI(TAG, "PIDController set point target: %.2f", this->targetTemperature);
