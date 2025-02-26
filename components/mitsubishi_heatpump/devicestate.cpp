@@ -801,7 +801,20 @@ namespace devicestate {
         if (!devicestate::same_float(setPointCorrection, this->correctedTargetTemperature)) {
             ESP_LOGW(TAG, "Adjusting setpoint: oldCorrection={%f} newCorrection={%f} current={%f} deviceTarget={%f} componentTarget={%f}", this->correctedTargetTemperature, setPointCorrection, currentTemperature, deviceState.targetTemperature, this->targetTemperature);
             
-            this->internalSetCorrectedTemperature(setPointCorrection);
+            int correctionOffset = 0;
+            const DeviceState deviceState = this->getDeviceState();
+            switch(deviceState.mode) {
+                case devicestate::DeviceMode::DeviceMode_Heat: {
+                    correctionOffset = this->hysterisisUnderOff;
+                    break;
+                }
+                case devicestate::DeviceMode::DeviceMode_Cool: {
+                    correctionOffset = -this->hysterisisUnderOff;
+                    break;
+                }
+            }
+
+            this->internalSetCorrectedTemperature(setPointCorrection - correctionOffset);
             if (!this->commit()) {
                 ESP_LOGW(TAG, "Failed to update device state");
             }
