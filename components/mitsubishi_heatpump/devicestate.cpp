@@ -298,7 +298,7 @@ namespace devicestate {
             (this->maxTemp + this->minTemp) / 2.0, // Set target to mid point of min/max
             this->minTemp,
             this->maxTemp,
-            this->maxAdjustmentOver * 2.0 // We are allowing an over-adjustment at pidcontroller and offsetting later,
+            this->maxAdjustmentOver * 2.0, // We are allowing an over-adjustment at pidcontroller and offsetting later
             this->maxAdjustmentUnder
         );
 
