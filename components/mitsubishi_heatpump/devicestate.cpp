@@ -252,6 +252,7 @@ namespace devicestate {
       const float maxAdjustmentOver,
       const float hysterisisUnderOff,
       const float hysterisisOverOn,
+      const float offsetAdjustment,
       esphome::binary_sensor::BinarySensor* internal_power_on,
       esphome::binary_sensor::BinarySensor* device_state_connected,
       esphome::binary_sensor::BinarySensor* device_state_active,
@@ -272,6 +273,7 @@ namespace devicestate {
         this->maxAdjustmentOver = maxAdjustmentOver;
         this->hysterisisUnderOff = hysterisisUnderOff;
         this->hysterisisOverOn = hysterisisOverOn;
+        this->offsetAdjustment = offsetAdjustment;
 
         this->internal_power_on = internal_power_on;
         this->device_state_connected = device_state_connected;
@@ -298,8 +300,8 @@ namespace devicestate {
             (this->maxTemp + this->minTemp) / 2.0, // Set target to mid point of min/max
             this->minTemp,
             this->maxTemp,
-            this->maxAdjustmentOver + this->hysterisisUnderOff,
-            this->maxAdjustmentUnder -  - this->hysterisisUnderOff
+            this->maxAdjustmentOver + this->offsetAdjustment,
+            this->maxAdjustmentUnder -  - this->offsetAdjustment
         );
 
         #ifdef USE_CALLBACKS
@@ -750,17 +752,17 @@ namespace devicestate {
         const DeviceState deviceState = this->getDeviceState();
         switch(deviceState.mode) {
             case devicestate::DeviceMode::DeviceMode_Heat: {
-                const float delta = currentTemperature - deviceState.targetTemperature;
+                const float delta = currentTemperature - this->targetTemperature;
                 if (!deviceState.active) {
                     if (-delta > this->hysterisisOverOn) {
-                        ESP_LOGI(TAG, "Turn on while heating: delta={%f} current={%f} targetTemperature={%f}", delta, currentTemperature, deviceState.targetTemperature);
+                        ESP_LOGI(TAG, "Turn on while heating: delta={%f} current={%f} targetTemperature={%f}", delta, currentTemperature, this->targetTemperature);
                         this->internalTurnOn();
                     }
                     return;
                 }
 
                 if (delta > this->hysterisisUnderOff) {
-                    ESP_LOGI(TAG, "Turn off while heating: delta={%f} current={%f} targetTemperature={%f}", delta, currentTemperature, deviceState.targetTemperature);
+                    ESP_LOGI(TAG, "Turn off while heating: delta={%f} current={%f} targetTemperature={%f}", delta, currentTemperature, this->targetTemperature);
                     this->internalTurnOff();
                     return;
                 }
@@ -768,7 +770,7 @@ namespace devicestate {
                 break;
             }
             case devicestate::DeviceMode::DeviceMode_Cool: {
-                const float delta = deviceState.targetTemperature - currentTemperature;
+                const float delta = this->targetTemperature - currentTemperature;
                 if (!deviceState.active) {
                     if (-delta > this->hysterisisOverOn) {
                         ESP_LOGI(TAG, "Turn on while cooling: delta={%f} current={%f} targetTemperature={%f}", delta, currentTemperature, deviceState.targetTemperature);
@@ -791,13 +793,32 @@ namespace devicestate {
         }
     }
 
-    void DeviceStateManager::runPIDControllerWorkflow(const float currentTemperature, const float correctionOffset) {
+    float DeviceStateManager::getOffsetCorrection() {
+        float correctionOffset = 0.0;
+        const DeviceState deviceState = this->getDeviceState();
+        switch(deviceState.mode) {
+            case devicestate::DeviceMode::DeviceMode_Heat: {
+                // Heating: 70 - 0.25 = 68.0;
+                correctionOffset = this->offsetAdjustment;
+                break;
+            }
+            case devicestate::DeviceMode::DeviceMode_Cool: {
+                // Cooling: 70 + 0.25 = 72.0;
+                correctionOffset = -this->offsetAdjustment;
+                break;
+            }
+        }
+        return correctionOffset;
+    }
+
+    void DeviceStateManager::runPIDControllerWorkflow(const float currentTemperature) {
         const DeviceState deviceState = this->getDeviceState();
 
         this->ensurePIDTarget();
         ESP_LOGI(TAG, "PIDController update current: %.2f", currentTemperature);
         
         const float setPointCorrection = this->pidController->update(currentTemperature);
+        const float correctionOffset = this->getOffsetCorrection();
         const float setPointCorrectionOffset = setPointCorrection - correctionOffset;
         if (!devicestate::same_float(setPointCorrectionOffset, this->correctedTargetTemperature)) {
             ESP_LOGW(TAG, "Adjusting setpoint: oldCorrection={%f} newCorrection={%f} current={%f} deviceTarget={%f} componentTarget={%f}", this->correctedTargetTemperature, setPointCorrectionOffset, currentTemperature, deviceState.targetTemperature, this->targetTemperature);
@@ -834,21 +855,7 @@ namespace devicestate {
             this->dump_state();
         }
 
-        float correctionOffset = 0.0;
-        switch(deviceState.mode) {
-            case devicestate::DeviceMode::DeviceMode_Heat: {
-                // Heating: 70 - 0.25 = 68.0;
-                correctionOffset = this->hysterisisUnderOff;
-                break;
-            }
-            case devicestate::DeviceMode::DeviceMode_Cool: {
-                // Cooling: 70 + 0.25 = 72.0;
-                correctionOffset = -this->hysterisisUnderOff;
-                break;
-            }
-        }
-
         this->runHysteresisWorkflow(currentTemperature);
-        this->runPIDControllerWorkflow(currentTemperature, correctionOffset);
+        this->runPIDControllerWorkflow(currentTemperature);
     }
 }

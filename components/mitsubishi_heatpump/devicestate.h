@@ -111,6 +111,7 @@ namespace devicestate {
       float maxAdjustmentOver;
       float hysterisisUnderOff;
       float hysterisisOverOn;
+      float offsetAdjustment;
 
       int disconnected;
 
@@ -154,11 +155,12 @@ namespace devicestate {
       bool internalTurnOn();
       bool internalTurnOff();
       void internalSetTargetTemperature(const float value);
+      float getOffsetCorrection();
       void internalSetCorrectedTemperature(const float value);
       void ensurePIDTarget();
 
       void runHysteresisWorkflow(const float currentTemperature);
-      void runPIDControllerWorkflow(const float currentTemperature, const float correctionOffset);
+      void runPIDControllerWorkflow(const float currentTemperature);
 
       void dump_state();
       void log_heatpump_settings(heatpumpSettings currentSettings);
@@ -177,6 +179,7 @@ namespace devicestate {
         const float maxAdjustmentOver,
         const float hysterisisUnderOff,
         const float hysterisisOverOn,
+        const float offsetAdjustment,
         esphome::binary_sensor::BinarySensor* internal_power_on,
         esphome::binary_sensor::BinarySensor* device_state_connected,
         esphome::binary_sensor::BinarySensor* device_state_active,

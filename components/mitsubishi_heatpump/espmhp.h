@@ -92,7 +92,8 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         void set_max_adjustment_under(float maxAdjustmentUnder) { this->maxAdjustmentUnder_ = maxAdjustmentUnder; }
         void set_max_adjustment_over(float maxAdjustmentOver) { this->maxAdjustmentOver_ = maxAdjustmentOver; }
         void set_hysterisis_under_off(float hysterisisUnderOff) { this->hysterisisUnderOff_ = hysterisisUnderOff; }
-        void set_hysteisis_over_on(float hysterisisOverOn) { this->hysterisisOverOn_ = hysterisisOverOn; }
+        void set_hysterisis_over_on(float hysterisisOverOn) { this->hysterisisOverOn_ = hysterisisOverOn; }
+        void set_offset_adjustment(float offsetAdjustment) { this->offsetAdjustment_ = offsetAdjustment; }
 
         // handle a change in device;
         void updateDevice();
@@ -210,6 +211,7 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         float maxAdjustmentOver_;
         float hysterisisUnderOff_;
         float hysterisisOverOn_;
+        float offsetAdjustment_;
 
         bool isInitialized = false;
 

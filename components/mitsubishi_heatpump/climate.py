@@ -43,6 +43,7 @@ CONF_MAX_ADJUSTMENT_UNDER = "maxAdjustmentUnder"
 CONF_MAX_ADJUSTMENT_OVER = "maxAdjustmentOver"
 CONF_HYSTERISIS_UNDER_OFF = "hysterisisUnderOff"
 CONF_HYSTERISIS_OVER_ON = "hysterisisOverOn"
+CONF_OFFSET_ADJUSTMENT = "offsetAdjustment"
 
 CONF_HORIZONTAL_SWING_SELECT = "horizontal_vane_select"
 CONF_VERTICAL_SWING_SELECT = "vertical_vane_select"
@@ -255,6 +256,7 @@ CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
                 cv.Optional(CONF_MAX_ADJUSTMENT_OVER, default=2.0): cv.float_,
                 cv.Optional(CONF_HYSTERISIS_UNDER_OFF, default=0.25): cv.float_,
                 cv.Optional(CONF_HYSTERISIS_OVER_ON, default=0.25): cv.float_,
+                cv.Optional(CONF_OFFSET_ADJUSTMENT, default=0.00): cv.float_,
             }
         ),
 
@@ -345,7 +347,8 @@ def to_code(config):
     cg.add(var.set_max_adjustment_under(params[CONF_MAX_ADJUSTMENT_UNDER]))
     cg.add(var.set_max_adjustment_over(params[CONF_MAX_ADJUSTMENT_OVER]))
     cg.add(var.set_hysterisis_under_off(params[CONF_HYSTERISIS_UNDER_OFF]))
-    cg.add(var.set_hysteisis_over_on(params[CONF_HYSTERISIS_OVER_ON]))
+    cg.add(var.set_hysterisis_over_on(params[CONF_HYSTERISIS_OVER_ON]))
+    cg.add(var.set_offset_adjustment(params[CONF_OFFSET_ADJUSTMENT]))
 
     cg.add_library(
         name="HeatPump",

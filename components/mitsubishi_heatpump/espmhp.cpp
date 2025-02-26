@@ -762,6 +762,7 @@ void MitsubishiHeatPump::setup() {
         this->maxAdjustmentOver_,
         this->hysterisisUnderOff_,
         this->hysterisisOverOn_,
+        this->offsetAdjustment_,
         this->internal_power_on,
         this->device_state_connected,
         this->device_state_active,
