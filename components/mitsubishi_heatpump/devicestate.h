@@ -10,9 +10,16 @@
 
 #include <chrono>
 
-#include "pidcontroller.h"
-
 namespace devicestate {
+
+  class DeviceStateManager;
+
+  class WorkflowStep {
+    public:
+        WorkflowStep(){}
+    
+        virtual void run(const float currentTemperature, DeviceStateManager* deviceManager) = 0;
+  };
 
   enum DeviceMode {
     DeviceMode_Heat,
@@ -104,14 +111,9 @@ namespace devicestate {
   class DeviceStateManager {
     private:
       ConnectionMetadata connectionMetadata;
+
       float minTemp;
       float maxTemp;
-
-      float maxAdjustmentUnder;
-      float maxAdjustmentOver;
-      float hysterisisUnderOff;
-      float hysterisisOverOn;
-      float offsetAdjustment;
 
       int disconnected;
 
@@ -125,12 +127,9 @@ namespace devicestate {
       esphome::sensor::Sensor* device_status_input_power;
       esphome::sensor::Sensor* device_status_kwh;
       esphome::sensor::Sensor* device_status_runtime_hours;
-      esphome::sensor::Sensor* pid_set_point_correction;
 
       // HeatPump object using the underlying Arduino library.
       HeatPump* hp;
-
-      //uint32_t lastRunWorkflows = esphome::millis();
 
       uint32_t lastInternalPowerUpdate = esphome::millis();
       bool internalPowerOn;
@@ -144,23 +143,14 @@ namespace devicestate {
       bool statusInitialized;
       DeviceStatus deviceStatus;
 
-      PIDController *pidController;
-
       bool connect();
 
       void hpSettingsChanged();
       void hpStatusChanged(heatpumpStatus currentStatus);
 
       bool shouldThrottle(uint32_t end);
-      bool internalTurnOn();
-      bool internalTurnOff();
-      void internalSetTargetTemperature(const float value);
-      float getOffsetCorrection();
-      void internalSetCorrectedTemperature(const float value);
-      void ensurePIDTarget();
 
-      void runHysteresisWorkflow(const float currentTemperature);
-      void runPIDControllerWorkflow(const float currentTemperature);
+      void internalSetTargetTemperature(const float value);
 
       void dump_state();
       void log_heatpump_settings(heatpumpSettings currentSettings);
@@ -169,17 +159,8 @@ namespace devicestate {
     public:
       DeviceStateManager(
         ConnectionMetadata connectionMetadata,
-        const uint32_t updateInterval,
         const float minTemp,
         const float maxTemp,
-        const float p,
-        const float i,
-        const float d,
-        const float maxAdjustmentUnder,
-        const float maxAdjustmentOver,
-        const float hysterisisUnderOff,
-        const float hysterisisOverOn,
-        const float offsetAdjustment,
         esphome::binary_sensor::BinarySensor* internal_power_on,
         esphome::binary_sensor::BinarySensor* device_state_connected,
         esphome::binary_sensor::BinarySensor* device_state_active,
@@ -189,8 +170,7 @@ namespace devicestate {
         esphome::sensor::Sensor* device_status_compressor_frequency,
         esphome::sensor::Sensor* device_status_input_power,
         esphome::sensor::Sensor* device_status_kwh,
-        esphome::sensor::Sensor* device_status_runtime_hours,
-        esphome::sensor::Sensor* pid_set_point_correction
+        esphome::sensor::Sensor* device_status_runtime_hours
       );
 
       DeviceStatus getDeviceStatus();
@@ -220,14 +200,18 @@ namespace devicestate {
       void turnOn(DeviceMode mode);
       void turnOff();
 
+      bool internalTurnOn();
+      bool internalTurnOff();
+      void internalSetCorrectedTemperature(const float value);
+
       float getCurrentTemperature();
 
       float getTargetTemperature();
       void setTargetTemperature(const float target);
 
-      void setRemoteTemperature(const float current);
+      float getCorrectedTargetTemperature();
 
-      void runWorkflows(const float currentTemperature);
+      void setRemoteTemperature(const float current);
   };
 }
 #endif

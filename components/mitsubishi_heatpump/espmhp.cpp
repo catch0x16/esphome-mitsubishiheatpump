@@ -24,6 +24,12 @@ using namespace esphome;
 #include "devicestate.h"
 using namespace devicestate;
 
+#include "hysteresis_workflowstep.h"
+using namespace workflow::hysteresis;
+
+#include "pid_workflowstep.h"
+using namespace workflow::pid;
+
 #include "floats.h"
 
 static const char* TAG = "MitsubishiHeatPump"; // Logging tag
@@ -749,20 +755,29 @@ void MitsubishiHeatPump::setup() {
         this->max_temp = this->visual_max_temperature_override_.value();
     }
 
-    ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
-    this->dsm = new devicestate::DeviceStateManager(
-        connectionMetadata,
+    this->hysteresisWorkflowStep = new HysteresisWorkflowStep(
+        this->hysterisisOverOn_,
+        this->hysterisisUnderOff_
+    );
+
+    this->pidWorkflowStep = new PidWorkflowStep(
         this->get_update_interval(),
         this->min_temp,
         this->max_temp,
         this->kp_,
         this->ki_,
         this->kd_,
-        this->maxAdjustmentUnder_,
         this->maxAdjustmentOver_,
-        this->hysterisisUnderOff_,
-        this->hysterisisOverOn_,
+        this->maxAdjustmentUnder_,
         this->offsetAdjustment_,
+        this->pid_set_point_correction
+    );
+
+    ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
+    this->dsm = new devicestate::DeviceStateManager(
+        connectionMetadata,
+        this->min_temp,
+        this->max_temp,
         this->internal_power_on,
         this->device_state_connected,
         this->device_state_active,
@@ -772,8 +787,7 @@ void MitsubishiHeatPump::setup() {
         this->device_status_compressor_frequency,
         this->device_status_input_power,
         this->device_status_kwh,
-        this->device_status_runtime_hours,
-        this->pid_set_point_correction
+        this->device_status_runtime_hours
     );
 
     ESP_LOGCONFIG(TAG, "Calling dsm->initialize()");
@@ -865,5 +879,6 @@ void MitsubishiHeatPump::run_workflows() {
         return;
     }
 
-    this->dsm->runWorkflows(this->current_temperature);
+    this->hysteresisWorkflowStep->run(this->current_temperature, this->dsm);
+    this->pidWorkflowStep->run(this->current_temperature, this->dsm);
 }

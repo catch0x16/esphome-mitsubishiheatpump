@@ -26,6 +26,7 @@
 #include "pidcontroller.h"
 
 #include "devicestate.h"
+using namespace devicestate;
 
 #include "HeatPump.h"
 
@@ -145,6 +146,9 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
     protected:
         // HeatPump object using the underlying Arduino library.
         devicestate::DeviceStateManager* dsm;
+
+        WorkflowStep* hysteresisWorkflowStep;
+        WorkflowStep* pidWorkflowStep;
 
         // The ClimateTraits supported by this HeatPump.
         esphome::climate::ClimateTraits traits_;
