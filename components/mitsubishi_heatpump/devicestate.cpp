@@ -642,6 +642,10 @@ namespace devicestate {
 
     void DeviceStateManager::internalSetCorrectedTemperature(const float value) {
         const float adjustedCorrectedTemperature = devicestate::clamp(value, this->minTemp, this->maxTemp);
+        if (devicestate::same_float(this->correctedTargetTemperature, value, 0.01f)) {
+            return;
+        }
+
         ESP_LOGI(TAG, "Corrected target temp changing from %f to %f", this->correctedTargetTemperature, adjustedCorrectedTemperature);
         this->correctedTargetTemperature = adjustedCorrectedTemperature;
         this->hp->setTemperature(this->correctedTargetTemperature);
