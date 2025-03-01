@@ -71,6 +71,11 @@ namespace workflow {
             const bool direction = this->getOffsetDirection(&deviceState);
 
             this->ensurePIDTarget(deviceManager, direction);
+
+            if (!deviceManager->isInternalPowerOn()) {
+                ESP_LOGI(TAG, "Skipping PidWorkflowStep run due to device internal off.");
+                return;
+            }
             
             const float setPointCorrection = this->pidController->update(currentTemperature);
             const float correctionOffset = direction ? this->offsetAdjustment : -this->offsetAdjustment;

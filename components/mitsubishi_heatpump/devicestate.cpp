@@ -664,7 +664,7 @@ namespace devicestate {
         this->internalSetTargetTemperature(adjustedTargetTemperature);
         
         ESP_LOGI(TAG, "Device target temp changing from %f to %f", this->targetTemperature, adjustedTargetTemperature);
-        this->hp->setTemperature(this->targetTemperature);
+        this->hp->setTemperature(this->correctedTargetTemperature);
     }
 
     void DeviceStateManager::setRemoteTemperature(const float current) {

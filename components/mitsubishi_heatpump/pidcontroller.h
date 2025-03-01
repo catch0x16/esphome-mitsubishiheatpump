@@ -1,5 +1,3 @@
-// p, i, d, sampleTime, target, outputMin, outputMax, proportionalOnMeasurement = false
-
 #ifndef PIDC_H
 #define PIDC_H
 
