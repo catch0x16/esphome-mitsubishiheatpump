@@ -447,7 +447,7 @@ void MitsubishiHeatPump::updateDevice() {
     if (devicestate::deviceStateEqual(this->lastDeviceState, deviceState) &&
             devicestate::deviceStatusEqual(this->lastDeviceStatus, deviceStatus) &&
             !this->remote_temperature_updated) {
-        ESP_LOGI(TAG, "Skipping updateDevice due to no change");
+        ESP_LOGD(TAG, "Skipping updateDevice due to no change");
         return;
     }
 
