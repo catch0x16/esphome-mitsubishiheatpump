@@ -21,9 +21,10 @@ namespace workflow {
             const float d,
             const float maxAdjustmentUnder,
             const float maxAdjustmentOver,
+            const float offsetAdjustment,
             esphome::sensor::Sensor* pid_set_point_correction
         ) {
-            this->maxAdjustmentUnder = maxAdjustmentUnder;
+            this->offsetAdjustment = offsetAdjustment;
             this->pid_set_point_correction = pid_set_point_correction;
 
             this->pidController = new PIDController(
@@ -72,7 +73,7 @@ namespace workflow {
             this->ensurePIDTarget(deviceManager, direction);
             
             const float setPointCorrection = this->pidController->update(currentTemperature);
-            const float correctionOffset = direction ? this->maxAdjustmentUnder : -this->maxAdjustmentUnder;
+            const float correctionOffset = direction ? this->offsetAdjustment : -this->offsetAdjustment;
             const float setPointCorrectionOffset = setPointCorrection - correctionOffset;
             
             const float oldCorrectedTargetTemperature = deviceManager->getCorrectedTargetTemperature();
