@@ -62,7 +62,7 @@ namespace workflow {
                     break;
                 }
                 default: {
-                    ESP_LOGI(workflow::hysteresis::TAG, "Doing nothing in current mode (%s): current={%f} targetTemperature={%f}", 
+                    ESP_LOGV(workflow::hysteresis::TAG, "Doing nothing in current mode (%s): current={%f} targetTemperature={%f}", 
                         devicestate::deviceModeToString(deviceState.mode), currentTemperature, targetTemperature);
                     result.shouldRun = false;
                 }

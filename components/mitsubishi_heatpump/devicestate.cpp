@@ -347,6 +347,7 @@ namespace devicestate {
 
         const DeviceStatus newDeviceStatus = devicestate::toDeviceStatus(&currentStatus);
         if (devicestate::deviceStatusEqual(this->deviceStatus, newDeviceStatus)) {
+            ESP_LOGW(TAG, "Skipping status change as device status unchanged.");
             return;
         }
 
@@ -372,10 +373,10 @@ namespace devicestate {
         
         if (strcmp(packetDirection, "packetRecv") == 0) {
             const char* packetName = HeatPump::lookupRecvPacketName(packet);
-            ESP_LOGV(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
+            ESP_LOGI(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
         } else {
             const char* packetName = HeatPump::lookupSendPacketName(packet);
-            ESP_LOGV(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
+            ESP_LOGI(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
         }
     }
 
@@ -640,15 +641,16 @@ namespace devicestate {
         return this->correctedTargetTemperature;
     }
 
-    void DeviceStateManager::internalSetCorrectedTemperature(const float value) {
+    bool DeviceStateManager::internalSetCorrectedTemperature(const float value) {
         const float adjustedCorrectedTemperature = devicestate::clamp(value, this->minTemp, this->maxTemp);
-        if (devicestate::same_float(this->correctedTargetTemperature, value, 0.01f)) {
-            return;
+        if (devicestate::same_float(this->correctedTargetTemperature, adjustedCorrectedTemperature, 0.01f)) {
+            return false;
         }
 
         ESP_LOGI(TAG, "Corrected target temp changing from %f to %f", this->correctedTargetTemperature, adjustedCorrectedTemperature);
         this->correctedTargetTemperature = adjustedCorrectedTemperature;
         this->hp->setTemperature(this->correctedTargetTemperature);
+        return true;
     }
 
     void DeviceStateManager::internalSetTargetTemperature(const float value) {

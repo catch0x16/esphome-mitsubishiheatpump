@@ -202,7 +202,7 @@ namespace devicestate {
 
       bool internalTurnOn();
       bool internalTurnOff();
-      void internalSetCorrectedTemperature(const float value);
+      bool internalSetCorrectedTemperature(const float value);
 
       float getCurrentTemperature();
 
