@@ -16,6 +16,7 @@ namespace workflow {
     
             PIDController *pidController;
 
+            bool getOffsetDirection(const DeviceState* deviceState);
             void ensurePIDTarget(devicestate::DeviceStateManager* deviceManager);
         
         public:
