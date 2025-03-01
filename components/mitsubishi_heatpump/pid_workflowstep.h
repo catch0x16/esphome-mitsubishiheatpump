@@ -12,12 +12,13 @@ namespace workflow {
         
         class PidWorkflowStep : public WorkflowStep {
         private:
+            float maxAdjustmentUnder;
             esphome::sensor::Sensor* pid_set_point_correction;
     
             PIDController *pidController;
 
+            bool getOffsetDirection(const DeviceState* deviceState);
             void ensurePIDTarget(devicestate::DeviceStateManager* deviceManager, const float direction);
-            void ensurePIDTarget(devicestate::DeviceStateManager* deviceManager);
         
         public:
             PidWorkflowStep(

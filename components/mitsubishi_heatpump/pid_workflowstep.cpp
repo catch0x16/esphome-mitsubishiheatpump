@@ -23,6 +23,7 @@ namespace workflow {
             const float maxAdjustmentOver,
             esphome::sensor::Sensor* pid_set_point_correction
         ) {
+            this->maxAdjustmentUnder = maxAdjustmentUnder;
             this->pid_set_point_correction = pid_set_point_correction;
 
             this->pidController = new PIDController(
