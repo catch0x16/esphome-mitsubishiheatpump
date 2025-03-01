@@ -19,7 +19,6 @@ PIDController::PIDController(
     const float i,
     const float d,
     const int sampleTime,
-    const float target,
     const float outputMin,
     const float outputMax,
     const float maxAdjustmentOver,
@@ -34,7 +33,7 @@ PIDController::PIDController(
 
     this->sampleTime = sampleTime;
     this->setTunings(p, i, d);
-    this->setTarget(target);
+    this->setTarget((outputMax + outputMin) / 2.0, false);
 }
 
 float PIDController::update(const float input) {

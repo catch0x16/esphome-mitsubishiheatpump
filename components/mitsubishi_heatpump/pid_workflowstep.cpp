@@ -30,7 +30,6 @@ namespace workflow {
                 i,
                 d,
                 updateInterval,
-                (maxTemp + minTemp) / 2.0, // Set target to mid point of min/max
                 minTemp,
                 maxTemp,
                 maxAdjustmentOver,

@@ -40,7 +40,6 @@ class PIDController {
             const float i,
             const float d,
             const int sampleTime,
-            const float target,
             const float outputMin,
             const float outputMax,
             const float maxAdjustmentOver,
