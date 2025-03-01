@@ -374,7 +374,8 @@ namespace devicestate {
             const char* packetName = HeatPump::lookupRecvPacketName(packet);
             ESP_LOGV(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
         } else {
-            ESP_LOGV(TAG, "PKT: [%s] %s", packetDirection, packetHex.c_str());
+            const char* packetName = HeatPump::lookupSendPacketName(packet);
+            ESP_LOGV(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
         }
     }
 

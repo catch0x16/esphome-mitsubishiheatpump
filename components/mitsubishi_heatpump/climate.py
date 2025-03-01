@@ -352,6 +352,6 @@ def to_code(config):
 
     cg.add_library(
         name="HeatPump",
-        repository="https://github.com/catch0x16/HeatPump#33c7d3bd9cbfa105d68cfa39e0e2d85a7757439c",
+        repository="https://github.com/catch0x16/HeatPump#585b29830b800885c28be91843bdb7025149c018",
         version=None, # this appears to be ignored?
     )
