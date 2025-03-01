@@ -54,13 +54,14 @@ namespace workflow {
             }
         }
 
-        void PidWorkflowStep::ensurePIDTarget(devicestate::DeviceStateManager* deviceManager, const float direction) {
+        bool PidWorkflowStep::ensurePIDTarget(devicestate::DeviceStateManager* deviceManager, const float direction) {
             if (devicestate::same_float(deviceManager->getTargetTemperature(), this->pidController->getTarget(), 0.01f)) {
-                return;
+                return false;
             }
 
             ESP_LOGI(TAG, "PID target temp changing from %f to %f", this->pidController->getTarget(), deviceManager->getTargetTemperature());
             this->pidController->setTarget(deviceManager->getTargetTemperature(), direction);
+            return true;
         }
 
         void PidWorkflowStep::run(const float currentTemperature, devicestate::DeviceStateManager* deviceManager) {
@@ -70,13 +71,13 @@ namespace workflow {
             const DeviceState deviceState = deviceManager->getDeviceState();
             const bool direction = this->getOffsetDirection(&deviceState);
 
-            this->ensurePIDTarget(deviceManager, direction);
+            const bool updatedPidTarget = this->ensurePIDTarget(deviceManager, direction);
 
-            if (!deviceManager->isInternalPowerOn()) {
+            if (!updatedPidTarget || !deviceManager->isInternalPowerOn()) {
                 ESP_LOGI(TAG, "Skipping PidWorkflowStep run due to device internal off.");
                 return;
             }
-            
+
             const float setPointCorrection = this->pidController->update(currentTemperature);
             const float correctionOffset = direction ? this->offsetAdjustment : -this->offsetAdjustment;
             const float setPointCorrectionOffset = setPointCorrection - correctionOffset;
