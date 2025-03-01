@@ -70,15 +70,21 @@ float PIDController::update(const float input) {
     return this->output;
 }
 
-void PIDController::setTarget(const float target) {
+void PIDController::setTarget(const float target, const bool direction) {
     this->target = target;
-    this->adjustOutputLimits();
+    this->adjustOutputLimits(direction);
     this->resetState();
 }
 
-void PIDController::adjustOutputLimits() {
-    this->adjustedMin = devicestate::clamp(this->target - this->maxAdjustmentUnder, this->outputMin, this->outputMax);
-    this->adjustedMax = devicestate::clamp(this->target + this->maxAdjustmentOver, this->outputMin, this->outputMax);
+// direction:
+//   true  - heating or up
+//   false - cooling or down
+void PIDController::adjustOutputLimits(const bool direction) {
+    const float adjustMinOffset = direction ? this->maxAdjustmentUnder : this->maxAdjustmentOver;
+    const float adjustMaxOffset = direction ? this->maxAdjustmentOver : this->maxAdjustmentUnder;
+
+    this->adjustedMin = devicestate::clamp(this->target - adjustMinOffset, this->outputMin, this->outputMax);
+    this->adjustedMax = devicestate::clamp(this->target + adjustMaxOffset, this->outputMin, this->outputMax);
 
     // Apply to current state
     this->output = this->applyOutputLimits(this->output);

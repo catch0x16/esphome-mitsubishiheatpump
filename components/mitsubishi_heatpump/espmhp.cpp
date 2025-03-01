@@ -769,7 +769,6 @@ void MitsubishiHeatPump::setup() {
         this->kd_,
         this->maxAdjustmentOver_,
         this->maxAdjustmentUnder_,
-        this->offsetAdjustment_,
         this->pid_set_point_correction
     );
 

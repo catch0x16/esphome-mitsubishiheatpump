@@ -30,7 +30,7 @@ class PIDController {
         int sampleTime;
 
         float applyOutputLimits(const float output);
-        void adjustOutputLimits();
+        void adjustOutputLimits(const bool direction);
         void setTunings(const float p, const float i, const float d);
         void resetState();
 
@@ -51,7 +51,7 @@ class PIDController {
         float getOutputMax();
 
         float getTarget();
-        void setTarget(const float target);
+        void setTarget(const float target, const bool direction);
         float update(const float input);
 };
 
