@@ -74,15 +74,16 @@ namespace workflow {
             const float setPointCorrectionOffset = setPointCorrection - correctionOffset;
             
             const DeviceStatus deviceStatus = deviceManager->getDeviceStatus();
-            if (!devicestate::same_float(setPointCorrectionOffset, deviceManager->getCorrectedTargetTemperature())) {
+            const float oldCorrectedTargetTemperature = deviceManager->getCorrectedTargetTemperature();
+            if (!devicestate::same_float(setPointCorrectionOffset, oldCorrectedTargetTemperature)) {
                 if (deviceManager->internalSetCorrectedTemperature(setPointCorrectionOffset)) {
-                    ESP_LOGW(TAG, "Adjusted setpoint: oldCorrection={%f} newCorrection={%f} current={%f} deviceCurrent={%f} deviceTarget={%f} componentTarget={%f}", deviceManager->getCorrectedTargetTemperature(), setPointCorrectionOffset, currentTemperature, deviceStatus.currentTemperature, deviceState.targetTemperature, deviceManager->getTargetTemperature());
+                    ESP_LOGW(TAG, "Adjusted setpoint: oldCorrection={%f} newCorrection={%f} current={%f} deviceCurrent={%f} deviceTarget={%f} componentTarget={%f}", oldCorrectedTargetTemperature, setPointCorrectionOffset, currentTemperature, deviceStatus.currentTemperature, deviceState.targetTemperature, deviceManager->getTargetTemperature());
                     if (!deviceManager->commit()) {
                         ESP_LOGE(TAG, "Failed to update device state");
                     }
                 }
             } else {
-                ESP_LOGD(TAG, "Skipping setpoint adjustment: oldCorrection={%f} newCorrection={%f} current={%f} deviceCurrent={%f} deviceTarget={%f} componentTarget={%f}", deviceManager->getCorrectedTargetTemperature(), setPointCorrectionOffset, currentTemperature, deviceStatus.currentTemperature, deviceState.targetTemperature, deviceManager->getTargetTemperature());
+                ESP_LOGD(TAG, "Skipping setpoint adjustment: oldCorrection={%f} newCorrection={%f} current={%f} deviceCurrent={%f} deviceTarget={%f} componentTarget={%f}", oldCorrectedTargetTemperature, setPointCorrectionOffset, currentTemperature, deviceStatus.currentTemperature, deviceState.targetTemperature, deviceManager->getTargetTemperature());
             }
 
             ESP_LOGV(TAG, "PIDController set point target: %.2f", deviceManager->getTargetTemperature());

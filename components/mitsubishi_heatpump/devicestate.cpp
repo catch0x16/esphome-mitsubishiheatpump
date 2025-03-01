@@ -647,7 +647,7 @@ namespace devicestate {
             return false;
         }
 
-        ESP_LOGI(TAG, "Corrected target temp changing from %f to %f", this->correctedTargetTemperature, adjustedCorrectedTemperature);
+        ESP_LOGV(TAG, "Corrected target temp changing from %f to %f", this->correctedTargetTemperature, adjustedCorrectedTemperature);
         this->correctedTargetTemperature = adjustedCorrectedTemperature;
         this->hp->setTemperature(this->correctedTargetTemperature);
         return true;
