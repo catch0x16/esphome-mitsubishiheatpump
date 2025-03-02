@@ -76,6 +76,10 @@ MitsubishiHeatPump = cg.global_ns.class_(
     "MitsubishiHeatPump", climate.Climate, cg.PollingComponent
 )
 
+MitsubishiACSelect = cg.global_ns.class_(
+    "MitsubishiACSelect", select.Select, cg.Component
+)
+
 def valid_uart(uart):
     if CORE.is_esp8266:
         uarts = ["UART0"]  # UART1 is tx-only
@@ -87,7 +91,9 @@ def valid_uart(uart):
     return cv.one_of(*uarts, upper=True)(uart)
 
 
-SELECT_SCHEMA = select.SELECT_SCHEMA
+SELECT_SCHEMA = select.SELECT_SCHEMA.extend(
+    {cv.GenerateID(CONF_ID): cv.declare_id(MitsubishiACSelect)}
+)
 
 INTERNAL_POWER_ON_SCHEMA = binary_sensor.binary_sensor_schema(binary_sensor.BinarySensor,
     entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
