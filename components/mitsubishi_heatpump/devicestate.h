@@ -85,7 +85,7 @@ namespace devicestate {
     float kWh;
     float runtimeHours;
   };
-  bool deviceStatusEqual(DeviceStatus left, DeviceStatus right);
+  bool deviceStatusEqual(const DeviceStatus& left, const DeviceStatus& right);
   DeviceStatus toDeviceState(heatpumpStatus *currentStatus);
 
   struct DeviceState {
@@ -98,7 +98,7 @@ namespace devicestate {
     float targetTemperature;
     //bool connected;
   };
-  bool deviceStateEqual(DeviceState left, DeviceState right);
+  bool deviceStateEqual(const DeviceState& left, const DeviceState& right);
   DeviceState toDeviceState(heatpumpSettings *currentSettings);
 
   struct ConnectionMetadata {
@@ -219,6 +219,8 @@ namespace devicestate {
       bool getOffsetDirection(const DeviceState* deviceState);
 
       bool commit();
+
+      void publish();
   };
 }
 #endif

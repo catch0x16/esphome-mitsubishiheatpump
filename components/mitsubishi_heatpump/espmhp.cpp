@@ -124,6 +124,8 @@ void MitsubishiHeatPump::update() {
 
     this->enforce_remote_temperature_sensor_timeout();
     this->run_workflows();
+
+    this->dsm->publish();
 }
 
 void MitsubishiHeatPump::set_baud_rate(int baud) {

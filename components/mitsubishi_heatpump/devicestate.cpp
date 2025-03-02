@@ -10,7 +10,7 @@ namespace devicestate {
 
     static const char* TAG = "DeviceStateManager"; // Logging tag
 
-    bool deviceStatusEqual(DeviceStatus left, DeviceStatus right) {
+    bool deviceStatusEqual(const DeviceStatus& left, const DeviceStatus& right) {
         return left.operating == right.operating &&
             devicestate::same_float(left.currentTemperature, right.currentTemperature, 0.01f) &&
             devicestate::same_float(left.compressorFrequency, right.compressorFrequency, 0.01f) &&
@@ -19,7 +19,7 @@ namespace devicestate {
             devicestate::same_float(left.runtimeHours, right.runtimeHours, 0.01f);
     }
 
-    bool deviceStateEqual(DeviceState left, DeviceState right) {
+    bool deviceStateEqual(const DeviceState& left, const DeviceState& right) {
         return left.active == right.active &&
             left.mode == right.mode &&
             left.fanMode == right.fanMode &&
@@ -285,14 +285,12 @@ namespace devicestate {
         #ifdef USE_CALLBACKS
             hp->setSettingsChangedCallback(
                     [this]() {
-                        ESP_LOGW(TAG, "Callback hpSettingsChanged");
                         this->hpSettingsChanged();
                     }
             );
 
             hp->setStatusChangedCallback(
                     [this](heatpumpStatus currentStatus) {
-                        ESP_LOGW(TAG, "Callback hpStatusChanged");
                         this->hpStatusChanged(currentStatus);
                     }
             );
@@ -333,39 +331,30 @@ namespace devicestate {
             this->targetTemperature = deviceState.targetTemperature;
             this->settingsInitialized = true;
         }
-        this->deviceState = deviceState;
 
-        this->device_state_connected->publish_state(this->hp->isConnected());
-        this->internal_power_on->publish_state(this->internalPowerOn);
-        this->device_state_active->publish_state(this->deviceState.active);
-        this->device_set_point->publish_state(this->deviceState.targetTemperature);
-        this->pid_set_point_correction->publish_state(this->correctedTargetTemperature);
+        this->deviceState = deviceState;
+        ESP_LOGI(TAG, "HeatPump device state updated.");
+
+        ESP_LOGW(TAG, "Callback hpStatusChanged");
     }
 
     /**
      * Report changes in the current temperature sensed by the HeatPump.
      */
     void DeviceStateManager::hpStatusChanged(heatpumpStatus currentStatus) {
+        ESP_LOGW(TAG, "Callback hpStatusChanged starting");
         if (!this->statusInitialized) {
             this->statusInitialized = true;
             ESP_LOGW(TAG, "HeatPump status initialized.");
         }
 
         const DeviceStatus newDeviceStatus = devicestate::toDeviceStatus(&currentStatus);
-        if (devicestate::deviceStatusEqual(this->deviceStatus, newDeviceStatus)) {
-            ESP_LOGW(TAG, "Skipping status change as device status unchanged.");
-            return;
+        if (!devicestate::deviceStatusEqual(this->deviceStatus, newDeviceStatus)) {
+            this->deviceStatus = newDeviceStatus;
+            ESP_LOGI(TAG, "HeatPump device status updated.");
         }
 
-        ESP_LOGI(TAG, "HeatPump device status updated.");
-        this->deviceStatus = newDeviceStatus;
-
-        this->device_status_operating->publish_state(this->deviceStatus.operating);
-        this->device_status_current_temperature->publish_state(this->deviceStatus.currentTemperature);
-        this->device_status_compressor_frequency->publish_state(this->deviceStatus.compressorFrequency);
-        this->device_status_input_power->publish_state(this->deviceStatus.inputPower);
-        this->device_status_kwh->publish_state(this->deviceStatus.kWh);
-        this->device_status_runtime_hours->publish_state(this->deviceStatus.runtimeHours);
+        ESP_LOGW(TAG, "Callback hpStatusChanged completed");
     }
 
     void DeviceStateManager::log_packet(byte* packet, unsigned int length, char* packetDirection) {
@@ -473,13 +462,11 @@ namespace devicestate {
         this->hp->setModeSetting(deviceMode);
         this->hp->setPowerSetting("ON");
         this->internalPowerOn = true;
-        this->internal_power_on->publish_state(this->internalPowerOn);
     }
 
     void DeviceStateManager::turnOff() {
         this->hp->setPowerSetting("OFF");
         this->internalPowerOn = false;
-        this->internal_power_on->publish_state(this->internalPowerOn);
     }
 
     bool DeviceStateManager::shouldThrottle(uint32_t end) {
@@ -508,7 +495,6 @@ namespace devicestate {
         if (this->commit()) {
             this->lastInternalPowerUpdate = end;
             this->internalPowerOn = true;
-            this->internal_power_on->publish_state(this->internalPowerOn);
             ESP_LOGW(TAG, "Performed internal turn on!");
             return true;
         } else {
@@ -533,7 +519,6 @@ namespace devicestate {
         if (this->commit()) {
             this->lastInternalPowerUpdate = end;
             this->internalPowerOn = false;
-            this->internal_power_on->publish_state(this->internalPowerOn);
             ESP_LOGW(TAG, "Performed internal turn off!");
             return true;
         } else {
@@ -692,7 +677,7 @@ namespace devicestate {
         this->hp->setTemperature(this->correctedTargetTemperature);
 
         ESP_LOGW(TAG, "internalSetCorrectedTemperature: Adjusted corrected temperature: oldCorrection={%f} newCorrection={%f} roundedNewCorrection={%f} deviceTarget={%f} componentTarget={%f}", oldCorrectedTargetTemperature, adjustedCorrectedTemperature, roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, this->getTargetTemperature());
-        this->pid_set_point_correction->publish_state(this->correctedTargetTemperature);
+        //this->pid_set_point_correction->publish_state(this->correctedTargetTemperature);
         return true;
     }
 
@@ -757,6 +742,23 @@ namespace devicestate {
         ESP_LOGI(TAG, "Heatpump Settings");
         heatpumpSettings currentSettings = this->hp->getSettings();
         this->log_heatpump_settings(currentSettings);
+    }
+
+    void DeviceStateManager::publish() {
+        // Publish device status
+        this->device_status_operating->publish_state(this->deviceStatus.operating);
+        this->device_status_current_temperature->publish_state(this->deviceStatus.currentTemperature);
+        this->device_status_compressor_frequency->publish_state(this->deviceStatus.compressorFrequency);
+        this->device_status_input_power->publish_state(this->deviceStatus.inputPower);
+        this->device_status_kwh->publish_state(this->deviceStatus.kWh);
+        this->device_status_runtime_hours->publish_state(this->deviceStatus.runtimeHours);
+
+        // Public device state
+        this->device_state_connected->publish_state(this->hp->isConnected());
+        this->internal_power_on->publish_state(this->internalPowerOn);
+        this->device_state_active->publish_state(this->deviceState.active);
+        this->device_set_point->publish_state(this->deviceState.targetTemperature);
+        this->pid_set_point_correction->publish_state(this->correctedTargetTemperature);
     }
 
 }
