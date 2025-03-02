@@ -767,8 +767,7 @@ void MitsubishiHeatPump::setup() {
         this->ki_,
         this->kd_,
         this->maxAdjustmentUnder_,
-        this->maxAdjustmentOver_,
-        this->offsetAdjustment_
+        this->maxAdjustmentOver_
     );
 
     ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
@@ -776,6 +775,7 @@ void MitsubishiHeatPump::setup() {
         connectionMetadata,
         this->min_temp,
         this->max_temp,
+        this->offsetAdjustment_,
         this->internal_power_on,
         this->device_state_connected,
         this->device_state_active,

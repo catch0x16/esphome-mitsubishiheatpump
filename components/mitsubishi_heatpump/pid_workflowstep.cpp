@@ -20,11 +20,8 @@ namespace workflow {
             const float i,
             const float d,
             const float maxAdjustmentUnder,
-            const float maxAdjustmentOver,
-            const float offsetAdjustment
+            const float maxAdjustmentOver
         ) {
-            this->offsetAdjustment = offsetAdjustment;
-
             this->pidController = new PIDController(
                 p,
                 i,
@@ -37,57 +34,29 @@ namespace workflow {
             );
         }
 
-        bool PidWorkflowStep::getOffsetDirection(const DeviceState* deviceState) {
-            switch(deviceState->mode) {
-                case devicestate::DeviceMode::DeviceMode_Heat: {
-                    return true;
-                }
-                case devicestate::DeviceMode::DeviceMode_Cool: {
-                    return false;
-                }
-                default: {
-                    ESP_LOGE(TAG, "Unexpected state for offset direction");
-                    return false;
-                }
-            }
-        }
-
-        bool PidWorkflowStep::ensurePIDTarget(devicestate::DeviceStateManager* deviceManager, const float direction) {
+        bool PidWorkflowStep::ensurePIDTarget(devicestate::DeviceStateManager* deviceManager) {
             if (devicestate::same_float(deviceManager->getTargetTemperature(), this->pidController->getTarget(), 0.01f)) {
                 return false;
             }
 
             ESP_LOGI(TAG, "PID target temp changing from %f to %f", this->pidController->getTarget(), deviceManager->getTargetTemperature());
-            this->pidController->setTarget(deviceManager->getTargetTemperature(), direction);
+            this->pidController->setTarget(deviceManager->getTargetTemperature(), deviceManager->getOffsetDirection());
             return true;
         }
 
         void PidWorkflowStep::run(const float currentTemperature, devicestate::DeviceStateManager* deviceManager) {
             ESP_LOGV(TAG, "PIDController update current: %.2f", currentTemperature);
 
-            const DeviceStatus deviceStatus = deviceManager->getDeviceStatus();
-            const DeviceState deviceState = deviceManager->getDeviceState();
-            const bool direction = this->getOffsetDirection(&deviceState);
-
-            const bool updatedPidTarget = this->ensurePIDTarget(deviceManager, direction);
+            const bool updatedPidTarget = this->ensurePIDTarget(deviceManager);
             // if pid target is not updated and internal power is not on
             if (updatedPidTarget || deviceManager->isInternalPowerOn()) {
                 const float setPointCorrection = this->pidController->update(currentTemperature);
-                const float correctionOffset = direction ? this->offsetAdjustment : -this->offsetAdjustment;
-                const float setPointCorrectionOffset = setPointCorrection - correctionOffset;
-                
-                const float oldCorrectedTargetTemperature = deviceManager->getCorrectedTargetTemperature();
-                if (!devicestate::same_float(setPointCorrection, oldCorrectedTargetTemperature)) {
-                    if (deviceManager->internalSetCorrectedTemperature(setPointCorrectionOffset)) {
-                        ESP_LOGW(TAG, "Adjusted setpoint: oldCorrection={%f} newCorrection={%f} current={%f} deviceCurrent={%f} deviceTarget={%f} componentTarget={%f}", oldCorrectedTargetTemperature, setPointCorrectionOffset, currentTemperature, deviceStatus.currentTemperature, deviceState.targetTemperature, deviceManager->getTargetTemperature());
+                if (deviceManager->internalSetCorrectedTemperature(setPointCorrection)) {
+                    if (!deviceManager->commit()) {
+                        ESP_LOGE(TAG, "PidWorkflowStep failed to update corrected temperature");
                     }
-                } else {
-                    ESP_LOGD(TAG, "Skipping setpoint adjustment: oldCorrection={%f} newCorrection={%f} current={%f} deviceCurrent={%f} deviceTarget={%f} componentTarget={%f}", oldCorrectedTargetTemperature, setPointCorrectionOffset, currentTemperature, deviceStatus.currentTemperature, deviceState.targetTemperature, deviceManager->getTargetTemperature());
                 }
             }
-
-            ESP_LOGV(TAG, "PIDController set point target: %.2f", deviceManager->getTargetTemperature());
-            ESP_LOGV(TAG, "PIDController set point correction: %.2f", deviceManager->getCorrectedTargetTemperature());
         }
 
     }

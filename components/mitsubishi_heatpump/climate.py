@@ -76,10 +76,6 @@ MitsubishiHeatPump = cg.global_ns.class_(
     "MitsubishiHeatPump", climate.Climate, cg.PollingComponent
 )
 
-MitsubishiACSelect = cg.global_ns.class_(
-    "MitsubishiACSelect", select.Select, cg.Component
-)
-
 def valid_uart(uart):
     if CORE.is_esp8266:
         uarts = ["UART0"]  # UART1 is tx-only
@@ -91,9 +87,7 @@ def valid_uart(uart):
     return cv.one_of(*uarts, upper=True)(uart)
 
 
-SELECT_SCHEMA = select.SELECT_SCHEMA.extend(
-    {cv.GenerateID(CONF_ID): cv.declare_id(MitsubishiACSelect)}
-)
+SELECT_SCHEMA = select.SELECT_SCHEMA
 
 INTERNAL_POWER_ON_SCHEMA = binary_sensor.binary_sensor_schema(binary_sensor.BinarySensor,
     entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
@@ -352,6 +346,6 @@ def to_code(config):
 
     cg.add_library(
         name="HeatPump",
-        repository="https://github.com/catch0x16/HeatPump#a0c77dfe87213ee201100cabbb5ed0eeb6ef18a6",
+        repository="https://github.com/catch0x16/HeatPump#1b7edd3acca721ed1630a7973a4b19e60b3dd9d6",
         version=None, # this appears to be ignored?
     )

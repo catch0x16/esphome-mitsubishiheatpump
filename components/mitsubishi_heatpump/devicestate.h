@@ -114,6 +114,7 @@ namespace devicestate {
 
       float minTemp;
       float maxTemp;
+      float offsetAdjustment;
 
       int disconnected;
 
@@ -155,11 +156,14 @@ namespace devicestate {
       void log_heatpump_settings(heatpumpSettings currentSettings);
       static void log_packet(byte* packet, unsigned int length, char* packetDirection);
 
+      float getRoundedTemp(float value);
+
     public:
       DeviceStateManager(
         ConnectionMetadata connectionMetadata,
         const float minTemp,
         const float maxTemp,
+        const float offsetAdjustment,
         esphome::binary_sensor::BinarySensor* internal_power_on,
         esphome::binary_sensor::BinarySensor* device_state_connected,
         esphome::binary_sensor::BinarySensor* device_state_active,
@@ -210,7 +214,10 @@ namespace devicestate {
 
       float getCorrectedTargetTemperature();
       bool internalSetCorrectedTemperature(const float value);
-      
+
+      bool getOffsetDirection();
+      bool getOffsetDirection(const DeviceState* deviceState);
+
       bool commit();
   };
 }

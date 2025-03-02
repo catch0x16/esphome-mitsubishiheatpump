@@ -12,12 +12,9 @@ namespace workflow {
         
         class PidWorkflowStep : public WorkflowStep {
         private:
-            float offsetAdjustment;
-    
             PIDController *pidController;
 
-            bool getOffsetDirection(const DeviceState* deviceState);
-            bool ensurePIDTarget(devicestate::DeviceStateManager* deviceManager, const float direction);
+            bool ensurePIDTarget(devicestate::DeviceStateManager* deviceManager);
         
         public:
             PidWorkflowStep(
@@ -28,8 +25,7 @@ namespace workflow {
                 const float i,
                 const float d,
                 const float maxAdjustmentUnder,
-                const float maxAdjustmentOver,
-                const float offsetAdjustment
+                const float maxAdjustmentOver
             );
         
             void run(const float currentTemperature, devicestate::DeviceStateManager* deviceManager);

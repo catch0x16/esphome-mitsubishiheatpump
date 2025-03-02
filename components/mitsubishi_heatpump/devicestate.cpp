@@ -4,6 +4,7 @@
 using namespace esphome;
 
 #include "floats.h"
+#include <math.h>
 
 namespace devicestate {
 
@@ -244,6 +245,7 @@ namespace devicestate {
       ConnectionMetadata connectionMetadata,
       const float minTemp,
       const float maxTemp,
+      const float offsetAdjustment,
       esphome::binary_sensor::BinarySensor* internal_power_on,
       esphome::binary_sensor::BinarySensor* device_state_connected,
       esphome::binary_sensor::BinarySensor* device_state_active,
@@ -260,6 +262,7 @@ namespace devicestate {
 
         this->minTemp = minTemp;
         this->maxTemp = maxTemp;
+        this->offsetAdjustment = offsetAdjustment;
 
         this->internal_power_on = internal_power_on;
         this->device_state_connected = device_state_connected;
@@ -277,6 +280,7 @@ namespace devicestate {
 
         ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
         this->hp = new HeatPump();
+        this->hp->enableExternalUpdate();
 
         #ifdef USE_CALLBACKS
             hp->setSettingsChangedCallback(
@@ -335,6 +339,7 @@ namespace devicestate {
         this->internal_power_on->publish_state(this->internalPowerOn);
         this->device_state_active->publish_state(this->deviceState.active);
         this->device_set_point->publish_state(this->deviceState.targetTemperature);
+        this->pid_set_point_correction->publish_state(this->correctedTargetTemperature);
     }
 
     /**
@@ -375,10 +380,10 @@ namespace devicestate {
         
         if (strcmp(packetDirection, "packetRecv") == 0) {
             const char* packetName = HeatPump::lookupRecvPacketName(packet);
-            ESP_LOGV(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
+            ESP_LOGD(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
         } else {
             const char* packetName = HeatPump::lookupSendPacketName(packet);
-            ESP_LOGV(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
+            ESP_LOGD(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
         }
     }
 
@@ -490,18 +495,16 @@ namespace devicestate {
             return false;
         }
 
-        const char* deviceMode = deviceModeToString(this->deviceState.mode);
-
         const uint32_t end = esphome::millis();
         if (this->shouldThrottle(end)) {
             ESP_LOGD(TAG, "Throttling internal turn on: %i seconds remaining", remaining);
             return false;
         }
 
-        const DeviceState deviceState = this->getDeviceState();
+        const char* deviceMode = deviceModeToString(this->deviceState.mode);
         this->hp->setModeSetting(deviceMode);
         this->hp->setPowerSetting("ON");
-        this->hp->setTemperature(deviceState.targetTemperature);
+        this->internalSetCorrectedTemperature(this->getTargetTemperature());
         if (this->commit()) {
             this->lastInternalPowerUpdate = end;
             this->internalPowerOn = true;
@@ -644,23 +647,50 @@ namespace devicestate {
         return this->correctedTargetTemperature;
     }
 
+    bool DeviceStateManager::getOffsetDirection() {
+        const DeviceState deviceState = this->getDeviceState();
+        return this->getOffsetDirection(&deviceState);
+    }
+
+    bool DeviceStateManager::getOffsetDirection(const DeviceState* deviceState) {
+        switch(deviceState->mode) {
+            case devicestate::DeviceMode::DeviceMode_Heat: {
+                return true;
+            }
+            case devicestate::DeviceMode::DeviceMode_Cool: {
+                return false;
+            }
+            default: {
+                ESP_LOGE(TAG, "Unexpected state for offset direction");
+                return false;
+            }
+        }
+    }
+
+    float DeviceStateManager::getRoundedTemp(float value) {
+        value = value * 2;
+        value = round(value);
+        return value / 2;
+    }
+
     bool DeviceStateManager::internalSetCorrectedTemperature(const float value) {
-        const float adjustedCorrectedTemperature = devicestate::clamp(value, this->minTemp, this->maxTemp);
-        if (devicestate::same_float(this->correctedTargetTemperature, adjustedCorrectedTemperature, 0.01f)) {
+        const DeviceState deviceState = this->getDeviceState();
+        const bool direction = this->getOffsetDirection(&deviceState);
+        const float correctionOffset = direction ? this->offsetAdjustment : -this->offsetAdjustment;
+        const float setPointCorrectionOffset = value - correctionOffset;
+
+        const float adjustedCorrectedTemperature = devicestate::clamp(setPointCorrectionOffset, this->minTemp, this->maxTemp);
+        const float roundedAdjustedCorrectedTemperature = this->getRoundedTemp(adjustedCorrectedTemperature);
+        if (devicestate::same_float(this->correctedTargetTemperature, adjustedCorrectedTemperature, 0.01f) &&
+            devicestate::same_float(roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, 0.01f)) {
             return false;
         }
 
         const float oldCorrectedTargetTemperature = this->correctedTargetTemperature;
-        ESP_LOGV(TAG, "Corrected target temp changing from %f to %f", this->correctedTargetTemperature, adjustedCorrectedTemperature);
         this->correctedTargetTemperature = adjustedCorrectedTemperature;
         this->hp->setTemperature(this->correctedTargetTemperature);
 
-        if (!this->commit()) {
-            ESP_LOGE(TAG, "Failed to update device state");
-            this->correctedTargetTemperature = oldCorrectedTargetTemperature;
-            return false;
-        }
-
+        ESP_LOGW(TAG, "internalSetCorrectedTemperature: Adjusted corrected temperature: oldCorrection={%f} newCorrection={%f} roundedNewCorrection={%f} deviceTarget={%f} componentTarget={%f}", oldCorrectedTargetTemperature, adjustedCorrectedTemperature, roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, this->getTargetTemperature());
         this->pid_set_point_correction->publish_state(this->correctedTargetTemperature);
         return true;
     }
@@ -669,8 +699,8 @@ namespace devicestate {
         const float adjustedTargetTemperature = devicestate::clamp(value, this->minTemp, this->maxTemp);
 
         const float oldTargetTemperature = this->targetTemperature;
-        this->targetTemperature = adjustedTargetTemperature;        
-        ESP_LOGI(TAG, "Device target temp changing from %f to %f", oldTargetTemperature, this->targetTemperature);
+        this->targetTemperature = adjustedTargetTemperature;
+        ESP_LOGW(TAG, "setTargetTemperature: Device target temp changing from %f to %f", oldTargetTemperature, this->targetTemperature);
         this->hp->setTemperature(this->targetTemperature);
     }
 
