@@ -647,7 +647,6 @@ void MitsubishiHeatPump::updateDevice() {
     }
     ESP_LOGD(TAG, "Horizontal vane mode is: %s", horizontalSwingModeToString(deviceState.horizontalSwingMode));
 
-    //this->update_setpoint(this->dsm->getTargetTemperature());
     this->target_temperature = this->dsm->getTargetTemperature();
 
     /*
@@ -769,8 +768,7 @@ void MitsubishiHeatPump::setup() {
         this->kd_,
         this->maxAdjustmentUnder_,
         this->maxAdjustmentOver_,
-        this->offsetAdjustment_,
-        this->pid_set_point_correction
+        this->offsetAdjustment_
     );
 
     ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
@@ -787,7 +785,8 @@ void MitsubishiHeatPump::setup() {
         this->device_status_compressor_frequency,
         this->device_status_input_power,
         this->device_status_kwh,
-        this->device_status_runtime_hours
+        this->device_status_runtime_hours,
+        this->pid_set_point_correction
     );
 
     ESP_LOGCONFIG(TAG, "Calling dsm->initialize()");
@@ -866,9 +865,11 @@ bool MitsubishiHeatPump::isComponentActive() {
 }
 
 void MitsubishiHeatPump::update_setpoint(const float value) {
-    ESP_LOGI(TAG, "Target temp changing from %f to %f", this->target_temperature, value);
-    this->target_temperature = value;
+    const float oldTargetTemperature = this->target_temperature;
     this->dsm->setTargetTemperature(value);
+    this->target_temperature = this->dsm->getTargetTemperature();
+    ESP_LOGI(TAG, "Target temp changed from %f to %f", oldTargetTemperature, this->target_temperature);
+
 }
 
 void MitsubishiHeatPump::run_workflows() {

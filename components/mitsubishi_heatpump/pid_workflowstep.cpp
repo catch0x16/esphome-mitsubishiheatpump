@@ -21,11 +21,9 @@ namespace workflow {
             const float d,
             const float maxAdjustmentUnder,
             const float maxAdjustmentOver,
-            const float offsetAdjustment,
-            esphome::sensor::Sensor* pid_set_point_correction
+            const float offsetAdjustment
         ) {
             this->offsetAdjustment = offsetAdjustment;
-            this->pid_set_point_correction = pid_set_point_correction;
 
             this->pidController = new PIDController(
                 p,
@@ -82,9 +80,6 @@ namespace workflow {
                 if (!devicestate::same_float(setPointCorrection, oldCorrectedTargetTemperature)) {
                     if (deviceManager->internalSetCorrectedTemperature(setPointCorrectionOffset)) {
                         ESP_LOGW(TAG, "Adjusted setpoint: oldCorrection={%f} newCorrection={%f} current={%f} deviceCurrent={%f} deviceTarget={%f} componentTarget={%f}", oldCorrectedTargetTemperature, setPointCorrectionOffset, currentTemperature, deviceStatus.currentTemperature, deviceState.targetTemperature, deviceManager->getTargetTemperature());
-                        if (!deviceManager->commit()) {
-                            ESP_LOGE(TAG, "Failed to update device state");
-                        }
                     }
                 } else {
                     ESP_LOGD(TAG, "Skipping setpoint adjustment: oldCorrection={%f} newCorrection={%f} current={%f} deviceCurrent={%f} deviceTarget={%f} componentTarget={%f}", oldCorrectedTargetTemperature, setPointCorrectionOffset, currentTemperature, deviceStatus.currentTemperature, deviceState.targetTemperature, deviceManager->getTargetTemperature());
@@ -93,7 +88,6 @@ namespace workflow {
 
             ESP_LOGV(TAG, "PIDController set point target: %.2f", deviceManager->getTargetTemperature());
             ESP_LOGV(TAG, "PIDController set point correction: %.2f", deviceManager->getCorrectedTargetTemperature());
-            this->pid_set_point_correction->publish_state(deviceManager->getCorrectedTargetTemperature());
         }
 
     }

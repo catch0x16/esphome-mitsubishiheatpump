@@ -13,7 +13,6 @@ namespace workflow {
         class PidWorkflowStep : public WorkflowStep {
         private:
             float offsetAdjustment;
-            esphome::sensor::Sensor* pid_set_point_correction;
     
             PIDController *pidController;
 
@@ -30,8 +29,7 @@ namespace workflow {
                 const float d,
                 const float maxAdjustmentUnder,
                 const float maxAdjustmentOver,
-                const float offsetAdjustment,
-                esphome::sensor::Sensor* pid_set_point_correction
+                const float offsetAdjustment
             );
         
             void run(const float currentTemperature, devicestate::DeviceStateManager* deviceManager);

@@ -127,6 +127,7 @@ namespace devicestate {
       esphome::sensor::Sensor* device_status_input_power;
       esphome::sensor::Sensor* device_status_kwh;
       esphome::sensor::Sensor* device_status_runtime_hours;
+      esphome::sensor::Sensor* pid_set_point_correction;
 
       // HeatPump object using the underlying Arduino library.
       HeatPump* hp;
@@ -150,8 +151,6 @@ namespace devicestate {
 
       bool shouldThrottle(uint32_t end);
 
-      void internalSetTargetTemperature(const float value);
-
       void dump_state();
       void log_heatpump_settings(heatpumpSettings currentSettings);
       static void log_packet(byte* packet, unsigned int length, char* packetDirection);
@@ -170,7 +169,8 @@ namespace devicestate {
         esphome::sensor::Sensor* device_status_compressor_frequency,
         esphome::sensor::Sensor* device_status_input_power,
         esphome::sensor::Sensor* device_status_kwh,
-        esphome::sensor::Sensor* device_status_runtime_hours
+        esphome::sensor::Sensor* device_status_runtime_hours,
+        esphome::sensor::Sensor* pid_set_point_correction
       );
 
       DeviceStatus getDeviceStatus();
@@ -180,7 +180,6 @@ namespace devicestate {
       bool initialize();
 
       void update();
-      bool isInternalPowerOn();
 
       void setCool();
       void setHeat();
@@ -195,23 +194,24 @@ namespace devicestate {
       bool setFanMode(FanMode mode);
       bool setFanMode(FanMode mode, bool commit);
 
-      bool commit();
-
       void turnOn(DeviceMode mode);
       void turnOff();
-
-      bool internalTurnOn();
-      bool internalTurnOff();
-      bool internalSetCorrectedTemperature(const float value);
 
       float getCurrentTemperature();
 
       float getTargetTemperature();
       void setTargetTemperature(const float target);
 
-      float getCorrectedTargetTemperature();
-
       void setRemoteTemperature(const float current);
+
+      bool internalTurnOn();
+      bool internalTurnOff();
+      bool isInternalPowerOn();
+
+      float getCorrectedTargetTemperature();
+      bool internalSetCorrectedTemperature(const float value);
+      
+      bool commit();
   };
 }
 #endif

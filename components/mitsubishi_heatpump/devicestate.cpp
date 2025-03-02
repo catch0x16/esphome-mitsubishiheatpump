@@ -253,7 +253,8 @@ namespace devicestate {
       esphome::sensor::Sensor* device_status_compressor_frequency,
       esphome::sensor::Sensor* device_status_input_power,
       esphome::sensor::Sensor* device_status_kwh,
-      esphome::sensor::Sensor* device_status_runtime_hours
+      esphome::sensor::Sensor* device_status_runtime_hours,
+      esphome::sensor::Sensor* pid_set_point_correction
     ) {
         this->connectionMetadata = connectionMetadata;
 
@@ -270,6 +271,7 @@ namespace devicestate {
         this->device_status_input_power = device_status_input_power;
         this->device_status_kwh = device_status_kwh;
         this->device_status_runtime_hours = device_status_runtime_hours;
+        this->pid_set_point_correction = pid_set_point_correction;
 
         this->disconnected = 0;
 
@@ -324,8 +326,7 @@ namespace devicestate {
                 this->internalPowerOn = deviceState.active;
             }
             ESP_LOGW(TAG, "Initializing targetTemperature state from %f to %f", this->targetTemperature, deviceState.targetTemperature);
-            this->internalSetTargetTemperature(deviceState.targetTemperature);
-
+            this->targetTemperature = deviceState.targetTemperature;
             this->settingsInitialized = true;
         }
         this->deviceState = deviceState;
@@ -353,6 +354,7 @@ namespace devicestate {
 
         ESP_LOGI(TAG, "HeatPump device status updated.");
         this->deviceStatus = newDeviceStatus;
+
         this->device_status_operating->publish_state(this->deviceStatus.operating);
         this->device_status_current_temperature->publish_state(this->deviceStatus.currentTemperature);
         this->device_status_compressor_frequency->publish_state(this->deviceStatus.compressorFrequency);
@@ -496,9 +498,10 @@ namespace devicestate {
             return false;
         }
 
+        const DeviceState deviceState = this->getDeviceState();
         this->hp->setModeSetting(deviceMode);
         this->hp->setPowerSetting("ON");
-        this->hp->setTemperature(this->correctedTargetTemperature);
+        this->hp->setTemperature(deviceState.targetTemperature);
         if (this->commit()) {
             this->lastInternalPowerUpdate = end;
             this->internalPowerOn = true;
@@ -647,24 +650,28 @@ namespace devicestate {
             return false;
         }
 
+        const float oldCorrectedTargetTemperature = this->correctedTargetTemperature;
         ESP_LOGV(TAG, "Corrected target temp changing from %f to %f", this->correctedTargetTemperature, adjustedCorrectedTemperature);
         this->correctedTargetTemperature = adjustedCorrectedTemperature;
         this->hp->setTemperature(this->correctedTargetTemperature);
-        return true;
-    }
 
-    void DeviceStateManager::internalSetTargetTemperature(const float value) {
-        this->targetTemperature = value;
-        this->correctedTargetTemperature = this->targetTemperature;
+        if (!this->commit()) {
+            ESP_LOGE(TAG, "Failed to update device state");
+            this->correctedTargetTemperature = oldCorrectedTargetTemperature;
+            return false;
+        }
+
+        this->pid_set_point_correction->publish_state(this->correctedTargetTemperature);
+        return true;
     }
 
     void DeviceStateManager::setTargetTemperature(const float value) {
         const float adjustedTargetTemperature = devicestate::clamp(value, this->minTemp, this->maxTemp);
 
-        this->internalSetTargetTemperature(adjustedTargetTemperature);
-        
-        ESP_LOGI(TAG, "Device target temp changing from %f to %f", this->targetTemperature, adjustedTargetTemperature);
-        this->hp->setTemperature(this->correctedTargetTemperature);
+        const float oldTargetTemperature = this->targetTemperature;
+        this->targetTemperature = adjustedTargetTemperature;        
+        ESP_LOGI(TAG, "Device target temp changing from %f to %f", oldTargetTemperature, this->targetTemperature);
+        this->hp->setTemperature(this->targetTemperature);
     }
 
     void DeviceStateManager::setRemoteTemperature(const float current) {
