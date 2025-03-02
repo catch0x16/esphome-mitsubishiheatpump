@@ -687,6 +687,7 @@ namespace devicestate {
             return false;
         }
 
+        const float oldCorrectedTargetTemperature = this->correctedTargetTemperature;
         this->correctedTargetTemperature = adjustedCorrectedTemperature;
         this->hp->setTemperature(this->correctedTargetTemperature);
 
