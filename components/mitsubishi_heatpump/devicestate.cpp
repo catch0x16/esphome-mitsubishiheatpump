@@ -683,11 +683,10 @@ namespace devicestate {
         const float roundedAdjustedCorrectedTemperature = this->getRoundedTemp(adjustedCorrectedTemperature);
         if (devicestate::same_float(this->correctedTargetTemperature, adjustedCorrectedTemperature, 0.01f) &&
             devicestate::same_float(roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, 0.01f)) {
-            ESP_LOGW(TAG, "internalSetCorrectedTemperature: Adjustment unchanged: oldCorrection={%f} newCorrection={%f} roundedNewCorrection={%f} deviceTarget={%f} componentTarget={%f}", oldCorrectedTargetTemperature, adjustedCorrectedTemperature, roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, this->getTargetTemperature());
+            ESP_LOGW(TAG, "internalSetCorrectedTemperature: Adjustment unchanged: oldCorrection={%f} newCorrection={%f} roundedNewCorrection={%f} deviceTarget={%f} componentTarget={%f}", this->correctedTargetTemperature, adjustedCorrectedTemperature, roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, this->getTargetTemperature());
             return false;
         }
 
-        const float oldCorrectedTargetTemperature = this->correctedTargetTemperature;
         this->correctedTargetTemperature = adjustedCorrectedTemperature;
         this->hp->setTemperature(this->correctedTargetTemperature);
 
