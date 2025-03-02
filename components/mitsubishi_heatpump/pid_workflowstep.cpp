@@ -72,7 +72,8 @@ namespace workflow {
             const bool direction = this->getOffsetDirection(&deviceState);
 
             const bool updatedPidTarget = this->ensurePIDTarget(deviceManager, direction);
-            if (!updatedPidTarget || deviceManager->isInternalPowerOn()) {
+            // if pid target is not updated and internal power is not on
+            if (!updatedPidTarget && !deviceManager->isInternalPowerOn()) {
                 ESP_LOGI(TAG, "Skipping PidWorkflowStep run due to device internal off.");
                 return;
             }
