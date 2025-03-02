@@ -681,8 +681,8 @@ namespace devicestate {
 
         const float adjustedCorrectedTemperature = devicestate::clamp(setPointCorrectionOffset, this->minTemp, this->maxTemp);
         const float roundedAdjustedCorrectedTemperature = this->getRoundedTemp(adjustedCorrectedTemperature);
-        if (devicestate::same_float(this->correctedTargetTemperature, adjustedCorrectedTemperature, 0.1f) &&
-            devicestate::same_float(roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, 0.1f)) {
+        if (devicestate::same_float(this->correctedTargetTemperature, adjustedCorrectedTemperature, 0.01f) &&
+            devicestate::same_float(roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, 0.01f)) {
             return false;
         }
 
