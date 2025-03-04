@@ -302,7 +302,7 @@ namespace devicestate {
     void DeviceStateManager::hpSettingsChanged() {
         heatpumpSettings currentSettings = hp->getSettings();
         ESP_LOGI(TAG, "Heatpump Settings Changed:");
-        this->log_heatpump_settings(currentSettings);
+        //this->log_heatpump_settings(currentSettings);
 
         if (currentSettings.power == NULL) {
             /*

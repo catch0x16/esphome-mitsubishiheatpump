@@ -32,6 +32,7 @@ namespace workflow {
                 maxAdjustmentOver,
                 maxAdjustmentUnder
             );
+            this->resetRequired = true;
         }
 
         bool PidWorkflowStep::ensurePIDTarget(devicestate::DeviceStateManager* deviceManager) {
@@ -48,14 +49,22 @@ namespace workflow {
             ESP_LOGV(TAG, "PIDController update current: %.2f", currentTemperature);
 
             const bool updatedPidTarget = this->ensurePIDTarget(deviceManager);
+
             // if pid target is not updated and internal power is not on
             if (updatedPidTarget || deviceManager->isInternalPowerOn()) {
+                if (this->resetRequired) {
+                    this->resetRequired = false;
+                    this->pidController->resetState();
+                }
+
                 const float setPointCorrection = this->pidController->update(currentTemperature);
                 if (deviceManager->internalSetCorrectedTemperature(setPointCorrection)) {
                     if (!deviceManager->commit()) {
                         ESP_LOGE(TAG, "PidWorkflowStep failed to update corrected temperature");
                     }
                 }
+            } else {
+                this->resetRequired = true;
             }
         }
 

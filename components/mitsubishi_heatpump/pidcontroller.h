@@ -30,7 +30,6 @@ class PIDController {
         float applyOutputLimits(const float output);
         void adjustOutputLimits(const bool direction);
         void setTunings(const float p, const float i, const float d);
-        void resetState();
 
     public:
         PIDController(
@@ -50,6 +49,7 @@ class PIDController {
         float getTarget();
         void setTarget(const float target, const bool direction);
         float update(const float input);
+        void resetState();
 };
 
 #endif

@@ -9,11 +9,6 @@
 
 using namespace std;
 
-float roundToDecimals(const float value, const int n) {
-    const int decimals = std::pow(10, n);
-    return std::ceil(value * decimals) / decimals;
-}
-
 PIDController::PIDController(
     const float p,
     const float i,
@@ -101,7 +96,7 @@ void PIDController::setTunings(const float p, const float i, const float d) {
     this->d = d;
 
     // Calculate internal pid representations
-    const float sampleTimeSec = roundToDecimals(this->sampleTime / 1000.0, 6);
+    const float sampleTimeSec = devicestate::roundToDecimals(this->sampleTime / 1000.0, 6);
     this->kp = p;
     this->ki = i * sampleTimeSec;
     this->kd = d / sampleTimeSec;

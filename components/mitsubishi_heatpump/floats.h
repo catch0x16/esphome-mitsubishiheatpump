@@ -5,6 +5,11 @@
 
 namespace devicestate {
 
+    __attribute__((unused))static float roundToDecimals(const float value, const int n) {
+        const int decimals = std::pow(10, n);
+        return std::ceil(value * decimals) / decimals;
+    }
+
     __attribute__((unused))static bool same_float(const float a, const float b, const float epsilon = 0.001f) {
         if (std::isnan(a) || std::isnan(b)) {
             return false;
