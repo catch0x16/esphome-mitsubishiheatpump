@@ -1,4 +1,7 @@
 #include <cmath>
+#include <vector>
+
+using namespace std;
 
 #ifndef FLOATSDS_H
 #define FLOATSDS_H
@@ -25,6 +28,89 @@ namespace devicestate {
         }
         return value;
     }
+
+    __attribute__((unused))static double calculateDelta(double y1, double y2) {
+        return y2 - y1;
+    }
+
+    class CircularBuffer {
+        private:
+            int capacity;
+            int count;
+            int head;
+            int tail;
+
+            float* items;
+
+        public:
+            CircularBuffer(int capacity) {
+                this->capacity = capacity;
+                this->count = 0;
+                this->items = new float[capacity];
+                this->head = 0;
+                this->tail = 0;
+            }
+
+            bool offer(float next) {
+                if (this->count >= this->capacity + 1) {
+                    return false;
+                }
+
+                this->items[this->tail] = next;
+                this->tail = (this->tail + 1) % this->capacity;
+                this->count++;
+                return true;
+            }
+
+            bool pop() {
+                if (this->count == 0) {
+                    return false;
+                }
+
+                this->head = (this->head + 1) % this->capacity;
+                this->count--;
+                return true;
+            }
+    };
+
+    class MovingSlopeAverage {
+        private:
+            int window;
+            float deltaSum;
+
+            vector<float> data;
+
+        public:
+            MovingSlopeAverage(const int window) {
+                this->window = window;
+                this->deltaSum = 0;
+
+                this->data = {};
+            }
+
+            float getAverage() {
+                const int n = this->data.size();
+                if (n < 2) {
+                    return 0;
+                }
+                return this->deltaSum / n;
+            }
+
+            float increment(float next) {
+                const int n = this->data.size();
+
+                if (n == window) {
+                    double lastDelta = calculateDelta(this->data[0], this->data[1]);
+                    deltaSum -= lastDelta;
+                    this->data.erase(this->data.begin());
+                }
+
+                double delta = calculateDelta(this->data[n - 1], next);
+                this->deltaSum += delta;
+                this->data.push_back(next);
+                return delta;
+            }
+    };
 
 }
 
