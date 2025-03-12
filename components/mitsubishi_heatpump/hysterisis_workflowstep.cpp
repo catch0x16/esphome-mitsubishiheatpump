@@ -6,38 +6,38 @@ using namespace devicestate;
 
 namespace workflow {
 
-    namespace hysteresis {
+    namespace hysterisis {
 
-        static const char* TAG = "HysteresisWorkflowStep"; // Logging tag
+        static const char* TAG = "HysterisisWorkflowStep"; // Logging tag
 
-        HysteresisWorkflowStep::HysteresisWorkflowStep(
-            const float hysterisisOverOn,
-            const float hysterisisUnderOff
+        HysterisisWorkflowStep::HysterisisWorkflowStep(
+            const float hysterisisOn,
+            const float hysterisisOff
         ) {
-            this->hysterisisOverOn = hysterisisOverOn;
-            this->hysterisisUnderOff = hysterisisUnderOff;
+            this->hysterisisOn = hysterisisOn;
+            this->hysterisisOff = hysterisisOff;
         }
         
-        void HysteresisWorkflowStep::executeHysteresisWorkflowStep(
-                HysteresisResult* result, devicestate::DeviceStateManager* deviceManager) {
+        void HysterisisWorkflowStep::executeHysterisisWorkflowStep(
+                HysterisisResult* result, devicestate::DeviceStateManager* deviceManager) {
             if (!result->active) {
-                if (-result->delta > this->hysterisisOverOn) {
+                if (-result->delta > this->hysterisisOn) {
                     ESP_LOGI(TAG, "Turn on while %s: delta={%f} current={%f} targetTemperature={%f}", result->label.c_str(), result->delta, result->currentTemperature, result->targetTemperature);
                     deviceManager->internalTurnOn();
                 }
                 return;
             }
         
-            if (result->delta > this->hysterisisUnderOff) {
+            if (result->delta > this->hysterisisOff) {
                 ESP_LOGI(TAG, "Turn off while %s: delta={%f} current={%f} targetTemperature={%f}", result->label.c_str(), result->delta, result->currentTemperature, result->targetTemperature);
                 deviceManager->internalTurnOff();
                 return;
             }
         }
         
-        HysteresisResult HysteresisWorkflowStep::getHysteresisResult(
+        HysterisisResult HysterisisWorkflowStep::getHysterisisResult(
                 const float currentTemperature, devicestate::DeviceStateManager* deviceManager) {
-            HysteresisResult result;
+            HysterisisResult result;
         
             const float targetTemperature = deviceManager->getTargetTemperature();
         
@@ -62,7 +62,7 @@ namespace workflow {
                     break;
                 }
                 default: {
-                    ESP_LOGV(workflow::hysteresis::TAG, "Doing nothing in current mode (%s): current={%f} targetTemperature={%f}", 
+                    ESP_LOGV(workflow::hysterisis::TAG, "Doing nothing in current mode (%s): current={%f} targetTemperature={%f}", 
                         devicestate::deviceModeToString(deviceState.mode), currentTemperature, targetTemperature);
                     result.shouldRun = false;
                 }
@@ -71,10 +71,10 @@ namespace workflow {
             return result;
         }
         
-        void HysteresisWorkflowStep::run(const float currentTemperature, devicestate::DeviceStateManager* deviceManager) {
-            HysteresisResult result = this->getHysteresisResult(currentTemperature, deviceManager);
+        void HysterisisWorkflowStep::run(const float currentTemperature, devicestate::DeviceStateManager* deviceManager) {
+            HysterisisResult result = this->getHysterisisResult(currentTemperature, deviceManager);
             if (result.shouldRun) {
-                this->executeHysteresisWorkflowStep(&result, deviceManager);
+                this->executeHysterisisWorkflowStep(&result, deviceManager);
             }
         }
 

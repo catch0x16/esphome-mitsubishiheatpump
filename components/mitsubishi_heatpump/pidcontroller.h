@@ -45,6 +45,8 @@ class PIDController {
 
         float getOutputMin();
         float getOutputMax();
+        float getAdjustedMin();
+        float getAdjustedMax();
 
         float getTarget();
         void setTarget(const float target, const bool direction);

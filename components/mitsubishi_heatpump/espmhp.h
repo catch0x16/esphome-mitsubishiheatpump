@@ -92,8 +92,8 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         void set_kd(float kd) { this->kd_ = kd; }
         void set_max_adjustment_under(float maxAdjustmentUnder) { this->maxAdjustmentUnder_ = maxAdjustmentUnder; }
         void set_max_adjustment_over(float maxAdjustmentOver) { this->maxAdjustmentOver_ = maxAdjustmentOver; }
-        void set_hysterisis_under_off(float hysterisisUnderOff) { this->hysterisisUnderOff_ = hysterisisUnderOff; }
-        void set_hysterisis_over_on(float hysterisisOverOn) { this->hysterisisOverOn_ = hysterisisOverOn; }
+        void set_hysterisis_off(float hysterisisOff) { this->hysterisisOff_ = hysterisisOff; }
+        void set_hysterisis_on(float hysterisisOn) { this->hysterisisOn_ = hysterisisOn; }
         void set_offset_adjustment(float offsetAdjustment) { this->offsetAdjustment_ = offsetAdjustment; }
 
         // handle a change in device;
@@ -147,7 +147,7 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         // HeatPump object using the underlying Arduino library.
         devicestate::DeviceStateManager* dsm;
 
-        WorkflowStep* hysteresisWorkflowStep;
+        WorkflowStep* hysterisisWorkflowStep;
         WorkflowStep* pidWorkflowStep;
 
         // The ClimateTraits supported by this HeatPump.
@@ -213,8 +213,8 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         float kd_;
         float maxAdjustmentUnder_;
         float maxAdjustmentOver_;
-        float hysterisisUnderOff_;
-        float hysterisisOverOn_;
+        float hysterisisOff_;
+        float hysterisisOn_;
         float offsetAdjustment_;
 
         bool isInitialized = false;

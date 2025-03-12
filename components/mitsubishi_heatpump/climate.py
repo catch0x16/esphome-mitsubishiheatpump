@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import binary_sensor, climate, select, sensor
+from esphome.components import binary_sensor, climate, select, sensor, number
 
 from esphome.components.logger import HARDWARE_UART_TO_SERIAL
 from esphome.const import (
@@ -15,6 +15,7 @@ from esphome.const import (
     CONF_MODE,
     CONF_FAN_MODE,
     CONF_SWING_MODE,
+    CONF_VALUE,
     PLATFORM_ESP8266
 )
 from esphome.core import CORE, coroutine
@@ -41,8 +42,8 @@ CONF_KI = "ki"
 CONF_KD = "kd"
 CONF_MAX_ADJUSTMENT_UNDER = "maxAdjustmentUnder"
 CONF_MAX_ADJUSTMENT_OVER = "maxAdjustmentOver"
-CONF_HYSTERISIS_UNDER_OFF = "hysterisisUnderOff"
-CONF_HYSTERISIS_OVER_ON = "hysterisisOverOn"
+CONF_HYSTERISIS_OFF = "hysterisisOff"
+CONF_HYSTERISIS_ON = "hysterisisOn"
 CONF_OFFSET_ADJUSTMENT = "offsetAdjustment"
 
 CONF_HORIZONTAL_SWING_SELECT = "horizontal_vane_select"
@@ -249,13 +250,13 @@ CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
         
         cv.Required(CONF_CONTROL_PARAMETERS): cv.Schema(
             {
-                cv.Required(CONF_KP): cv.float_,
+                cv.Optional(CONF_KP, default=0.0): cv.float_,
                 cv.Optional(CONF_KI, default=0.0): cv.float_,
                 cv.Optional(CONF_KD, default=0.0): cv.float_,
                 cv.Optional(CONF_MAX_ADJUSTMENT_UNDER, default=2.0): cv.float_,
                 cv.Optional(CONF_MAX_ADJUSTMENT_OVER, default=2.0): cv.float_,
-                cv.Optional(CONF_HYSTERISIS_UNDER_OFF, default=0.25): cv.float_,
-                cv.Optional(CONF_HYSTERISIS_OVER_ON, default=0.25): cv.float_,
+                cv.Optional(CONF_HYSTERISIS_OFF, default=0.25): cv.float_,
+                cv.Optional(CONF_HYSTERISIS_ON, default=0.25): cv.float_,
                 cv.Optional(CONF_OFFSET_ADJUSTMENT, default=0.00): cv.float_,
             }
         ),
@@ -346,8 +347,8 @@ def to_code(config):
     cg.add(var.set_kd(params[CONF_KD]))
     cg.add(var.set_max_adjustment_under(params[CONF_MAX_ADJUSTMENT_UNDER]))
     cg.add(var.set_max_adjustment_over(params[CONF_MAX_ADJUSTMENT_OVER]))
-    cg.add(var.set_hysterisis_under_off(params[CONF_HYSTERISIS_UNDER_OFF]))
-    cg.add(var.set_hysterisis_over_on(params[CONF_HYSTERISIS_OVER_ON]))
+    cg.add(var.set_hysterisis_off(params[CONF_HYSTERISIS_OFF]))
+    cg.add(var.set_hysterisis_on(params[CONF_HYSTERISIS_ON]))
     cg.add(var.set_offset_adjustment(params[CONF_OFFSET_ADJUSTMENT]))
 
     cg.add_library(

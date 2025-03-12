@@ -24,8 +24,8 @@ using namespace esphome;
 #include "devicestate.h"
 using namespace devicestate;
 
-#include "hysteresis_workflowstep.h"
-using namespace workflow::hysteresis;
+#include "hysterisis_workflowstep.h"
+using namespace workflow::hysterisis;
 
 #include "pid_workflowstep.h"
 using namespace workflow::pid;
@@ -756,9 +756,9 @@ void MitsubishiHeatPump::setup() {
         this->max_temp = this->visual_max_temperature_override_.value();
     }
 
-    this->hysteresisWorkflowStep = new HysteresisWorkflowStep(
-        this->hysterisisOverOn_,
-        this->hysterisisUnderOff_
+    this->hysterisisWorkflowStep = new HysterisisWorkflowStep(
+        this->hysterisisOn_,
+        this->hysterisisOff_
     );
 
     this->pidWorkflowStep = new PidWorkflowStep(
@@ -836,7 +836,7 @@ void MitsubishiHeatPump::save(float value, ESPPreferenceObject& storage) {
     storage.save(&steps);
 }
 
-optional<float> MitsubishiHeatPump::load(ESPPreferenceObject& storage) {
+esphome::optional<float> MitsubishiHeatPump::load(ESPPreferenceObject& storage) {
     uint8_t steps = 0;
     if (!storage.load(&steps)) {
         return {};
@@ -875,13 +875,12 @@ void MitsubishiHeatPump::update_setpoint(const float value) {
 }
 
 void MitsubishiHeatPump::run_workflows() {
-    ESP_LOGD(TAG, "Run workflows...");
-
     if (!this->isComponentActive()) {
         ESP_LOGW(TAG, "Skipping run workflow due to inactive state.");
         return;
     }
 
-    this->hysteresisWorkflowStep->run(this->current_temperature, this->dsm);
+    ESP_LOGI(TAG, "Run workflows - currentTemperature: %.2f", this->current_temperature);
+    this->hysterisisWorkflowStep->run(this->current_temperature, this->dsm);
     this->pidWorkflowStep->run(this->current_temperature, this->dsm);
 }

@@ -114,6 +114,14 @@ float PIDController::getTarget() {
     return this->target;
 }
 
+float PIDController::getAdjustedMin() {
+    return this->adjustedMin;
+}
+
+float PIDController::getAdjustedMax() {
+    return this->adjustedMax;
+}
+
 void PIDController::resetState() {
     this->outputSum = this->target; // Start adjusting from target
     this->lastInput.reset();

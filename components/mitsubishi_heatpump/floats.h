@@ -1,8 +1,6 @@
 #include <cmath>
 #include <vector>
 
-using namespace std;
-
 #ifndef FLOATSDS_H
 #define FLOATSDS_H
 
@@ -78,7 +76,7 @@ namespace devicestate {
             int window;
             float deltaSum;
 
-            vector<float> data;
+            std::vector<float> data;
 
         public:
             MovingSlopeAverage(const int window) {
