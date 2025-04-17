@@ -57,7 +57,7 @@ namespace workflow {
                 case devicestate::DeviceMode::DeviceMode_Cool: {
                     const float delta = targetTemperature - currentTemperature;
                     result.shouldRun = true;
-                    result.active = deviceState.active;
+                    result.delta = delta;
                     result.label = "cooling";
                     break;
                 }
