@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import binary_sensor, climate, select, sensor, number
+from esphome.components import binary_sensor, climate, select, sensor
 
 from esphome.components.logger import HARDWARE_UART_TO_SERIAL
 from esphome.const import (
@@ -15,7 +15,6 @@ from esphome.const import (
     CONF_MODE,
     CONF_FAN_MODE,
     CONF_SWING_MODE,
-    CONF_VALUE,
     PLATFORM_ESP8266
 )
 from esphome.core import CORE, coroutine
@@ -92,7 +91,7 @@ def valid_uart(uart):
     return cv.one_of(*uarts, upper=True)(uart)
 
 
-SELECT_SCHEMA = select.SELECT_SCHEMA.extend(
+SELECT_SCHEMA = select.select_schema(MitsubishiACSelect).extend(
     {cv.GenerateID(CONF_ID): cv.declare_id(MitsubishiACSelect)}
 )
 
@@ -218,7 +217,7 @@ DEVICE_STATUS_RUNTIME_HOURS_DEFAULT[CONF_INTERNAL] = False
 PID_SET_POINT_CORRECTION_DEFAULT[CONF_INTERNAL] = False
 DEVICE_SET_POINT_DEFAULT[CONF_INTERNAL] = False
 
-CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
+CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
     {
         cv.GenerateID(): cv.declare_id(MitsubishiHeatPump),
         cv.Optional(CONF_HARDWARE_UART, default="UART0"): valid_uart,
