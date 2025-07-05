@@ -55,8 +55,8 @@ MitsubishiHeatPump::MitsubishiHeatPump(
 
     device_status_current_temperature = new esphome::sensor::Sensor();
     device_status_current_temperature->set_unit_of_measurement("°C");
-    device_status_compressor_frequency->set_device_class("temperature");
-    device_status_compressor_frequency->set_state_class(sensor::StateClass::STATE_CLASS_MEASUREMENT)
+    device_status_current_temperature->set_device_class("temperature");
+    device_status_current_temperature->set_state_class(sensor::StateClass::STATE_CLASS_MEASUREMENT);
     device_status_current_temperature->set_accuracy_decimals(1);
 
     device_status_compressor_frequency = new esphome::sensor::Sensor();
