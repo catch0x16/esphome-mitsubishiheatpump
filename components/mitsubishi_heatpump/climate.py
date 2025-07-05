@@ -217,7 +217,8 @@ DEVICE_STATUS_RUNTIME_HOURS_DEFAULT[CONF_INTERNAL] = False
 PID_SET_POINT_CORRECTION_DEFAULT[CONF_INTERNAL] = False
 DEVICE_SET_POINT_DEFAULT[CONF_INTERNAL] = False
 
-CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
+#CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
+CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
     {
         cv.GenerateID(): cv.declare_id(MitsubishiHeatPump),
         cv.Optional(CONF_HARDWARE_UART, default="UART0"): valid_uart,
