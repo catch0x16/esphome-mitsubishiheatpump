@@ -52,23 +52,47 @@ MitsubishiHeatPump::MitsubishiHeatPump(
     device_state_connected = new esphome::binary_sensor::BinarySensor();
     device_state_active = new esphome::binary_sensor::BinarySensor();
     device_status_operating = new esphome::binary_sensor::BinarySensor();
+
     device_status_current_temperature = new esphome::sensor::Sensor();
     device_status_current_temperature->set_unit_of_measurement("°C");
+    device_status_compressor_frequency->set_device_class("temperature");
+    device_status_compressor_frequency->set_state_class(sensor::StateClass::STATE_CLASS_MEASUREMENT)
     device_status_current_temperature->set_accuracy_decimals(1);
+
     device_status_compressor_frequency = new esphome::sensor::Sensor();
     device_status_compressor_frequency->set_unit_of_measurement("Hz");
     device_status_compressor_frequency->set_device_class("frequency");
+    device_status_compressor_frequency->set_state_class(sensor::StateClass::STATE_CLASS_MEASUREMENT)
     device_status_compressor_frequency->set_accuracy_decimals(1);
+    
     device_status_input_power = new esphome::sensor::Sensor();
+    device_status_input_power->set_unit_of_measurement("W");
+    device_status_input_power->set_device_class("power");
+    device_status_input_power->set_state_class(sensor::StateClass::STATE_CLASS_MEASUREMENT)
+    device_status_input_power->set_accuracy_decimals(0);
+
     device_status_kwh = new esphome::sensor::Sensor();
     device_status_kwh->set_unit_of_measurement("kWh");
+    device_status_kwh->set_device_class("energy");
+    device_status_kwh->set_state_class(sensor::StateClass::STATE_CLASS_TOTAL_INCREASING)
+    device_status_kwh->set_accuracy_decimals(1);
+    
     device_status_runtime_hours = new esphome::sensor::Sensor();
     device_status_runtime_hours->set_unit_of_measurement("h");
+    device_status_runtime_hours->set_device_class("duration");
+    device_status_runtime_hours->set_state_class(sensor::StateClass::STATE_CLASS_TOTAL_INCREASING)
+    device_status_runtime_hours->set_accuracy_decimals(2);
+
     pid_set_point_correction = new esphome::sensor::Sensor();
     pid_set_point_correction->set_unit_of_measurement("°C");
+    pid_set_point_correction->set_device_class("temperature");
+    pid_set_point_correction->set_state_class(sensor::StateClass::STATE_CLASS_MEASUREMENT)
     pid_set_point_correction->set_accuracy_decimals(1);
+
     device_set_point = new esphome::sensor::Sensor();
     device_set_point->set_unit_of_measurement("°C");
+    device_set_point->set_device_class("temperature");
+    device_set_point->set_state_class(sensor::StateClass::STATE_CLASS_MEASUREMENT)
     device_set_point->set_accuracy_decimals(1);
 
     this->traits_.set_supports_action(true);
