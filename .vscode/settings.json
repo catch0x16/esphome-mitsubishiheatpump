@@ -63,6 +63,7 @@
         "memory": "cpp",
         "print": "cpp",
         "stack": "cpp",
-        "__availability": "cpp"
+        "__availability": "cpp",
+        "regex": "cpp"
     }
 }

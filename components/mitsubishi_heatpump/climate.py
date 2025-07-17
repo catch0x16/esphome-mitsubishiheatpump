@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import binary_sensor, climate, select, sensor
+from esphome.components import binary_sensor, climate, select, sensor, uart
 
 from esphome.components.logger import HARDWARE_UART_TO_SERIAL
 from esphome.const import (
@@ -73,7 +73,7 @@ CONF_REMOTE_IDLE_TIMEOUT = "remote_temperature_idle_timeout_minutes"
 CONF_REMOTE_PING_TIMEOUT = "remote_temperature_ping_timeout_minutes"
 
 MitsubishiHeatPump = cg.global_ns.class_(
-    "MitsubishiHeatPump", climate.Climate, cg.PollingComponent
+    "MitsubishiHeatPump", climate.Climate, cg.Component, uart.UARTDevice
 )
 
 MitsubishiACSelect = cg.global_ns.class_(
@@ -95,130 +95,120 @@ SELECT_SCHEMA = select.select_schema(MitsubishiACSelect).extend(
     {cv.GenerateID(CONF_ID): cv.declare_id(MitsubishiACSelect)}
 )
 
-INTERNAL_POWER_ON_SCHEMA = binary_sensor.binary_sensor_schema(binary_sensor.BinarySensor,
-    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+InternalPowerOnSensor = cg.global_ns.class_("InternalPowerOnSensor", binary_sensor.BinarySensor, cg.Component)
+INTERNAL_POWER_ON_SCHEMA = binary_sensor.binary_sensor_schema(InternalPowerOnSensor, entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC).extend(
+    {
+        cv.GenerateID(CONF_ID): cv.declare_id(InternalPowerOnSensor),
+        cv.Optional(CONF_NAME): "Internal power on",
+    }
 )
 
-DEVICE_STATE_CONNECTED_SCHEMA = binary_sensor.binary_sensor_schema(binary_sensor.BinarySensor,
-    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+DeviceStateConnectedSensor = cg.global_ns.class_("DeviceStateConnectedSensor", binary_sensor.BinarySensor, cg.Component)
+DEVICE_STATE_CONNECTED_SCHEMA = binary_sensor.binary_sensor_schema(DeviceStateConnectedSensor, entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC).extend(
+    {
+        cv.GenerateID(CONF_ID): cv.declare_id(DeviceStateConnectedSensor),
+        cv.Optional(CONF_NAME): "Device state connected"
+    }
 )
 
-DEVICE_STATE_ACTIVE_SCHEMA = binary_sensor.binary_sensor_schema(binary_sensor.BinarySensor,
-    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+DeviceStateActiveSensor = cg.global_ns.class_("DeviceStateActiveSensor", binary_sensor.BinarySensor, cg.Component)
+DEVICE_STATE_ACTIVE_SCHEMA = binary_sensor.binary_sensor_schema(DeviceStateActiveSensor, entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC).extend(
+    {
+        cv.GenerateID(CONF_ID): cv.declare_id(DeviceStateActiveSensor),
+        cv.Optional(CONF_NAME): "Device state active"
+    }
 )
 
-PID_SET_POINT_CORRECTION_SCHEMA = sensor.sensor_schema(sensor.Sensor,
+PidSetPointCorrectionSensor = cg.global_ns.class_("PidSetPointCorrectionSensor", sensor.Sensor, cg.Component)
+PID_SET_POINT_CORRECTION_SCHEMA = sensor.sensor_schema(PidSetPointCorrectionSensor,
     entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
     unit_of_measurement="°C"
+).extend(
+    {
+        cv.GenerateID(CONF_ID): cv.declare_id(PidSetPointCorrectionSensor),
+        cv.Optional(CONF_NAME): "PID Set Point Correction"
+    }
 )
 
-DEVICE_STATUS_OPERATING_SCHEMA = binary_sensor.binary_sensor_schema(binary_sensor.BinarySensor,
-    entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+DeviceStatusOperatingSensor = cg.global_ns.class_("DeviceStatusOperatingSensor", binary_sensor.BinarySensor, cg.Component)
+DEVICE_STATUS_OPERATING_SCHEMA = binary_sensor.binary_sensor_schema(DeviceStatusOperatingSensor, entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC).extend(
+    {
+        cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusOperatingSensor),
+        cv.Optional(CONF_NAME): "Device status operating"
+    }
 )
 
-DEVICE_STATUS_CURRENT_TEMPERATURE_SCHEMA = sensor.sensor_schema(sensor.Sensor,
+DeviceStatusCurrentTemperatureSensor = cg.global_ns.class_("DeviceStatusCurrentTemperatureSensor", sensor.Sensor, cg.Component)
+DEVICE_STATUS_CURRENT_TEMPERATURE_SCHEMA = sensor.sensor_schema(DeviceStatusCurrentTemperatureSensor,
     entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
     unit_of_measurement="°C"
+).extend(
+    {
+        cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusCurrentTemperatureSensor),
+        cv.Optional(CONF_NAME): "Device current temperature"
+    }
 )
 
-DEVICE_STATUS_COMPRESSOR_FREQUENCY_SCHEMA = sensor.sensor_schema(sensor.Sensor,
+DeviceStatusCompressorFrequencySensor = cg.global_ns.class_("DeviceStatusCompressorFrequencySensor", sensor.Sensor, cg.Component)
+DEVICE_STATUS_COMPRESSOR_FREQUENCY_SCHEMA = sensor.sensor_schema(DeviceStatusCompressorFrequencySensor,
     entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
     unit_of_measurement="Hz",
     state_class="measurement"
+).extend(
+    {
+        cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusCompressorFrequencySensor),
+        cv.Optional(CONF_NAME): "Device status compressor frequency"
+    }
 )
 
-DEVICE_STATUS_INPUT_POWER_SCHEMA = sensor.sensor_schema(sensor.Sensor,
+DeviceStatusInputPowerSensor = cg.global_ns.class_("DeviceStatusInputPowerSensor", sensor.Sensor, cg.Component)
+DEVICE_STATUS_INPUT_POWER_SCHEMA = sensor.sensor_schema(DeviceStatusInputPowerSensor,
     entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC
+).extend(
+    {
+        cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusInputPowerSensor),
+        cv.Optional(CONF_NAME): "Device status input power"
+    }
 )
 
-DEVICE_STATUS_KWH_SCHEMA = sensor.sensor_schema(sensor.Sensor,
+DeviceStatusKwhSensor = cg.global_ns.class_("DeviceStatusKwhSensor", sensor.Sensor, cg.Component)
+DEVICE_STATUS_KWH_SCHEMA = sensor.sensor_schema(DeviceStatusKwhSensor,
     entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
     unit_of_measurement="kWh",
     device_class='energy',
     state_class="total_increasing"
+).extend(
+    {
+        cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusKwhSensor),
+        cv.Optional(CONF_NAME): "Device status kWh"
+    }
 )
 
-DEVICE_STATUS_RUNTIME_HOURS_SCHEMA = sensor.sensor_schema(sensor.Sensor,
+DeviceStatusRuntimeHoursSensor = cg.global_ns.class_("DeviceStatusRuntimeHoursSensor", sensor.Sensor, cg.Component)
+DEVICE_STATUS_RUNTIME_HOURS_SCHEMA = sensor.sensor_schema(DeviceStatusRuntimeHoursSensor,
     entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
     unit_of_measurement="h",
     device_class='duration',
     state_class="total_increasing"
+).extend(
+    {
+        cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusRuntimeHoursSensor),
+        cv.Optional(CONF_NAME): "Device status runtime hours"
+    }
 )
 
-DEVICE_SET_POINT_SCHEMA = sensor.sensor_schema(sensor.Sensor,
+DeviceSetPointSensor = cg.global_ns.class_("DeviceSetPointSensor", sensor.Sensor, cg.Component)
+DEVICE_SET_POINT_SCHEMA = sensor.sensor_schema(DeviceSetPointSensor,
     entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC,
     unit_of_measurement="°C"
+).extend(
+    {
+        cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusRuntimeHoursSensor),
+        cv.Optional(CONF_NAME): "Device Set Point"
+    }
 )
 
-INTERNAL_POWER_ON_DEFAULT = INTERNAL_POWER_ON_SCHEMA({
-    CONF_ID: CONF_INTERNAL_POWER_ON,
-    CONF_NAME: "Internal power on"
-})
-
-DEVICE_STATE_CONNECTED_DEFAULT = DEVICE_STATE_CONNECTED_SCHEMA({
-    CONF_ID: CONF_DEVICE_STATE_CONNECTED,
-    CONF_NAME: "Device state connected"
-})
-
-DEVICE_STATE_ACTIVE_DEFAULT = DEVICE_STATE_ACTIVE_SCHEMA({
-    CONF_ID: CONF_DEVICE_STATE_ACTIVE,
-    CONF_NAME: "Device state active"
-})
-
-PID_SET_POINT_CORRECTION_DEFAULT = PID_SET_POINT_CORRECTION_SCHEMA({
-    CONF_ID: CONF_PID_SET_POINT_CORRECTION,
-    CONF_NAME: "PID Set Point Correction"
-})
-
-DEVICE_STATUS_OPERATING_DEFAULT = DEVICE_STATUS_OPERATING_SCHEMA({
-    CONF_ID: CONF_DEVICE_STATUS_OPERATING,
-    CONF_NAME: "Device status operating"
-})
-
-DEVICE_STATUS_CURRENT_TEMPERATURE_DEFAULT = DEVICE_STATUS_CURRENT_TEMPERATURE_SCHEMA({
-    CONF_ID: CONF_DEVICE_STATUS_CURRENT_TEMPERATURE,
-    CONF_NAME: "Device current temperature"
-})
-
-DEVICE_STATUS_COMPRESSOR_FREQUENCY_DEFAULT = DEVICE_STATUS_COMPRESSOR_FREQUENCY_SCHEMA({
-    CONF_ID: CONF_DEVICE_STATUS_COMPRESSOR_FREQUENCY,
-    CONF_NAME: "Device status compressor frequency"
-})
-
-DEVICE_STATUS_INPUT_POWER_DEFAULT = DEVICE_STATUS_INPUT_POWER_SCHEMA({
-    CONF_ID: CONF_DEVICE_STATUS_INPUT_POWER,
-    CONF_NAME: "Device status input power"
-})
-
-DEVICE_STATUS_KWH_DEFAULT = DEVICE_STATUS_KWH_SCHEMA({
-    CONF_ID: CONF_DEVICE_STATUS_KWH,
-    CONF_NAME: "Device status kWh"
-})
-
-DEVICE_STATUS_RUNTIME_HOURS_DEFAULT = DEVICE_STATUS_RUNTIME_HOURS_SCHEMA({
-    CONF_ID: CONF_DEVICE_STATUS_RUNTIME_HOURS,
-    CONF_NAME: "Device status runtime hours"
-})
-
-DEVICE_SET_POINT_DEFAULT = DEVICE_SET_POINT_SCHEMA({
-    CONF_ID: CONF_DEVICE_SET_POINT,
-    CONF_NAME: "Device Set Point"
-})
-
-INTERNAL_POWER_ON_DEFAULT[CONF_INTERNAL] = False
-DEVICE_STATE_CONNECTED_DEFAULT[CONF_INTERNAL] = False
-DEVICE_STATE_ACTIVE_DEFAULT[CONF_INTERNAL] = False
-DEVICE_STATUS_OPERATING_DEFAULT[CONF_INTERNAL] = False
-DEVICE_STATUS_CURRENT_TEMPERATURE_DEFAULT[CONF_INTERNAL] = False
-DEVICE_STATUS_COMPRESSOR_FREQUENCY_DEFAULT[CONF_INTERNAL] = False
-DEVICE_STATUS_INPUT_POWER_DEFAULT[CONF_INTERNAL] = False
-DEVICE_STATUS_KWH_DEFAULT[CONF_INTERNAL] = False
-DEVICE_STATUS_RUNTIME_HOURS_DEFAULT[CONF_INTERNAL] = False
-PID_SET_POINT_CORRECTION_DEFAULT[CONF_INTERNAL] = False
-DEVICE_SET_POINT_DEFAULT[CONF_INTERNAL] = False
-
-#CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
-CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
+CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
     {
         cv.GenerateID(): cv.declare_id(MitsubishiHeatPump),
         cv.Optional(CONF_HARDWARE_UART, default="UART0"): valid_uart,
@@ -236,17 +226,17 @@ CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
         # Add selects for vertical and horizontal vane positions
         cv.Optional(CONF_HORIZONTAL_SWING_SELECT): SELECT_SCHEMA,
         cv.Optional(CONF_VERTICAL_SWING_SELECT): SELECT_SCHEMA,
-        cv.Optional(CONF_INTERNAL_POWER_ON, default=INTERNAL_POWER_ON_DEFAULT): INTERNAL_POWER_ON_SCHEMA,
-        cv.Optional(CONF_DEVICE_STATE_CONNECTED, default=DEVICE_STATE_CONNECTED_DEFAULT): DEVICE_STATE_CONNECTED_SCHEMA,
-        cv.Optional(CONF_DEVICE_STATE_ACTIVE, default=DEVICE_STATE_ACTIVE_DEFAULT): DEVICE_STATE_ACTIVE_SCHEMA,
-        cv.Optional(CONF_DEVICE_STATUS_OPERATING, default=DEVICE_STATUS_OPERATING_DEFAULT): DEVICE_STATUS_OPERATING_SCHEMA,
-        cv.Optional(CONF_DEVICE_STATUS_CURRENT_TEMPERATURE, default=DEVICE_STATUS_CURRENT_TEMPERATURE_DEFAULT): DEVICE_STATUS_CURRENT_TEMPERATURE_SCHEMA,
-        cv.Optional(CONF_DEVICE_STATUS_COMPRESSOR_FREQUENCY, default=DEVICE_STATUS_COMPRESSOR_FREQUENCY_DEFAULT): DEVICE_STATUS_COMPRESSOR_FREQUENCY_SCHEMA,
-        cv.Optional(CONF_DEVICE_STATUS_INPUT_POWER, default=DEVICE_STATUS_INPUT_POWER_DEFAULT): DEVICE_STATUS_INPUT_POWER_SCHEMA,
-        cv.Optional(CONF_DEVICE_STATUS_KWH, default=DEVICE_STATUS_KWH_DEFAULT): DEVICE_STATUS_KWH_SCHEMA,
-        cv.Optional(CONF_DEVICE_STATUS_RUNTIME_HOURS, default=DEVICE_STATUS_RUNTIME_HOURS_DEFAULT): DEVICE_STATUS_RUNTIME_HOURS_SCHEMA,
-        cv.Optional(CONF_PID_SET_POINT_CORRECTION, default=PID_SET_POINT_CORRECTION_DEFAULT): PID_SET_POINT_CORRECTION_SCHEMA,
-        cv.Optional(CONF_DEVICE_SET_POINT, default=DEVICE_SET_POINT_DEFAULT): DEVICE_SET_POINT_SCHEMA,
+        cv.Optional(CONF_INTERNAL_POWER_ON): INTERNAL_POWER_ON_SCHEMA,
+        cv.Optional(CONF_DEVICE_STATE_CONNECTED): DEVICE_STATE_CONNECTED_SCHEMA,
+        cv.Optional(CONF_DEVICE_STATE_ACTIVE): DEVICE_STATE_ACTIVE_SCHEMA,
+        cv.Optional(CONF_DEVICE_STATUS_OPERATING): DEVICE_STATUS_OPERATING_SCHEMA,
+        cv.Optional(CONF_DEVICE_STATUS_CURRENT_TEMPERATURE): DEVICE_STATUS_CURRENT_TEMPERATURE_SCHEMA,
+        cv.Optional(CONF_DEVICE_STATUS_COMPRESSOR_FREQUENCY): DEVICE_STATUS_COMPRESSOR_FREQUENCY_SCHEMA,
+        cv.Optional(CONF_DEVICE_STATUS_INPUT_POWER): DEVICE_STATUS_INPUT_POWER_SCHEMA,
+        cv.Optional(CONF_DEVICE_STATUS_KWH): DEVICE_STATUS_KWH_SCHEMA,
+        cv.Optional(CONF_DEVICE_STATUS_RUNTIME_HOURS): DEVICE_STATUS_RUNTIME_HOURS_SCHEMA,
+        cv.Optional(CONF_PID_SET_POINT_CORRECTION): PID_SET_POINT_CORRECTION_SCHEMA,
+        cv.Optional(CONF_DEVICE_SET_POINT): DEVICE_SET_POINT_SCHEMA,
         
         cv.Required(CONF_CONTROL_PARAMETERS): cv.Schema(
             {
@@ -327,19 +317,63 @@ def to_code(config):
         yield cg.register_component(swing_select, conf)
         cg.add(var.set_vertical_vane_select(swing_select))
 
+    if CONF_INTERNAL_POWER_ON in config:
+        conf_item = config[CONF_INTERNAL_POWER_ON]
+        sensor_var = yield sensor.new_sensor(conf_item)
+        cg.add(var.set_input_power_sensor(sensor_var))
+
+    if CONF_DEVICE_STATE_CONNECTED in config:
+        conf_item = config[CONF_DEVICE_STATE_CONNECTED]
+        sensor_var = yield sensor.new_sensor(conf_item)
+        cg.add(var.set_device_state_connected_sensor(sensor_var))
+
+    if CONF_DEVICE_STATE_ACTIVE in config:
+        conf_item = config[CONF_DEVICE_STATE_ACTIVE]
+        sensor_var = yield sensor.new_sensor(conf_item)
+        cg.add(var.set_device_state_active_sensor(sensor_var))
+    
+    if CONF_DEVICE_STATUS_OPERATING in config:
+        conf_item = config[CONF_DEVICE_STATUS_OPERATING]
+        sensor_var = yield sensor.new_sensor(conf_item)
+        cg.add(var.set_device_status_operating_sensor(sensor_var))
+
+    if CONF_PID_SET_POINT_CORRECTION in config:
+        conf_item = config[CONF_PID_SET_POINT_CORRECTION]
+        sensor_var = yield sensor.new_sensor(conf_item)
+        cg.add(var.set_pid_set_point_correction_sensor(sensor_var))
+    
+    if CONF_DEVICE_STATUS_CURRENT_TEMPERATURE in config:
+        conf_item = config[CONF_DEVICE_STATUS_CURRENT_TEMPERATURE]
+        sensor_var = yield sensor.new_sensor(conf_item)
+        cg.add(var.set_device_status_current_temperature_sensor(sensor_var))
+
+    if CONF_DEVICE_STATUS_COMPRESSOR_FREQUENCY in config:
+        conf_item = config[CONF_DEVICE_STATUS_COMPRESSOR_FREQUENCY]
+        sensor_var = yield sensor.new_sensor(conf_item)
+        cg.add(var.set_device_status_compressor_frequency_sensor(sensor_var))
+
+    if CONF_DEVICE_STATUS_INPUT_POWER in config:
+        conf_item = config[CONF_DEVICE_STATUS_INPUT_POWER]
+        sensor_var = yield sensor.new_sensor(conf_item)
+        cg.add(var.set_device_status_input_power_sensor(sensor_var))
+
+    if CONF_DEVICE_STATUS_KWH in config:
+        conf_item = config[CONF_DEVICE_STATUS_KWH]
+        sensor_var = yield sensor.new_sensor(conf_item)
+        cg.add(var.set_device_status_kwh_sensor(sensor_var))
+
+    if CONF_DEVICE_STATUS_RUNTIME_HOURS in config:
+        conf_item = config[CONF_DEVICE_STATUS_RUNTIME_HOURS]
+        sensor_var = yield sensor.new_sensor(conf_item)
+        cg.add(var.set_device_status_runtime_hours_sensor(sensor_var))
+
+    if CONF_DEVICE_SET_POINT in config:
+        conf_item = config[CONF_DEVICE_SET_POINT]
+        sensor_var = yield sensor.new_sensor(conf_item)
+        cg.add(var.set_device_set_point_sensor(sensor_var))
+
     yield cg.register_component(var, config)
     yield climate.register_climate(var, config)
-    yield binary_sensor.register_binary_sensor(var.internal_power_on, config[CONF_INTERNAL_POWER_ON])
-    yield binary_sensor.register_binary_sensor(var.device_state_connected, config[CONF_DEVICE_STATE_CONNECTED])
-    yield binary_sensor.register_binary_sensor(var.device_state_active, config[CONF_DEVICE_STATE_ACTIVE])
-    yield binary_sensor.register_binary_sensor(var.device_status_operating, config[CONF_DEVICE_STATUS_OPERATING])
-    yield sensor.register_sensor(var.device_status_current_temperature, config[CONF_DEVICE_STATUS_CURRENT_TEMPERATURE])
-    yield sensor.register_sensor(var.device_status_compressor_frequency, config[CONF_DEVICE_STATUS_COMPRESSOR_FREQUENCY])
-    yield sensor.register_sensor(var.device_status_input_power, config[CONF_DEVICE_STATUS_INPUT_POWER])
-    yield sensor.register_sensor(var.device_status_kwh, config[CONF_DEVICE_STATUS_KWH])
-    yield sensor.register_sensor(var.device_status_runtime_hours, config[CONF_DEVICE_STATUS_RUNTIME_HOURS])
-    yield sensor.register_sensor(var.pid_set_point_correction, config[CONF_PID_SET_POINT_CORRECTION])
-    yield sensor.register_sensor(var.device_set_point, config[CONF_DEVICE_SET_POINT])
 
     params = config[CONF_CONTROL_PARAMETERS]
     cg.add(var.set_kp(params[CONF_KP]))

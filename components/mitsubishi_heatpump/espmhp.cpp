@@ -229,6 +229,54 @@ void MitsubishiHeatPump::set_horizontal_vane_select(
           });
 }
 
+void MitsubishiHeatPump::set_input_power_sensor(
+        esphome::binary_sensor::BinarySensor* value) {
+    this->internal_power_on = value;
+}
+
+void MitsubishiHeatPump::set_device_state_connected_sensor(
+        esphome::binary_sensor::BinarySensor* value) {
+    this->device_state_connected = value;
+}
+
+void MitsubishiHeatPump::set_device_state_active_sensor(
+        esphome::binary_sensor::BinarySensor* value) {
+    this->device_state_active = value;
+}
+
+void MitsubishiHeatPump::set_device_status_operating_sensor(
+        esphome::binary_sensor::BinarySensor* value) {
+    this->device_status_operating = value;
+}
+
+void MitsubishiHeatPump::set_pid_set_point_correction_sensor(esphome::sensor::Sensor* value) {
+    this->pid_set_point_correction = value;
+}
+
+void MitsubishiHeatPump::set_device_status_current_temperature_sensor(esphome::sensor::Sensor* value) {
+    this->device_status_current_temperature = value;
+}
+
+void MitsubishiHeatPump::set_device_status_compressor_frequency_sensor(esphome::sensor::Sensor* value) {
+    this->device_status_compressor_frequency = value;
+}
+
+void MitsubishiHeatPump::set_device_status_input_power_sensor(esphome::sensor::Sensor* value) {
+    this->device_status_input_power = value;
+}
+
+void MitsubishiHeatPump::set_device_status_kwh_sensor(esphome::sensor::Sensor* value) {
+    this->device_status_kwh = value;
+}
+
+void MitsubishiHeatPump::set_device_status_runtime_hours_sensor(esphome::sensor::Sensor* value) {
+    this->device_status_runtime_hours = value;
+}
+
+void MitsubishiHeatPump::set_device_set_point_sensor(esphome::sensor::Sensor* value) {
+    this->device_set_point = value;
+}
+
 void MitsubishiHeatPump::on_vertical_swing_change(const std::string &swing) {
     ESP_LOGD(TAG, "Setting vertical swing position");
     bool updated = false;
