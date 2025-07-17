@@ -49,51 +49,76 @@ MitsubishiHeatPump::MitsubishiHeatPump(
     hw_serial_{hw_serial}
 {
     internal_power_on = new esphome::binary_sensor::BinarySensor();
+    internal_power_on->set_name("Internal power on");
+    internal_power_on->set_internal(false);
+
     device_state_connected = new esphome::binary_sensor::BinarySensor();
+    device_state_connected->set_name("Device state connected");
+    device_state_connected->set_internal(false);
+
     device_state_active = new esphome::binary_sensor::BinarySensor();
+    device_state_active->set_name("Device state active");
+    device_state_active->set_internal(false);
+
     device_status_operating = new esphome::binary_sensor::BinarySensor();
+    device_status_operating->set_name("Device status operating");
+    device_status_operating->set_internal(false);
 
     device_status_current_temperature = new esphome::sensor::Sensor();
     device_status_current_temperature->set_unit_of_measurement("°C");
     device_status_current_temperature->set_device_class("temperature");
     device_status_current_temperature->set_state_class(sensor::StateClass::STATE_CLASS_MEASUREMENT);
     device_status_current_temperature->set_accuracy_decimals(1);
+    device_status_current_temperature->set_name("Device current temperature");
+    device_status_current_temperature->set_internal(false);
 
     device_status_compressor_frequency = new esphome::sensor::Sensor();
     device_status_compressor_frequency->set_unit_of_measurement("Hz");
     device_status_compressor_frequency->set_device_class("frequency");
     device_status_compressor_frequency->set_state_class(sensor::StateClass::STATE_CLASS_MEASUREMENT);
     device_status_compressor_frequency->set_accuracy_decimals(1);
+    device_status_compressor_frequency->set_name("Device status compressor frequency");
+    device_status_compressor_frequency->set_internal(false);
     
     device_status_input_power = new esphome::sensor::Sensor();
     device_status_input_power->set_unit_of_measurement("W");
     device_status_input_power->set_device_class("power");
     device_status_input_power->set_state_class(sensor::StateClass::STATE_CLASS_MEASUREMENT);
     device_status_input_power->set_accuracy_decimals(0);
+    device_status_input_power->set_name("Device status input power");
+    device_status_input_power->set_internal(false);
 
     device_status_kwh = new esphome::sensor::Sensor();
     device_status_kwh->set_unit_of_measurement("kWh");
     device_status_kwh->set_device_class("energy");
     device_status_kwh->set_state_class(sensor::StateClass::STATE_CLASS_TOTAL_INCREASING);
     device_status_kwh->set_accuracy_decimals(1);
+    device_status_kwh->set_name("Device status kWh");
+    device_status_kwh->set_internal(false);
     
     device_status_runtime_hours = new esphome::sensor::Sensor();
     device_status_runtime_hours->set_unit_of_measurement("h");
     device_status_runtime_hours->set_device_class("duration");
     device_status_runtime_hours->set_state_class(sensor::StateClass::STATE_CLASS_TOTAL_INCREASING);
     device_status_runtime_hours->set_accuracy_decimals(2);
+    device_status_runtime_hours->set_name("Device status runtime hours");
+    device_status_runtime_hours->set_internal(false);
 
     pid_set_point_correction = new esphome::sensor::Sensor();
     pid_set_point_correction->set_unit_of_measurement("°C");
     pid_set_point_correction->set_device_class("temperature");
     pid_set_point_correction->set_state_class(sensor::StateClass::STATE_CLASS_MEASUREMENT);
     pid_set_point_correction->set_accuracy_decimals(1);
+    pid_set_point_correction->set_name("Device status runtime hours");
+    pid_set_point_correction->set_internal(false);
 
     device_set_point = new esphome::sensor::Sensor();
     device_set_point->set_unit_of_measurement("°C");
     device_set_point->set_device_class("temperature");
     device_set_point->set_state_class(sensor::StateClass::STATE_CLASS_MEASUREMENT);
     device_set_point->set_accuracy_decimals(1);
+    pid_set_point_correction->set_name("PID Set Point Correction");
+    pid_set_point_correction->set_internal(false);
 
     this->traits_.set_supports_action(true);
     this->traits_.set_supports_current_temperature(true);
@@ -227,54 +252,6 @@ void MitsubishiHeatPump::set_horizontal_vane_select(
               if (value == this->horizontal_swing_state_) return;
               this->on_horizontal_swing_change(value);
           });
-}
-
-void MitsubishiHeatPump::set_input_power_sensor(
-        esphome::binary_sensor::BinarySensor* value) {
-    this->internal_power_on = value;
-}
-
-void MitsubishiHeatPump::set_device_state_connected_sensor(
-        esphome::binary_sensor::BinarySensor* value) {
-    this->device_state_connected = value;
-}
-
-void MitsubishiHeatPump::set_device_state_active_sensor(
-        esphome::binary_sensor::BinarySensor* value) {
-    this->device_state_active = value;
-}
-
-void MitsubishiHeatPump::set_device_status_operating_sensor(
-        esphome::binary_sensor::BinarySensor* value) {
-    this->device_status_operating = value;
-}
-
-void MitsubishiHeatPump::set_pid_set_point_correction_sensor(esphome::sensor::Sensor* value) {
-    this->pid_set_point_correction = value;
-}
-
-void MitsubishiHeatPump::set_device_status_current_temperature_sensor(esphome::sensor::Sensor* value) {
-    this->device_status_current_temperature = value;
-}
-
-void MitsubishiHeatPump::set_device_status_compressor_frequency_sensor(esphome::sensor::Sensor* value) {
-    this->device_status_compressor_frequency = value;
-}
-
-void MitsubishiHeatPump::set_device_status_input_power_sensor(esphome::sensor::Sensor* value) {
-    this->device_status_input_power = value;
-}
-
-void MitsubishiHeatPump::set_device_status_kwh_sensor(esphome::sensor::Sensor* value) {
-    this->device_status_kwh = value;
-}
-
-void MitsubishiHeatPump::set_device_status_runtime_hours_sensor(esphome::sensor::Sensor* value) {
-    this->device_status_runtime_hours = value;
-}
-
-void MitsubishiHeatPump::set_device_set_point_sensor(esphome::sensor::Sensor* value) {
-    this->device_set_point = value;
 }
 
 void MitsubishiHeatPump::on_vertical_swing_change(const std::string &swing) {
