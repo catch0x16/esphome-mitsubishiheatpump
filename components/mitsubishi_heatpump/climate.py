@@ -100,6 +100,7 @@ INTERNAL_POWER_ON_SCHEMA = binary_sensor.binary_sensor_schema(InternalPowerOnSen
     {
         cv.GenerateID(CONF_ID): cv.declare_id(InternalPowerOnSensor),
         cv.Optional(CONF_NAME): "Internal power on",
+        cv.Optional(CONF_INTERNAL): False
     }
 )
 
@@ -107,7 +108,8 @@ DeviceStateConnectedSensor = cg.global_ns.class_("DeviceStateConnectedSensor", b
 DEVICE_STATE_CONNECTED_SCHEMA = binary_sensor.binary_sensor_schema(DeviceStateConnectedSensor, entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC).extend(
     {
         cv.GenerateID(CONF_ID): cv.declare_id(DeviceStateConnectedSensor),
-        cv.Optional(CONF_NAME): "Device state connected"
+        cv.Optional(CONF_NAME): "Device state connected",
+        cv.Optional(CONF_INTERNAL): False
     }
 )
 
@@ -115,7 +117,8 @@ DeviceStateActiveSensor = cg.global_ns.class_("DeviceStateActiveSensor", binary_
 DEVICE_STATE_ACTIVE_SCHEMA = binary_sensor.binary_sensor_schema(DeviceStateActiveSensor, entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC).extend(
     {
         cv.GenerateID(CONF_ID): cv.declare_id(DeviceStateActiveSensor),
-        cv.Optional(CONF_NAME): "Device state active"
+        cv.Optional(CONF_NAME): "Device state active",
+        cv.Optional(CONF_INTERNAL): False
     }
 )
 
@@ -126,7 +129,8 @@ PID_SET_POINT_CORRECTION_SCHEMA = sensor.sensor_schema(PidSetPointCorrectionSens
 ).extend(
     {
         cv.GenerateID(CONF_ID): cv.declare_id(PidSetPointCorrectionSensor),
-        cv.Optional(CONF_NAME): "PID Set Point Correction"
+        cv.Optional(CONF_NAME): "PID Set Point Correction",
+        cv.Optional(CONF_INTERNAL): False
     }
 )
 
@@ -134,7 +138,8 @@ DeviceStatusOperatingSensor = cg.global_ns.class_("DeviceStatusOperatingSensor",
 DEVICE_STATUS_OPERATING_SCHEMA = binary_sensor.binary_sensor_schema(DeviceStatusOperatingSensor, entity_category=cv.ENTITY_CATEGORY_DIAGNOSTIC).extend(
     {
         cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusOperatingSensor),
-        cv.Optional(CONF_NAME): "Device status operating"
+        cv.Optional(CONF_NAME): "Device status operating",
+        cv.Optional(CONF_INTERNAL): False
     }
 )
 
@@ -145,7 +150,8 @@ DEVICE_STATUS_CURRENT_TEMPERATURE_SCHEMA = sensor.sensor_schema(DeviceStatusCurr
 ).extend(
     {
         cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusCurrentTemperatureSensor),
-        cv.Optional(CONF_NAME): "Device current temperature"
+        cv.Optional(CONF_NAME): "Device current temperature",
+        cv.Optional(CONF_INTERNAL): False
     }
 )
 
@@ -157,7 +163,8 @@ DEVICE_STATUS_COMPRESSOR_FREQUENCY_SCHEMA = sensor.sensor_schema(DeviceStatusCom
 ).extend(
     {
         cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusCompressorFrequencySensor),
-        cv.Optional(CONF_NAME): "Device status compressor frequency"
+        cv.Optional(CONF_NAME): "Device status compressor frequency",
+        cv.Optional(CONF_INTERNAL): False
     }
 )
 
@@ -167,7 +174,8 @@ DEVICE_STATUS_INPUT_POWER_SCHEMA = sensor.sensor_schema(DeviceStatusInputPowerSe
 ).extend(
     {
         cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusInputPowerSensor),
-        cv.Optional(CONF_NAME): "Device status input power"
+        cv.Optional(CONF_NAME): "Device status input power",
+        cv.Optional(CONF_INTERNAL): False
     }
 )
 
@@ -180,7 +188,8 @@ DEVICE_STATUS_KWH_SCHEMA = sensor.sensor_schema(DeviceStatusKwhSensor,
 ).extend(
     {
         cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusKwhSensor),
-        cv.Optional(CONF_NAME): "Device status kWh"
+        cv.Optional(CONF_NAME): "Device status kWh",
+        cv.Optional(CONF_INTERNAL): False
     }
 )
 
@@ -193,7 +202,8 @@ DEVICE_STATUS_RUNTIME_HOURS_SCHEMA = sensor.sensor_schema(DeviceStatusRuntimeHou
 ).extend(
     {
         cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusRuntimeHoursSensor),
-        cv.Optional(CONF_NAME): "Device status runtime hours"
+        cv.Optional(CONF_NAME): "Device status runtime hours",
+        cv.Optional(CONF_INTERNAL): False
     }
 )
 
@@ -204,7 +214,8 @@ DEVICE_SET_POINT_SCHEMA = sensor.sensor_schema(DeviceSetPointSensor,
 ).extend(
     {
         cv.GenerateID(CONF_ID): cv.declare_id(DeviceStatusRuntimeHoursSensor),
-        cv.Optional(CONF_NAME): "Device Set Point"
+        cv.Optional(CONF_NAME): "Device Set Point",
+        cv.Optional(CONF_INTERNAL): False
     }
 )
 
