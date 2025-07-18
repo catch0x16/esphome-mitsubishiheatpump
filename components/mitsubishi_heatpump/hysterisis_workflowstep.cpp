@@ -20,19 +20,18 @@ namespace workflow {
         
         void HysterisisWorkflowStep::executeHysterisisWorkflowStep(
                 HysterisisResult* result, devicestate::DeviceStateManager* deviceManager) {
-            if (!result->active) {
-                ESP_LOGI(TAG, "Not current active while %s: delta={%f} current={%f} targetTemperature={%f}", result->label.c_str(), result->delta, result->currentTemperature, result->targetTemperature);
+            if (result->active) {
+                ESP_LOGV(TAG, "Active while %s: delta={%f} current={%f} targetTemperature={%f}", result->label.c_str(), result->delta, result->currentTemperature, result->targetTemperature);
+                if (result->delta > this->hysterisisOff) {
+                    ESP_LOGI(TAG, "Turn off while %s: delta={%f} current={%f} targetTemperature={%f}", result->label.c_str(), result->delta, result->currentTemperature, result->targetTemperature);
+                    deviceManager->internalTurnOff();
+                }
+            } else {
+                ESP_LOGI(TAG, "Not currently active while %s: delta={%f} current={%f} targetTemperature={%f}", result->label.c_str(), result->delta, result->currentTemperature, result->targetTemperature);
                 if (-result->delta > this->hysterisisOn) {
                     ESP_LOGI(TAG, "Turn on while %s: delta={%f} current={%f} targetTemperature={%f}", result->label.c_str(), result->delta, result->currentTemperature, result->targetTemperature);
                     deviceManager->internalTurnOn();
                 }
-                return;
-            }
-        
-            if (result->delta > this->hysterisisOff) {
-                ESP_LOGI(TAG, "Turn off while %s: delta={%f} current={%f} targetTemperature={%f}", result->label.c_str(), result->delta, result->currentTemperature, result->targetTemperature);
-                deviceManager->internalTurnOff();
-                return;
             }
         }
         
