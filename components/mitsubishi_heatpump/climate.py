@@ -59,7 +59,7 @@ CONF_REMOTE_IDLE_TIMEOUT = "remote_temperature_idle_timeout_minutes"
 CONF_REMOTE_PING_TIMEOUT = "remote_temperature_ping_timeout_minutes"
 
 MitsubishiHeatPump = cg.global_ns.class_(
-    "MitsubishiHeatPump", climate.Climate, cg.PollingComponent, uart.UARTDevice
+    "MitsubishiHeatPump", climate.Climate, cg.PollingComponent
 )
 
 MitsubishiACSelect = cg.global_ns.class_(
