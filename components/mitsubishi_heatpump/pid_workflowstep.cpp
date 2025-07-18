@@ -57,8 +57,8 @@ namespace workflow {
                 }
 
                 const float setPointCorrection = this->pidController->update(currentTemperature);
-                ESP_LOGI(TAG, "PidWorkflowStep setPointCorrection={%.2f} adjustedMin={%.2f} adjustedMax={%.2f}",
-                    setPointCorrection, this->pidController->getAdjustedMin(), this->pidController->getAdjustedMax());
+                ESP_LOGI(TAG, "PidWorkflowStep setPointCorrection={%.2f} adjustedMin={%.2f} adjustedMax={%.2f} powerOn={%s}",
+                    setPointCorrection, this->pidController->getAdjustedMin(), this->pidController->getAdjustedMax(), YESNO(deviceManager->isInternalPowerOn()));
                 if (deviceManager->internalSetCorrectedTemperature(setPointCorrection)) {
                     if (!deviceManager->commit()) {
                         ESP_LOGE(TAG, "PidWorkflowStep failed to update corrected temperature");

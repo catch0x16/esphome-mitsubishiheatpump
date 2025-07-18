@@ -21,6 +21,7 @@ namespace workflow {
         void HysterisisWorkflowStep::executeHysterisisWorkflowStep(
                 HysterisisResult* result, devicestate::DeviceStateManager* deviceManager) {
             if (!result->active) {
+                ESP_LOGI(TAG, "Not current active while %s: delta={%f} current={%f} targetTemperature={%f}", result->label.c_str(), result->delta, result->currentTemperature, result->targetTemperature);
                 if (-result->delta > this->hysterisisOn) {
                     ESP_LOGI(TAG, "Turn on while %s: delta={%f} current={%f} targetTemperature={%f}", result->label.c_str(), result->delta, result->currentTemperature, result->targetTemperature);
                     deviceManager->internalTurnOn();
@@ -62,7 +63,7 @@ namespace workflow {
                     break;
                 }
                 default: {
-                    ESP_LOGV(workflow::hysterisis::TAG, "Doing nothing in current mode (%s): current={%f} targetTemperature={%f}", 
+                    ESP_LOGI(workflow::hysterisis::TAG, "Doing nothing in current mode (%s): current={%f} targetTemperature={%f}", 
                         devicestate::deviceModeToString(deviceState.mode), currentTemperature, targetTemperature);
                     result.shouldRun = false;
                 }
