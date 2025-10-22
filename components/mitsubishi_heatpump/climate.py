@@ -1,6 +1,11 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import climate, select, uart
+from esphome.components import (
+    climate,
+    select,
+    binary_sensor,
+    sensor,
+)
 
 from esphome.components.logger import HARDWARE_UART_TO_SERIAL
 from esphome.const import (
@@ -13,9 +18,31 @@ from esphome.const import (
     CONF_MODE,
     CONF_FAN_MODE,
     CONF_SWING_MODE,
-    PLATFORM_ESP8266
+    PLATFORM_ESP8266,
+    CONF_NAME,
+    CONF_DISABLED_BY_DEFAULT,
+    CONF_INTERNAL,
+    CONF_ENTITY_CATEGORY,
+    CONF_UNIT_OF_MEASUREMENT,
+    CONF_DEVICE_CLASS,
+    CONF_STATE_CLASS,
+    CONF_ACCURACY_DECIMALS,
+    CONF_FORCE_UPDATE,
+    DEVICE_CLASS_TEMPERATURE,
+    DEVICE_CLASS_FREQUENCY,
+    DEVICE_CLASS_POWER,
+    DEVICE_CLASS_ENERGY,
+    DEVICE_CLASS_DURATION,
+    UNIT_CELSIUS,
+    UNIT_HERTZ,
+    UNIT_WATT,
+    UNIT_KILOWATT_HOURS,
+    UNIT_HOUR,
 )
 from esphome.core import CORE, coroutine
+
+sensor_ns = cg.esphome_ns.namespace("sensor")
+StateClasses = sensor_ns.enum("StateClass")
 
 AUTO_LOAD = ["climate", "select", "binary_sensor"]
 
@@ -75,6 +102,9 @@ def valid_uart(uart):
         raise NotImplementedError
 
     return cv.one_of(*uarts, upper=True)(uart)
+
+
+InternalPowerOnSensor = cg.global_ns.class_("InternalPowerOn", binary_sensor.BinarySensor, cg.Component)
 
 SELECT_SCHEMA = select.select_schema(MitsubishiACSelect).extend(
     {cv.GenerateID(CONF_ID): cv.declare_id(MitsubishiACSelect)}
@@ -175,6 +205,140 @@ def to_code(config):
         swing_select = yield select.new_select(conf, options=VERTICAL_SWING_OPTIONS)
         yield cg.register_component(swing_select, conf)
         cg.add(var.set_vertical_vane_select(swing_select))
+
+    internal_power_on_sensor_var = yield binary_sensor.new_binary_sensor({
+        CONF_ID: cv.declare_id(binary_sensor.BinarySensor)("internal_power_on"),
+        CONF_NAME: "Internal power on",
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_INTERNAL: False,
+        CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+    })
+    cg.add(var.set_internal_power_on_sensor(internal_power_on_sensor_var))
+
+    device_state_connected_sensor_var = yield binary_sensor.new_binary_sensor({
+        CONF_ID: cv.declare_id(binary_sensor.BinarySensor)("device_state_connected"),
+        CONF_NAME: "Device state connected",
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_INTERNAL: False,
+        CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+    })
+    cg.add(var.set_device_state_connected_sensor(device_state_connected_sensor_var))
+
+    device_state_active_sensor_var = yield binary_sensor.new_binary_sensor({
+        CONF_ID: cv.declare_id(binary_sensor.BinarySensor)("device_state_active"),
+        CONF_NAME: "Device state active",
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_INTERNAL: False,
+        CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+    })
+    cg.add(var.set_device_state_active_sensor(device_state_active_sensor_var))
+
+    device_status_operating_sensor_var = yield binary_sensor.new_binary_sensor({
+        CONF_ID: cv.declare_id(binary_sensor.BinarySensor)("device_status_operating"),
+        CONF_NAME: "Device status operating",
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_INTERNAL: False,
+        CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+    })
+    cg.add(var.set_device_status_operating_sensor(device_status_operating_sensor_var))
+
+    device_status_current_temperature_sensor_var = yield sensor.new_sensor({
+        CONF_ID: cv.declare_id(sensor.Sensor)("device_status_current_temperature"),
+        CONF_NAME: "Device current temperature",
+        CONF_UNIT_OF_MEASUREMENT: UNIT_CELSIUS,
+        CONF_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
+        CONF_STATE_CLASS: StateClasses.STATE_CLASS_MEASUREMENT,
+        CONF_ACCURACY_DECIMALS: 1,
+        CONF_FORCE_UPDATE: False,
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_INTERNAL: False,
+        CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+    })
+    cg.add(var.set_device_status_current_temperature_sensor(device_status_current_temperature_sensor_var))
+
+    device_status_compressor_frequency_sensor_var = yield sensor.new_sensor({
+        CONF_ID: cv.declare_id(sensor.Sensor)("device_status_compressor_frequency"),
+        CONF_NAME: "Device status compressor frequency",
+        CONF_UNIT_OF_MEASUREMENT: UNIT_HERTZ,
+        CONF_DEVICE_CLASS: DEVICE_CLASS_FREQUENCY,
+        CONF_STATE_CLASS: StateClasses.STATE_CLASS_MEASUREMENT,
+        CONF_ACCURACY_DECIMALS: 1,
+        CONF_FORCE_UPDATE: False,
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_INTERNAL: False,
+        CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+    })
+    cg.add(var.set_device_status_compressor_frequency_sensor(device_status_compressor_frequency_sensor_var))
+
+    device_status_input_power_sensor_var = yield sensor.new_sensor({
+        CONF_ID: cv.declare_id(sensor.Sensor)("device_status_input_power"),
+        CONF_NAME: "Device status input power",
+        CONF_UNIT_OF_MEASUREMENT: UNIT_WATT,
+        CONF_DEVICE_CLASS: DEVICE_CLASS_POWER,
+        CONF_STATE_CLASS: StateClasses.STATE_CLASS_MEASUREMENT,
+        CONF_ACCURACY_DECIMALS: 0,
+        CONF_FORCE_UPDATE: False,
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_INTERNAL: False,
+        CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+    })
+    cg.add(var.set_device_status_input_power_sensor(device_status_input_power_sensor_var))
+
+    device_status_kwh_sensor_var = yield sensor.new_sensor({
+        CONF_ID: cv.declare_id(sensor.Sensor)("device_status_kwh"),
+        CONF_NAME: "Device status kWh",
+        CONF_UNIT_OF_MEASUREMENT: UNIT_KILOWATT_HOURS,
+        CONF_DEVICE_CLASS: DEVICE_CLASS_ENERGY,
+        CONF_STATE_CLASS: StateClasses.STATE_CLASS_TOTAL_INCREASING,
+        CONF_ACCURACY_DECIMALS: 1,
+        CONF_FORCE_UPDATE: False,
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_INTERNAL: False,
+        CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+    })
+    cg.add(var.set_device_status_kwh_sensor(device_status_kwh_sensor_var))
+
+    device_status_runtime_hours_sensor_var = yield sensor.new_sensor({
+        CONF_ID: cv.declare_id(sensor.Sensor)("device_status_runtime_hours"),
+        CONF_NAME: "Device status runtime hours",
+        CONF_UNIT_OF_MEASUREMENT: UNIT_HOUR,
+        CONF_DEVICE_CLASS: DEVICE_CLASS_DURATION,
+        CONF_STATE_CLASS: StateClasses.STATE_CLASS_TOTAL_INCREASING,
+        CONF_ACCURACY_DECIMALS: 2,
+        CONF_FORCE_UPDATE: False,
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_INTERNAL: False,
+        CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+    })
+    cg.add(var.set_device_status_runtime_hours_sensor(device_status_runtime_hours_sensor_var))
+
+    pid_set_point_correction_sensor_var = yield sensor.new_sensor({
+        CONF_ID: cv.declare_id(sensor.Sensor)("pid_set_point_correction"),
+        CONF_NAME: "PID Set Point Correction",
+        CONF_UNIT_OF_MEASUREMENT: UNIT_CELSIUS,
+        CONF_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
+        CONF_STATE_CLASS: StateClasses.STATE_CLASS_MEASUREMENT,
+        CONF_ACCURACY_DECIMALS: 1,
+        CONF_FORCE_UPDATE: False,
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_INTERNAL: False,
+        CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+    })
+    cg.add(var.set_pid_set_point_correction_sensor(pid_set_point_correction_sensor_var))
+
+    device_set_point_sensor_var = yield sensor.new_sensor({
+        CONF_ID: cv.declare_id(sensor.Sensor)("device_set_point"),
+        CONF_NAME: "Device Set Point",
+        CONF_UNIT_OF_MEASUREMENT: UNIT_CELSIUS,
+        CONF_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
+        CONF_STATE_CLASS: StateClasses.STATE_CLASS_MEASUREMENT,
+        CONF_ACCURACY_DECIMALS: 1,
+        CONF_FORCE_UPDATE: False,
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_INTERNAL: False,
+        CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+    })
+    cg.add(var.set_device_set_point_sensor(device_set_point_sensor_var))
 
     yield cg.register_component(var, config)
     yield climate.register_climate(var, config)

@@ -143,6 +143,50 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         // temperature sensor if a ping isn't received from the controller.
         void set_remote_ping_timeout_minutes(int);
 
+        void set_internal_power_on_sensor(esphome::binary_sensor::BinarySensor* internal_power_on) {
+            this->internal_power_on = internal_power_on;
+        }
+
+        void set_device_state_connected_sensor(esphome::binary_sensor::BinarySensor* device_state_connected) {
+            this->device_state_connected = device_state_connected;
+        }
+
+        void set_device_state_active_sensor(esphome::binary_sensor::BinarySensor* device_state_active) {
+            this->device_state_active = device_state_active;
+        }
+
+        void set_device_status_operating_sensor(esphome::binary_sensor::BinarySensor* device_status_operating) {
+            this->device_status_operating = device_status_operating;
+        }
+
+        void set_device_status_current_temperature_sensor(esphome::sensor::Sensor* device_status_current_temperature) {
+            this->device_status_current_temperature = device_status_current_temperature;
+        }
+
+        void set_device_status_compressor_frequency_sensor(esphome::sensor::Sensor* device_status_compressor_frequency) {
+            this->device_status_compressor_frequency = device_status_compressor_frequency;
+        }
+
+        void set_device_status_input_power_sensor(esphome::sensor::Sensor* device_status_input_power) {
+            this->device_status_input_power = device_status_input_power;
+        }
+
+        void set_device_status_kwh_sensor(esphome::sensor::Sensor* device_status_kwh) {
+            this->device_status_kwh = device_status_kwh;
+        }
+
+        void set_device_status_runtime_hours_sensor(esphome::sensor::Sensor* device_status_runtime_hours) {
+            this->device_status_runtime_hours = device_status_runtime_hours;
+        }
+
+        void set_pid_set_point_correction_sensor(esphome::sensor::Sensor* pid_set_point_correction) {
+            this->pid_set_point_correction = pid_set_point_correction;
+        }
+
+        void set_device_set_point_sensor(esphome::sensor::Sensor* device_set_point) {
+            this->device_set_point = device_set_point;
+        }
+
     protected:
         // HeatPump object using the underlying Arduino library.
         devicestate::DeviceStateManager* dsm;
