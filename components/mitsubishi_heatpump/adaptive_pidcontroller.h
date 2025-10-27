@@ -172,6 +172,7 @@ public:
             } else {
                 this->notify_system_enabled(current_temp, current_time);
             }
+            this->system_active = isInternalPowerOn;
         }
         // If system is off due to hysteresis, return target temp (no action)
         if (!this->system_active) {
