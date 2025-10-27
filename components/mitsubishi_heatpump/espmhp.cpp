@@ -34,7 +34,6 @@ using namespace workflow::pid;
 
 static const char* TAG = "MitsubishiHeatPump"; // Logging tag
 
-
 /**
  * Create a new MitsubishiHeatPump object
  *
@@ -755,7 +754,6 @@ void MitsubishiHeatPump::setup() {
         connectionMetadata,
         this->min_temp,
         this->max_temp,
-        this->offsetAdjustment_,
         this->internal_power_on,
         this->device_state_connected,
         this->device_state_active,

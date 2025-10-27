@@ -245,7 +245,6 @@ namespace devicestate {
       ConnectionMetadata connectionMetadata,
       const float minTemp,
       const float maxTemp,
-      const float offsetAdjustment,
       esphome::binary_sensor::BinarySensor* internal_power_on,
       esphome::binary_sensor::BinarySensor* device_state_connected,
       esphome::binary_sensor::BinarySensor* device_state_active,
@@ -262,7 +261,6 @@ namespace devicestate {
 
         this->minTemp = minTemp;
         this->maxTemp = maxTemp;
-        this->offsetAdjustment = offsetAdjustment;
 
         this->internal_power_on = internal_power_on;
         this->device_state_connected = device_state_connected;
@@ -658,13 +656,11 @@ namespace devicestate {
         return value / 2;
     }
 
-    bool DeviceStateManager::internalSetCorrectedTemperature(const float value) {
+    bool DeviceStateManager::internalSetCorrectedTemperature(const float setPointCorrection) {
         const DeviceState deviceState = this->getDeviceState();
         const bool direction = this->getOffsetDirection(&deviceState);
-        const float correctionOffset = direction ? this->offsetAdjustment : -this->offsetAdjustment;
-        const float setPointCorrectionOffset = value - correctionOffset;
 
-        const float adjustedCorrectedTemperature = devicestate::clamp(setPointCorrectionOffset, this->minTemp, this->maxTemp);
+        const float adjustedCorrectedTemperature = devicestate::clamp(setPointCorrection, this->minTemp, this->maxTemp);
         const float roundedAdjustedCorrectedTemperature = this->getRoundedTemp(adjustedCorrectedTemperature);
         if (devicestate::same_float(this->correctedTargetTemperature, adjustedCorrectedTemperature, 0.01f) &&
             devicestate::same_float(roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, 0.01f)) {

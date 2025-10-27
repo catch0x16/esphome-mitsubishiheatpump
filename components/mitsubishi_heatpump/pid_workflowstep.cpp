@@ -32,7 +32,16 @@ namespace workflow {
                 maxAdjustmentOver,
                 maxAdjustmentUnder
             );
-            this->resetRequired = true;
+
+            this->adaptivePIDController = new AdaptivePIDController(
+                p,
+                i,
+                d,
+                minTemp,
+                maxTemp,
+                maxAdjustmentOver,
+                maxAdjustmentUnder
+            );
         }
 
         bool PidWorkflowStep::ensurePIDTarget(devicestate::DeviceStateManager* deviceManager) {
@@ -42,30 +51,31 @@ namespace workflow {
 
             ESP_LOGW(TAG, "PID target temp changing from %f to %f", this->pidController->getTarget(), deviceManager->getTargetTemperature());
             this->pidController->setTarget(deviceManager->getTargetTemperature(), deviceManager->getOffsetDirection());
+
+            ESP_LOGW(TAG, "Adaptive PID target temp changing from %f to %f", this->adaptivePIDController->getTarget(), deviceManager->getTargetTemperature());
+            this->adaptivePIDController->setTarget(deviceManager->getTargetTemperature(), deviceManager->getOffsetDirection());
             return true;
         }
 
         void PidWorkflowStep::run(const float currentTemperature, devicestate::DeviceStateManager* deviceManager) {
             const bool updatedPidTarget = this->ensurePIDTarget(deviceManager);
 
-            // if pid target is not updated and internal power is not on
-            if (updatedPidTarget || deviceManager->isInternalPowerOn()) {
-                if (this->resetRequired) {
-                    this->resetRequired = false;
-                    ESP_LOGW(TAG, "PidWorkflowStep resetRequired so resetting state");
-                    //this->pidController->resetState();
-                }
+            unsigned long now = esphome::millis();
+            const float setPointCorrectionAdaptive =
+                this->adaptivePIDController->update(currentTemperature, now, deviceManager->isInternalPowerOn());
+            ESP_LOGI(TAG, "PidWorkflowStep setPointCorrectionAdaptive={%.2f} target={%.2f} adjustedMin={%.2f} adjustedMax={%.2f} powerOn={%s} kp={%.3f} ki={%.3f} kd={%.3f}",
+                setPointCorrectionAdaptive, this->pidController->getTarget(), this->adaptivePIDController->getAdjustedMin(), this->adaptivePIDController->getAdjustedMax(), YESNO(deviceManager->isInternalPowerOn()),
+                this->adaptivePIDController->get_kp(), this->adaptivePIDController->get_ki(), this->adaptivePIDController->get_kd());
 
+            if (updatedPidTarget || deviceManager->isInternalPowerOn()) {
                 const float setPointCorrection = this->pidController->update(currentTemperature);
-                ESP_LOGI(TAG, "PidWorkflowStep setPointCorrection={%.2f} adjustedMin={%.2f} adjustedMax={%.2f} powerOn={%s}",
-                    setPointCorrection, this->pidController->getAdjustedMin(), this->pidController->getAdjustedMax(), YESNO(deviceManager->isInternalPowerOn()));
+                ESP_LOGI(TAG, "PidWorkflowStep setPointCorrection={%.2f} target={%.2f} adjustedMin={%.2f} adjustedMax={%.2f} powerOn={%s}",
+                    setPointCorrection, this->pidController->getTarget(), this->pidController->getAdjustedMin(), this->pidController->getAdjustedMax(), YESNO(deviceManager->isInternalPowerOn()));
                 if (deviceManager->internalSetCorrectedTemperature(setPointCorrection)) {
                     if (!deviceManager->commit()) {
                         ESP_LOGE(TAG, "PidWorkflowStep failed to update corrected temperature");
                     }
                 }
-            } else {
-                this->resetRequired = true;
             }
         }
 

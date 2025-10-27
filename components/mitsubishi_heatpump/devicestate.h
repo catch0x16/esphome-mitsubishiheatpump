@@ -114,7 +114,6 @@ namespace devicestate {
 
       float minTemp;
       float maxTemp;
-      float offsetAdjustment;
 
       int disconnected;
 
@@ -163,7 +162,6 @@ namespace devicestate {
         ConnectionMetadata connectionMetadata,
         const float minTemp,
         const float maxTemp,
-        const float offsetAdjustment,
         esphome::binary_sensor::BinarySensor* internal_power_on,
         esphome::binary_sensor::BinarySensor* device_state_connected,
         esphome::binary_sensor::BinarySensor* device_state_active,

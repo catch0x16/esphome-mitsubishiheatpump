@@ -3,6 +3,9 @@
 #include "devicestate.h"
 using namespace devicestate;
 
+#include "pidcontroller.h"
+#include "adaptive_pidcontroller.h"
+
 #ifndef PID_WORKFLOWSTEP_H
 #define PID_WORKFLOWSTEP_H
 
@@ -13,7 +16,7 @@ namespace workflow {
         class PidWorkflowStep : public WorkflowStep {
         private:
             PIDController *pidController;
-            bool resetRequired;
+            AdaptivePIDController *adaptivePIDController;
 
             bool ensurePIDTarget(devicestate::DeviceStateManager* deviceManager);
         

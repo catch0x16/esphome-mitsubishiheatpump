@@ -23,8 +23,6 @@
 
 #include <chrono>
 
-#include "pidcontroller.h"
-
 #include "devicestate.h"
 using namespace devicestate;
 
@@ -94,7 +92,6 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         void set_max_adjustment_over(float maxAdjustmentOver) { this->maxAdjustmentOver_ = maxAdjustmentOver; }
         void set_hysterisis_off(float hysterisisOff) { this->hysterisisOff_ = hysterisisOff; }
         void set_hysterisis_on(float hysterisisOn) { this->hysterisisOn_ = hysterisisOn; }
-        void set_offset_adjustment(float offsetAdjustment) { this->offsetAdjustment_ = offsetAdjustment; }
 
         // handle a change in device;
         void updateDevice();
@@ -259,7 +256,6 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         float maxAdjustmentOver_;
         float hysterisisOff_;
         float hysterisisOn_;
-        float offsetAdjustment_;
 
         bool isInitialized = false;
 

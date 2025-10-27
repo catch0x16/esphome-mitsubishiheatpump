@@ -56,7 +56,6 @@ CONF_MAX_ADJUSTMENT_UNDER = "maxAdjustmentUnder"
 CONF_MAX_ADJUSTMENT_OVER = "maxAdjustmentOver"
 CONF_HYSTERISIS_OFF = "hysterisisOff"
 CONF_HYSTERISIS_ON = "hysterisisOn"
-CONF_OFFSET_ADJUSTMENT = "offsetAdjustment"
 
 CONF_HORIZONTAL_SWING_SELECT = "horizontal_vane_select"
 CONF_VERTICAL_SWING_SELECT = "vertical_vane_select"
@@ -137,7 +136,6 @@ CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
                 cv.Optional(CONF_MAX_ADJUSTMENT_OVER, default=2.0): cv.float_,
                 cv.Optional(CONF_HYSTERISIS_OFF, default=0.25): cv.float_,
                 cv.Optional(CONF_HYSTERISIS_ON, default=0.25): cv.float_,
-                cv.Optional(CONF_OFFSET_ADJUSTMENT, default=0.00): cv.float_,
             }
         ),
 
@@ -351,7 +349,6 @@ def to_code(config):
     cg.add(var.set_max_adjustment_over(params[CONF_MAX_ADJUSTMENT_OVER]))
     cg.add(var.set_hysterisis_off(params[CONF_HYSTERISIS_OFF]))
     cg.add(var.set_hysterisis_on(params[CONF_HYSTERISIS_ON]))
-    cg.add(var.set_offset_adjustment(params[CONF_OFFSET_ADJUSTMENT]))
 
     cg.add_library(
         name="HeatPump",
