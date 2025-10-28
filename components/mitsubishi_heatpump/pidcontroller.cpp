@@ -15,16 +15,10 @@ PIDController::PIDController(
     const float d,
     const int sampleTime,
     const float outputMin,
-    const float outputMax,
-    const float maxAdjustmentOver,
-    const float maxAdjustmentUnder
+    const float outputMax
 ) {
     this->outputMin = outputMin;
-    this->adjustedMin = this->outputMin;
     this->outputMax = outputMax;
-    this->adjustedMax = this->outputMax;
-    this->maxAdjustmentOver = maxAdjustmentOver;
-    this->maxAdjustmentUnder = maxAdjustmentUnder;
 
     this->sampleTime = sampleTime;
     this->setTunings(p, i, d);
@@ -74,12 +68,6 @@ void PIDController::setTarget(const float target, const bool direction) {
 //   true  - heating or up
 //   false - cooling or down
 void PIDController::adjustOutputLimits(const bool direction) {
-    const float adjustMinOffset = direction ? this->maxAdjustmentUnder : this->maxAdjustmentOver;
-    const float adjustMaxOffset = direction ? this->maxAdjustmentOver : this->maxAdjustmentUnder;
-
-    this->adjustedMin = devicestate::clamp(this->target - adjustMinOffset, this->outputMin, this->outputMax);
-    this->adjustedMax = devicestate::clamp(this->target + adjustMaxOffset, this->outputMin, this->outputMax);
-
     // Apply to current state
     this->output = this->applyOutputLimits(this->output);
     this->outputSum = this->applyOutputLimits(this->outputSum);
@@ -114,25 +102,15 @@ float PIDController::getTarget() {
     return this->target;
 }
 
-float PIDController::getAdjustedMin() {
-    return this->adjustedMin;
-}
-
-float PIDController::getAdjustedMax() {
-    return this->adjustedMax;
-}
-
 void PIDController::resetState() {
     this->outputSum = this->target; // Start adjusting from target
     this->lastInput.reset();
 }
 
 float PIDController::applyOutputLimits(const float output) {
-    if (output > this->adjustedMax) {
-        return this->adjustedMax;
-    }
-    if (output < this->adjustedMin) {
-        return this->adjustedMin;
-    }
-    return output;
+    return devicestate::clamp(output, this->outputMin, this->outputMax);
 }
+
+float PIDController::getKp() { return this->kp; }
+float PIDController::getKi() { return this->ki; }
+float PIDController::getKd() { return this->kd; }

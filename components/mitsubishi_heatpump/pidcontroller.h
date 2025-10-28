@@ -16,10 +16,6 @@ class PIDController {
         float kd;
         float outputMin;
         float outputMax;
-        float maxAdjustmentOver;
-        float maxAdjustmentUnder;
-        float adjustedMin;
-        float adjustedMax;
 
         float output;
         float outputSum = 0.0f;
@@ -38,20 +34,20 @@ class PIDController {
             const float d,
             const int sampleTime,
             const float outputMin,
-            const float outputMax,
-            const float maxAdjustmentOver,
-            const float maxAdjustmentUnder
+            const float outputMax
         );
 
         float getOutputMin();
         float getOutputMax();
-        float getAdjustedMin();
-        float getAdjustedMax();
 
         float getTarget();
         void setTarget(const float target, const bool direction);
         float update(const float input);
         void resetState();
+
+        float getKp();
+        float getKi();
+        float getKd();
 };
 
 #endif

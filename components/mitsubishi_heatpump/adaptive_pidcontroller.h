@@ -34,13 +34,6 @@ private:
     float outputMin;      // Lower bound (for cooling)
     float outputMax;      // Upper bound (for heating)
 
-    // Output limits (clamping bounds)
-    float maxAdjustmentUnder;      // Lower bound for relative adjustment
-    float maxAdjustmentOver;       // Upper bound for relative adjustment
-
-    float adjustedMin;
-    float adjustedMax;
-
     // Adaptive tuning variables
     float error_history[10];  // Recent error samples for adaptation
     int history_index;        // Current position in history array
@@ -68,9 +61,7 @@ public:
             const float i,
             const float d,
             const float outputMin,
-            const float outputMax,
-            const float maxAdjustmentOver,
-            const float maxAdjustmentUnder
+            const float outputMax
     ) {
         // Start with conservative PID values for room temperature
         //kp = 5.0f;           // Proportional: moderate response
@@ -88,9 +79,6 @@ public:
         // Set reasonable output limits (0-100% typical for HVAC)
         this->outputMin = outputMin;
         this->outputMax = outputMax;
-
-        this->maxAdjustmentUnder = maxAdjustmentUnder;
-        this->maxAdjustmentOver = maxAdjustmentOver;
         
         // Adaptive tuning settings
         this->history_index = 0;
@@ -115,26 +103,17 @@ public:
         return this->target;
     }
 
-    void adjustOutputLimits(const bool direction) {
-        const float adjustMinOffset = direction ? this->maxAdjustmentUnder : this->maxAdjustmentOver;
-        const float adjustMaxOffset = direction ? this->maxAdjustmentOver : this->maxAdjustmentUnder;
-
-        this->adjustedMin = devicestate::clamp(this->target - adjustMinOffset, this->outputMin, this->outputMax);
-        this->adjustedMax = devicestate::clamp(this->target + adjustMaxOffset, this->outputMin, this->outputMax);
-    }
-
     void setTarget(const float target, const bool direction) {
         this->target = target;
         this->direction = direction;
-        this->adjustOutputLimits(direction);
         this->resetState();
     }
 
     float convert_output_to_setpoint(float control_output, float current_temp) {
         float setpoint = this->direction
-            ? this->target + (control_output / 100.0f) * (this->adjustedMax - this->target)
-            : this->target - (control_output / 100.0f) * (this->target - this->adjustedMin);
-        return std::max(this->adjustedMin, std::min(setpoint, this->adjustedMax));
+            ? this->target + (control_output / 100.0f) * (this->outputMax - this->target)
+            : this->target - (control_output / 100.0f) * (this->target - this->outputMin);
+        return std::max(this->outputMin, std::min(setpoint, this->outputMax));
     }
 
     void set_system_state(bool system_active, float current_temp, unsigned long current_time) {
@@ -400,9 +379,6 @@ public:
     float get_kp() const { return kp; }
     float get_ki() const { return ki; }
     float get_kd() const { return kd; }
-
-    float getAdjustedMin() const { return this->adjustedMin; }
-    float getAdjustedMax() const { return this->adjustedMax; }
 };
 
 #endif

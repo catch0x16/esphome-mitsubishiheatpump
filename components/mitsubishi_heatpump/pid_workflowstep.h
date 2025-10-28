@@ -6,7 +6,9 @@
 #include "devicestate.h"
 using namespace devicestate;
 
+#include "pidcontroller.h"
 #include "adaptive_pidcontroller.h"
+#include "adaptive_pid_simple.h"
 
 namespace workflow {
 
@@ -16,6 +18,12 @@ namespace workflow {
         private:
             PIDController *pidController;
             AdaptivePIDController *adaptivePIDController;
+            AdaptivePIDSimple *adaptivePIDSimple;
+
+            float minTemp;
+            float maxTemp;
+            float maxAdjustmentOver;
+            float maxAdjustmentUnder;
 
             bool ensurePIDTarget(devicestate::DeviceStateManager* deviceManager);
         
