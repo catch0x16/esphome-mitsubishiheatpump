@@ -1,8 +1,8 @@
-#include <cmath>
-#include <vector>
-
 #ifndef FLOATSDS_H
 #define FLOATSDS_H
+
+#include <cmath>
+#include <vector>
 
 namespace devicestate {
 

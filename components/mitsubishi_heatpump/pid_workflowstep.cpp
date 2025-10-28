@@ -60,18 +60,6 @@ namespace workflow {
                     }
                 }
             }
-
-            if (deviceManager->isInternalPowerOn()) {
-                if (deviceManager->getOffsetDirection() && devicestate::same_float(setPointCorrectionAdaptive, this->adaptivePIDController->getAdjustedMin())) {
-                    deviceManager->setAggressiveRemoteTemperatureRounding(true);
-                } else if (!deviceManager->getOffsetDirection() && devicestate::same_float(setPointCorrectionAdaptive, this->adaptivePIDController->getAdjustedMax())) {
-                    deviceManager->setAggressiveRemoteTemperatureRounding(true);
-                } else {
-                    deviceManager->setAggressiveRemoteTemperatureRounding(false);
-                }
-            } else {
-                deviceManager->setAggressiveRemoteTemperatureRounding(true);
-            }
         }
 
     }

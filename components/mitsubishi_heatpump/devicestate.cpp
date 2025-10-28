@@ -4,7 +4,7 @@
 using namespace esphome;
 
 #include "floats.h"
-#include <math.h>
+#include <cmath>
 
 namespace devicestate {
 
@@ -275,7 +275,6 @@ namespace devicestate {
         this->pid_set_point_correction = pid_set_point_correction;
 
         this->disconnected = 0;
-        this->aggressiveRemoteTemperatureRounding = false;
 
         ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
         this->hp = new HeatPump();
@@ -687,17 +686,11 @@ namespace devicestate {
     }
 
     void DeviceStateManager::setRemoteTemperature(const float current) {
-        float normalizedCurrent = current;
-        if (this->aggressiveRemoteTemperatureRounding) {
-            normalizedCurrent = this->getOffsetDirection()
-                ? std::ceil(normalizedCurrent)
-                : std::floor(normalizedCurrent);
-        }
-        this->hp->setRemoteTemperature(normalizedCurrent);
-    }
+        const float normalizedCurrent = this->getOffsetDirection()
+            ? std::ceil(current * 2.0) / 2.0
+            : std::floor(current * 2.0) / 2.0;
 
-    void DeviceStateManager::setAggressiveRemoteTemperatureRounding(const bool value) {
-        this->aggressiveRemoteTemperatureRounding = value;
+        this->hp->setRemoteTemperature(normalizedCurrent);
     }
 
     bool DeviceStateManager::commit() {

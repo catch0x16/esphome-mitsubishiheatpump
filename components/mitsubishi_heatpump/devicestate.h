@@ -144,8 +144,6 @@ namespace devicestate {
       bool statusInitialized;
       DeviceStatus deviceStatus;
 
-      bool aggressiveRemoteTemperatureRounding;
-
       bool connect();
 
       void hpSettingsChanged();
