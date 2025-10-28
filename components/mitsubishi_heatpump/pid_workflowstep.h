@@ -14,6 +14,7 @@ namespace workflow {
         
         class PidWorkflowStep : public WorkflowStep {
         private:
+            PIDController *pidController;
             AdaptivePIDController *adaptivePIDController;
 
             bool ensurePIDTarget(devicestate::DeviceStateManager* deviceManager);

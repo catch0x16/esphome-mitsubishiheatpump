@@ -22,6 +22,17 @@ namespace workflow {
             const float maxAdjustmentUnder,
             const float maxAdjustmentOver
         ) {
+            this->pidController = new PIDController(
+                p,
+                i,
+                d,
+                updateInterval,
+                minTemp,
+                maxTemp,
+                maxAdjustmentOver,
+                maxAdjustmentUnder
+            );
+
             this->adaptivePIDController = new AdaptivePIDController(
                 p,
                 i,
@@ -53,12 +64,24 @@ namespace workflow {
                 setPointCorrectionAdaptive, this->adaptivePIDController->getTarget(), this->adaptivePIDController->getAdjustedMin(), this->adaptivePIDController->getAdjustedMax(), YESNO(deviceManager->isInternalPowerOn()),
                 this->adaptivePIDController->get_kp(), this->adaptivePIDController->get_ki(), this->adaptivePIDController->get_kd());
 
+            // if pid target is not updated and internal power is not on
             if (updatedPidTarget || deviceManager->isInternalPowerOn()) {
-                if (deviceManager->internalSetCorrectedTemperature(setPointCorrectionAdaptive)) {
+                if (this->resetRequired) {
+                    this->resetRequired = false;
+                    ESP_LOGW(TAG, "PidWorkflowStep resetRequired so resetting state");
+                    //this->pidController->resetState();
+                }
+
+                const float setPointCorrection = this->pidController->update(currentTemperature);
+                ESP_LOGI(TAG, "PidWorkflowStep setPointCorrection={%.2f} adjustedMin={%.2f} adjustedMax={%.2f} powerOn={%s}",
+                    setPointCorrection, this->pidController->getAdjustedMin(), this->pidController->getAdjustedMax(), YESNO(deviceManager->isInternalPowerOn()));
+                if (deviceManager->internalSetCorrectedTemperature(setPointCorrection)) {
                     if (!deviceManager->commit()) {
                         ESP_LOGE(TAG, "PidWorkflowStep failed to update corrected temperature");
                     }
                 }
+            } else {
+                this->resetRequired = true;
             }
         }
 

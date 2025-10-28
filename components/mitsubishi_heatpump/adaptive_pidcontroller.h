@@ -172,6 +172,7 @@ public:
             }
             this->system_active = isInternalPowerOn;
         }
+
         // If system is off due to hysteresis, return target temp (no action)
         if (!this->system_active) {
             // Don't update error history during off periods
