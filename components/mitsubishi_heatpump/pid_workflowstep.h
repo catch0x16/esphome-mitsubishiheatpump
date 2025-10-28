@@ -1,13 +1,12 @@
+#ifndef PID_WORKFLOWSTEP_H
+#define PID_WORKFLOWSTEP_H
+
 #include "esphome.h"
 
 #include "devicestate.h"
 using namespace devicestate;
 
-#include "pidcontroller.h"
 #include "adaptive_pidcontroller.h"
-
-#ifndef PID_WORKFLOWSTEP_H
-#define PID_WORKFLOWSTEP_H
 
 namespace workflow {
 
@@ -15,7 +14,6 @@ namespace workflow {
         
         class PidWorkflowStep : public WorkflowStep {
         private:
-            PIDController *pidController;
             AdaptivePIDController *adaptivePIDController;
 
             bool ensurePIDTarget(devicestate::DeviceStateManager* deviceManager);

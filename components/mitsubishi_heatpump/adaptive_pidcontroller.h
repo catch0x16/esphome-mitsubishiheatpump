@@ -48,7 +48,6 @@ private:
 
     // Anti-windup and stability
     float integral_max;    // Maximum integral to prevent windup
-    float deadband;        // Temperature tolerance zone (no action needed)
 
     // Timing
     unsigned long last_update_time;  // Timestamp of last update (milliseconds)
@@ -102,7 +101,6 @@ public:
         
         // Anti-windup and stability
         this->integral_max = 20.0f;     // Limit integral accumulation
-        this->deadband = 0.0f;//0.2f;          // ±0.2°C deadband to prevent hunting
         
         this->last_update_time = 0;
         this->system_active = true;     // Start with system enabled
@@ -191,14 +189,7 @@ public:
         
         // Calculate error (how far we are from target)
         float error = this->target - current_temp;
-        
-        // Apply deadband - if we're close enough, no action needed
-        if (std::abs(error) < deadband) {
-            error = 0.0f;
-            // Reset integral when in deadband to prevent windup
-            integral *= 0.9f;  // Gradual decay instead of hard reset
-        }
-        
+
         // Store error in history for adaptive tuning
         error_history[history_index] = error;
         history_index = (history_index + 1) % 10;
@@ -412,33 +403,5 @@ public:
     float getAdjustedMin() const { return this->adjustedMin; }
     float getAdjustedMax() const { return this->adjustedMax; }
 };
-
-
-/**
- * USAGE EXAMPLE for ESPHome:
- * 
- * // Create controller instance
- * AdaptivePIDController hvac_pid;
- * 
- * // In your setup function:
- * void setup() {
- *     hvac_pid.set_output_limits(0.0f, 100.0f);
- *     hvac_pid.set_deadband(0.2f);  // ±0.2°C tolerance
- * }
- * 
- * // In your loop/update function:
- * void loop() {
- *     float target = 22.0f;  // Target temperature (°C)
- *     float current = read_temperature_sensor();
- *     unsigned long now = millis();
- *     bool heating_mode = (current < target);
- *     
- *     float output = hvac_pid.update(target, current, now, heating_mode);
- *     
- *     // Apply output to your HVAC system
- *     // output is 0-100, scale as needed for your system
- *     set_hvac_power(output);
- * }
- */
 
 #endif

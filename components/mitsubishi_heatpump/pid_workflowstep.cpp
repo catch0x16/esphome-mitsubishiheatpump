@@ -22,17 +22,6 @@ namespace workflow {
             const float maxAdjustmentUnder,
             const float maxAdjustmentOver
         ) {
-            this->pidController = new PIDController(
-                p,
-                i,
-                d,
-                updateInterval,
-                minTemp,
-                maxTemp,
-                maxAdjustmentOver,
-                maxAdjustmentUnder
-            );
-
             this->adaptivePIDController = new AdaptivePIDController(
                 p,
                 i,
@@ -45,12 +34,9 @@ namespace workflow {
         }
 
         bool PidWorkflowStep::ensurePIDTarget(devicestate::DeviceStateManager* deviceManager) {
-            if (devicestate::same_float(deviceManager->getTargetTemperature(), this->pidController->getTarget(), 0.01f)) {
+            if (devicestate::same_float(deviceManager->getTargetTemperature(), this->adaptivePIDController->getTarget(), 0.01f)) {
                 return false;
             }
-
-            ESP_LOGW(TAG, "PID target temp changing from %f to %f", this->pidController->getTarget(), deviceManager->getTargetTemperature());
-            this->pidController->setTarget(deviceManager->getTargetTemperature(), deviceManager->getOffsetDirection());
 
             ESP_LOGW(TAG, "Adaptive PID target temp changing from %f to %f", this->adaptivePIDController->getTarget(), deviceManager->getTargetTemperature());
             this->adaptivePIDController->setTarget(deviceManager->getTargetTemperature(), deviceManager->getOffsetDirection());
@@ -64,18 +50,27 @@ namespace workflow {
             const float setPointCorrectionAdaptive =
                 this->adaptivePIDController->update(currentTemperature, now, deviceManager->isInternalPowerOn());
             ESP_LOGI(TAG, "PidWorkflowStep setPointCorrectionAdaptive={%.2f} target={%.2f} adjustedMin={%.2f} adjustedMax={%.2f} powerOn={%s} kp={%.3f} ki={%.3f} kd={%.3f}",
-                setPointCorrectionAdaptive, this->pidController->getTarget(), this->adaptivePIDController->getAdjustedMin(), this->adaptivePIDController->getAdjustedMax(), YESNO(deviceManager->isInternalPowerOn()),
+                setPointCorrectionAdaptive, this->adaptivePIDController->getTarget(), this->adaptivePIDController->getAdjustedMin(), this->adaptivePIDController->getAdjustedMax(), YESNO(deviceManager->isInternalPowerOn()),
                 this->adaptivePIDController->get_kp(), this->adaptivePIDController->get_ki(), this->adaptivePIDController->get_kd());
 
             if (updatedPidTarget || deviceManager->isInternalPowerOn()) {
-                const float setPointCorrection = this->pidController->update(currentTemperature);
-                ESP_LOGI(TAG, "PidWorkflowStep setPointCorrection={%.2f} target={%.2f} adjustedMin={%.2f} adjustedMax={%.2f} powerOn={%s}",
-                    setPointCorrection, this->pidController->getTarget(), this->pidController->getAdjustedMin(), this->pidController->getAdjustedMax(), YESNO(deviceManager->isInternalPowerOn()));
-                if (deviceManager->internalSetCorrectedTemperature(setPointCorrection)) {
+                if (deviceManager->internalSetCorrectedTemperature(setPointCorrectionAdaptive)) {
                     if (!deviceManager->commit()) {
                         ESP_LOGE(TAG, "PidWorkflowStep failed to update corrected temperature");
                     }
                 }
+            }
+
+            if (deviceManager->isInternalPowerOn()) {
+                if (deviceManager->getOffsetDirection() && devicestate::same_float(setPointCorrectionAdaptive, this->adaptivePIDController->getAdjustedMin())) {
+                    deviceManager->setAggressiveRemoteTemperatureRounding(true);
+                } else if (!deviceManager->getOffsetDirection() && devicestate::same_float(setPointCorrectionAdaptive, this->adaptivePIDController->getAdjustedMax())) {
+                    deviceManager->setAggressiveRemoteTemperatureRounding(true);
+                } else {
+                    deviceManager->setAggressiveRemoteTemperatureRounding(false);
+                }
+            } else {
+                deviceManager->setAggressiveRemoteTemperatureRounding(true);
             }
         }
 

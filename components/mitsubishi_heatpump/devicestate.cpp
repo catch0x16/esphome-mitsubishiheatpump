@@ -275,6 +275,7 @@ namespace devicestate {
         this->pid_set_point_correction = pid_set_point_correction;
 
         this->disconnected = 0;
+        this->aggressiveRemoteTemperatureRounding = false;
 
         ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
         this->hp = new HeatPump();
@@ -673,7 +674,6 @@ namespace devicestate {
         this->hp->setTemperature(this->correctedTargetTemperature);
 
         ESP_LOGW(TAG, "internalSetCorrectedTemperature: Adjusted corrected temperature: oldCorrection={%f} newCorrection={%f} roundedNewCorrection={%f} deviceTarget={%f} componentTarget={%f}", oldCorrectedTargetTemperature, adjustedCorrectedTemperature, roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, this->getTargetTemperature());
-        //this->pid_set_point_correction->publish_state(this->correctedTargetTemperature);
         return true;
     }
 
@@ -687,7 +687,17 @@ namespace devicestate {
     }
 
     void DeviceStateManager::setRemoteTemperature(const float current) {
-        this->hp->setRemoteTemperature(current);
+        float normalizedCurrent = current;
+        if (this->aggressiveRemoteTemperatureRounding) {
+            normalizedCurrent = this->getOffsetDirection()
+                ? std::ceil(normalizedCurrent)
+                : std::floor(normalizedCurrent);
+        }
+        this->hp->setRemoteTemperature(normalizedCurrent);
+    }
+
+    void DeviceStateManager::setAggressiveRemoteTemperatureRounding(const bool value) {
+        this->aggressiveRemoteTemperatureRounding = value;
     }
 
     bool DeviceStateManager::commit() {

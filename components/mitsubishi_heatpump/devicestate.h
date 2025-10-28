@@ -144,6 +144,8 @@ namespace devicestate {
       bool statusInitialized;
       DeviceStatus deviceStatus;
 
+      bool aggressiveRemoteTemperatureRounding;
+
       bool connect();
 
       void hpSettingsChanged();
@@ -205,6 +207,7 @@ namespace devicestate {
       void setTargetTemperature(const float target);
 
       void setRemoteTemperature(const float current);
+      void setAggressiveRemoteTemperatureRounding(const bool value);
 
       bool internalTurnOn();
       bool internalTurnOff();
