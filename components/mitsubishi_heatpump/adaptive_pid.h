@@ -6,10 +6,10 @@
 #include <cstdio>
 #include <algorithm>
 
-class AdaptivePIDSimple {
+class AdaptivePID {
 public:
     // Constructor: initialize with nominal PID gains and output range (e.g., 0..100)
-    AdaptivePIDSimple(float kp_init, float ki_init, float kd_init,
+    AdaptivePID(float kp_init, float ki_init, float kd_init,
                       float output_min = 0.0f, float output_max = 100.0f);
 
     // Main control API
@@ -21,6 +21,7 @@ public:
 
     // Configure target and direction (heating=true means setpoint increases with positive output)
     void set_target(float target, bool heating);
+    float get_target();
 
     // Configuration setters
     void set_learning_rates(float lr_kp, float lr_ki, float lr_kd); // per-adapt-step multipliers

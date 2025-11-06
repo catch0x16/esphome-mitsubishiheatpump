@@ -6,9 +6,7 @@
 #include "devicestate.h"
 using namespace devicestate;
 
-#include "pidcontroller.h"
-#include "adaptive_pidcontroller.h"
-#include "adaptive_pid_simple.h"
+#include "adaptive_pid.h"
 
 namespace workflow {
 
@@ -16,9 +14,7 @@ namespace workflow {
         
         class PidWorkflowStep : public WorkflowStep {
         private:
-            PIDController *pidController;
-            AdaptivePIDController *adaptivePIDController;
-            AdaptivePIDSimple *adaptivePIDSimple;
+            AdaptivePID *adaptivePID;
 
             float minTemp;
             float maxTemp;

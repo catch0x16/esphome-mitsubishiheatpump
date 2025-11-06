@@ -1,9 +1,9 @@
-#include "adaptive_pid_simple.h"
+#include "adaptive_pid.h"
 
 // -----------------------------
 // Constructor & defaults
 // -----------------------------
-AdaptivePIDSimple::AdaptivePIDSimple(float kp_init, float ki_init, float kd_init,
+AdaptivePID::AdaptivePID(float kp_init, float ki_init, float kd_init,
                                      float output_min, float output_max)
     : _kp(kp_init), _ki(ki_init), _kd(kd_init),
       _kp_min(0.0f), _kp_max(100.0f),
@@ -30,42 +30,46 @@ AdaptivePIDSimple::AdaptivePIDSimple(float kp_init, float ki_init, float kd_init
 // -----------------------------
 // Public configuration
 // -----------------------------
-void AdaptivePIDSimple::set_target(float target, bool heating) {
+void AdaptivePID::set_target(float target, bool heating) {
     _target = target;
     _heating = heating;
     // Reset internal integrator on target change to avoid windup
     _integral = 0.0f;
 }
 
-void AdaptivePIDSimple::set_learning_rates(float lr_kp, float lr_ki, float lr_kd) {
+float AdaptivePID::get_target() {
+    return this->_target;
+}
+
+void AdaptivePID::set_learning_rates(float lr_kp, float lr_ki, float lr_kd) {
     _lr_kp = lr_kp;
     _lr_ki = lr_ki;
     _lr_kd = lr_kd;
 }
 
-void AdaptivePIDSimple::set_plant_sensitivity(float sens) {
+void AdaptivePID::set_plant_sensitivity(float sens) {
     _plant_sensitivity = std::fabs(sens) + 1e-9f; // keep positive
 }
 
-void AdaptivePIDSimple::set_bounds(float kp_min, float kp_max, float ki_min, float ki_max, float kd_min, float kd_max) {
+void AdaptivePID::set_bounds(float kp_min, float kp_max, float ki_min, float ki_max, float kd_min, float kd_max) {
     _kp_min = kp_min; _kp_max = kp_max;
     _ki_min = ki_min; _ki_max = ki_max;
     _kd_min = kd_min; _kd_max = kd_max;
 }
 
-void AdaptivePIDSimple::set_adapt_interval_ms(uint32_t interval_ms) {
+void AdaptivePID::set_adapt_interval_ms(uint32_t interval_ms) {
     _adapt_interval_ms = std::max<uint32_t>(1000u, interval_ms);
 }
 
-void AdaptivePIDSimple::set_max_relative_change(float frac) {
+void AdaptivePID::set_max_relative_change(float frac) {
     _max_relative_change = std::max(0.001f, frac);
 }
 
-void AdaptivePIDSimple::set_deadband(float db) {
+void AdaptivePID::set_deadband(float db) {
     _deadband = std::abs(db);
 }
 
-void AdaptivePIDSimple::log_state(char *buf, size_t buflen) const {
+void AdaptivePID::log_state(char *buf, size_t buflen) const {
     // Small, safe formatted snapshot
     std::snprintf(buf, buflen,
                   "kp=%.4f ki=%.6f kd=%.4f adapt_ms=%u lr=(%.4f,%.4f,%.4f)",
@@ -75,7 +79,7 @@ void AdaptivePIDSimple::log_state(char *buf, size_t buflen) const {
 // -----------------------------
 // Core update loop
 // -----------------------------
-float AdaptivePIDSimple::update(float current_temp, uint32_t current_time_ms, bool system_power_on) {
+float AdaptivePID::update(float current_temp, uint32_t current_time_ms, bool system_power_on) {
     // Guard against zero-time initial calls: initialize last_update
     if (_last_update_ms == 0) {
         _last_update_ms = current_time_ms;
@@ -138,7 +142,7 @@ float AdaptivePIDSimple::update(float current_temp, uint32_t current_time_ms, bo
 // -----------------------------
 // Helpers
 // -----------------------------
-float AdaptivePIDSimple::compute_pid_output(float error, float derivative) {
+float AdaptivePID::compute_pid_output(float error, float derivative) {
     // Basic PID output composition
     float p = _kp * error;
     float i = _ki * _integral;
@@ -148,7 +152,7 @@ float AdaptivePIDSimple::compute_pid_output(float error, float derivative) {
     return out;
 }
 
-float AdaptivePIDSimple::convert_output_to_setpoint(float control_output, float current_temp) const {
+float AdaptivePID::convert_output_to_setpoint(float control_output, float current_temp) const {
     // Map control output to a setpoint range around target; here control_output is unbounded,
     // but we'll project it to a ±span and clamp to output limits.
     // Choose a mapping span: 100 units of control_output maps to full range by default.
@@ -166,7 +170,7 @@ float AdaptivePIDSimple::convert_output_to_setpoint(float control_output, float 
     return sp;
 }
 
-float AdaptivePIDSimple::apply_safe_update(float currentK, float deltaK, float Kmin, float Kmax) const {
+float AdaptivePID::apply_safe_update(float currentK, float deltaK, float Kmin, float Kmax) const {
     if (!std::isfinite(deltaK)) return currentK;
     // Cap by relative fraction of absolute currentK magnitude
     float cap = std::max(1e-6f, std::fabs(currentK) * _max_relative_change);
@@ -181,7 +185,7 @@ float AdaptivePIDSimple::apply_safe_update(float currentK, float deltaK, float K
 // -----------------------------
 // Gradient adaptation (surrogate gradient, simplified & smoothed)
 // -----------------------------
-void AdaptivePIDSimple::run_gradient_adaptation(float error, float integral, float derivative, uint32_t dt_ms) {
+void AdaptivePID::run_gradient_adaptation(float error, float integral, float derivative, uint32_t dt_ms) {
     // Use simple surrogate gradient: raw_dK = plant_sensitivity * error * phi
     // where phi is controller regressor: [e, integral, derivative]
     // We negate expected sign because d(error)/d(control) is negative for negative feedback.
