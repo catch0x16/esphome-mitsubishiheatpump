@@ -96,7 +96,6 @@ namespace devicestate {
     VerticalSwingMode verticalSwingMode;
     HorizontalSwingMode horizontalSwingMode;
     float targetTemperature;
-    //bool connected;
   };
   bool deviceStateEqual(const DeviceState& left, const DeviceState& right);
   DeviceState toDeviceState(heatpumpSettings *currentSettings);
@@ -128,9 +127,6 @@ namespace devicestate {
       esphome::sensor::Sensor* device_status_kwh;
       esphome::sensor::Sensor* device_status_runtime_hours;
       esphome::sensor::Sensor* pid_set_point_correction;
-
-      // HeatPump object using the underlying Arduino library.
-      HeatPump* hp;
 
       uint32_t lastInternalPowerUpdate = esphome::millis();
       bool internalPowerOn;
@@ -174,6 +170,9 @@ namespace devicestate {
         esphome::sensor::Sensor* device_status_runtime_hours,
         esphome::sensor::Sensor* pid_set_point_correction
       );
+
+      // HeatPump object using the underlying Arduino library.
+      HeatPump* hp;
 
       DeviceStatus getDeviceStatus();
       DeviceState getDeviceState();

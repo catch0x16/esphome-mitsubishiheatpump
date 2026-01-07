@@ -821,9 +821,14 @@ esphome::optional<float> MitsubishiHeatPump::load(ESPPreferenceObject& storage) 
 
 void MitsubishiHeatPump::dump_config() {
     this->banner();
-    ESP_LOGI(TAG, "  baud rate %d", this->baud_);
-    ESP_LOGI(TAG, "  rxPin %d", this->rx_pin_);
-    ESP_LOGI(TAG, "  txPin %d", this->tx_pin_);
+    ESP_LOGI(TAG, "  espmphp baud rate %d", this->baud_);
+    ESP_LOGI(TAG, "  espmphp rxPin %d", this->rx_pin_);
+    ESP_LOGI(TAG, "  espmphp txPin %d", this->tx_pin_);
+    if (this->dsm != nullptr) {
+        ESP_LOGI(TAG, "  dsm baud rate %d", this->dsm->hp->bitrate_);
+        ESP_LOGI(TAG, "  dsm rxPin %d", this->dsm->hp->rxPin_);
+        ESP_LOGI(TAG, "  dsm txPin %d", this->dsm->hp->txPin_);
+    }
     ESP_LOGI(TAG, "  Supports HEAT: %s", YESNO(true));
     ESP_LOGI(TAG, "  Supports COOL: %s", YESNO(true));
     ESP_LOGI(TAG, "  Supports AWAY mode: %s", YESNO(false));

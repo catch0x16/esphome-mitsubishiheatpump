@@ -277,7 +277,12 @@ namespace devicestate {
         this->disconnected = 0;
 
         ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
-        this->hp = new HeatPump();
+        this->hp = new HeatPump(
+            connectionMetadata.hardwareSerial,
+            connectionMetadata.rxPin,
+            connectionMetadata.txPin,
+            connectionMetadata.baud
+        );
         this->hp->enableExternalUpdate();
 
         #ifdef USE_CALLBACKS
@@ -379,11 +384,7 @@ namespace devicestate {
     }
 
     bool DeviceStateManager::connect() {
-        if (this->hp->connect(
-                this->connectionMetadata.hardwareSerial,
-                this->connectionMetadata.baud,
-                this->connectionMetadata.rxPin,
-                this->connectionMetadata.txPin)) {
+        if (this->hp->connect()) {
             ESP_LOGW(TAG, "Connect succeeded");
             this->hp->sync();
             return true;

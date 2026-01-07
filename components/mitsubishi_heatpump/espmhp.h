@@ -186,7 +186,7 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
 
     protected:
         // HeatPump object using the underlying Arduino library.
-        devicestate::DeviceStateManager* dsm;
+        devicestate::DeviceStateManager* dsm{nullptr};
 
         WorkflowStep* hysterisisWorkflowStep;
         WorkflowStep* pidWorkflowStep;
@@ -244,9 +244,9 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         // Retrieve the HardwareSerial pointer from friend and subclasses.
         HardwareSerial *hw_serial_;
         int baud_ = 0;
-
         int rx_pin_ = -1;
         int tx_pin_ = -1;
+
         bool operating_ = false;
 
         float kp_;

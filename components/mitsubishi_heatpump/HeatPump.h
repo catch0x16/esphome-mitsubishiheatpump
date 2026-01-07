@@ -194,8 +194,7 @@ class HeatPump
     heatpumpFunctions functions;
   
     HardwareSerial * _HardSerial {nullptr};
-    int rxPin; // save rx pin for retry ESP32
-    int txPin; // save tx pin for retry ESP32
+
     unsigned long lastSend;
     bool waitForRead;
     int infoMode;
@@ -232,6 +231,10 @@ class HeatPump
     PACKET_CALLBACK_SIGNATURE {nullptr};
 
   public:
+    int rxPin_; // save rx pin for retry ESP32
+    int txPin_; // save tx pin for retry ESP32
+    int bitrate_;
+
     // indexes for INFOMODE array (public so they can be optionally passed to sync())
     const int RQST_PKT_SETTINGS  = 0;
     const int RQST_PKT_ROOM_TEMP = 1;
@@ -240,11 +243,9 @@ class HeatPump
     const int RQST_PKT_STANDBY   = 5;
 
     // general
-    HeatPump();
-    bool connect(HardwareSerial *serial);
-    bool connect(HardwareSerial *serial, int bitrate);
-    bool connect(HardwareSerial *serial, int rx, int tx);
-    bool connect(HardwareSerial *serial, int bitrate, int rx, int tx);
+    HeatPump(HardwareSerial *serial, int rxPin, int txPin, int bitRate);
+
+    bool connect();
     bool update();
     void sync(byte packetType = PACKET_TYPE_DEFAULT);
     void enableExternalUpdate();
