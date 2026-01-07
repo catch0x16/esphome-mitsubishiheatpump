@@ -349,9 +349,3 @@ def to_code(config):
     cg.add(var.set_max_adjustment_over(params[CONF_MAX_ADJUSTMENT_OVER]))
     cg.add(var.set_hysterisis_off(params[CONF_HYSTERISIS_OFF]))
     cg.add(var.set_hysterisis_on(params[CONF_HYSTERISIS_ON]))
-
-    cg.add_library(
-        name="HeatPump",
-        repository="https://github.com/catch0x16/HeatPump#1b7edd3acca721ed1630a7973a4b19e60b3dd9d6",
-        version=None, # this appears to be ignored?
-    )
