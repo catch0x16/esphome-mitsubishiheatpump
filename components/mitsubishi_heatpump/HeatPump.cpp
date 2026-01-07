@@ -69,14 +69,8 @@ bool operator!=(const heatpumpTimers& lhs, const heatpumpTimers& rhs) {
 
 // Constructor /////////////////////////////////////////////////////////////////
 
-HeatPump::HeatPump(HardwareSerial *serial, int rxPin, int txPin, int bitRate) {
-  _HardSerial = serial;
-  rxPin_ = rxPin;
-  txPin_ = txPin;
-  bitrate_ = bitRate;
-  if(bitrate_ == 0) {
-    bitrate_ = 2400;
-  }
+HeatPump::HeatPump(devicestate::IIODevice* io_device) :
+    io_device_{io_device} {
 
   lastWanted = millis();
   lastSend = 0;
@@ -93,34 +87,11 @@ HeatPump::HeatPump(HardwareSerial *serial, int rxPin, int txPin, int bitRate) {
 
 // Public Methods //////////////////////////////////////////////////////////////
 bool HeatPump::connect() {
-  bool retry = false;
-  if(bitrate_ == 2400) {
-    retry = true;
-  }
-
-#if defined(ESP32)
-    if (rxPin > 0 && txPin > 0) // check if custom pin previous set
-    {
-      _HardSerial->begin(bitrate_, SERIAL_8E1, rxPin_, txPin_);
-    }
-    else // fall back to default hardware pins
-    {
-      _HardSerial->begin(bitrate_, SERIAL_8E1);
-    }
-#else
-    _HardSerial->begin(bitrate_, SERIAL_8E1);
-#endif
+  io_device_->begin();
 
   if(onConnectCallback) {
     onConnectCallback();
   }
-  
-// settle before we start sending packets
-#if defined(ESP32)
-  delay(1000);
-#else
-  delay(2000);
-#endif
 
   // send the CONNECT packet twice - need to copy the CONNECT packet locally
   byte packet[CONNECT_LEN];
@@ -129,11 +100,6 @@ bool HeatPump::connect() {
   writePacket(packet, CONNECT_LEN);
   while(!canRead()) { delay(10); }
   int packetType = readPacket();
-  if (packetType != RCVD_PKT_CONNECT_SUCCESS && retry)
-  {
-      bitrate_ = 9600;
-      return connect();
-  }
   connected = (packetType == RCVD_PKT_CONNECT_SUCCESS);
   return connected;
   //}
@@ -543,7 +509,7 @@ void HeatPump::createInfoPacket(byte *packet, byte packetType) {
 
 void HeatPump::writePacket(byte *packet, int length) {
   for (int i = 0; i < length; i++) {
-     _HardSerial->write((uint8_t)packet[i]);
+      io_device_->write((uint8_t)packet[i]);
   }
 
   if(packetCallback) {
@@ -593,6 +559,12 @@ const char* HeatPump::lookupSendPacketName(const byte *packet) {
   }
 }
 
+int HeatPump::readByte() {
+  uint8_t inputData;
+  io_device_->read(&inputData);
+  return inputData;
+}
+
 // Additional references
 //  https://github.com/echavet/MitsubishiCN105ESPHome/blob/98a7c603972acfd1c435d2dc1c4414784c3dad38/components/cn105/hp_readings.cpp#L353
 int HeatPump::readPacket() {
@@ -605,10 +577,10 @@ int HeatPump::readPacket() {
   
   waitForRead = false;
 
-  if(_HardSerial->available() > 0) {
+  if(io_device_->available() > 0) {
     // read until we get start byte 0xfc
-    while(_HardSerial->available() > 0 && !foundStart) {
-      header[0] = _HardSerial->read();
+    while(io_device_->available() > 0 && !foundStart) {
+      header[0] = readByte();
       if(header[0] == HEADER[0]) {
         foundStart = true;
         delay(100); // found that this delay increases accuracy when reading, might not be needed though
@@ -621,7 +593,7 @@ int HeatPump::readPacket() {
     
     //read header
     for(int i=1;i<5;i++) {
-      header[i] =  _HardSerial->read();
+      header[i] = readByte();
     }
     
     //check header
@@ -629,11 +601,11 @@ int HeatPump::readPacket() {
       dataLength = header[4];
       
       for(int i=0;i<dataLength;i++) {
-        data[i] = _HardSerial->read();
+        data[i] = readByte();
       }
   
       // read checksum byte
-      data[dataLength] = _HardSerial->read();
+      data[dataLength] = readByte();
   
       // sum up the header bytes...
       for (int i = 0; i < INFOHEADER_LEN; i++) {
@@ -827,7 +799,7 @@ int HeatPump::readPacket() {
 }
 
 void HeatPump::readAllPackets() {
-  while (_HardSerial->available() > 0) {
+  while (io_device_->available() > 0) {
     readPacket();
   }
 }

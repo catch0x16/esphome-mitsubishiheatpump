@@ -20,6 +20,7 @@
 #include "esphome/components/select/select.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/core/preferences.h"
+#include "esphome/components/uart/uart.h"
 
 #include <chrono>
 
@@ -46,18 +47,18 @@ static const float   ESPMHP_TARGET_TEMPERATURE_STEP = 0.5; // temperature settin
 static const float   ESPMHP_CURRENT_TEMPERATURE_STEP = 0.1; // temperature setting step,
                                                     // in degrees C
 
-class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::climate::Climate {
+class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::climate::Climate, public esphome::uart::UARTDevice {
     public:
 
         /**
          * Create a new MitsubishiHeatPump object
          *
          * Args:
-         *   hw_serial: pointer to an Arduino HardwareSerial instance
+         *   hw_serial: pointer to a UART instance
          *   poll_interval: polling interval in milliseconds
          */
         MitsubishiHeatPump(
-            HardwareSerial* hw_serial,
+            esphome::uart::UARTComponent* hw_serial,
             uint32_t poll_interval=ESPMHP_POLL_INTERVAL_DEFAULT
         );
 
@@ -204,7 +205,7 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         friend class HeatPump;
 
         //Accessor method for the HardwareSerial pointer
-        HardwareSerial* get_hw_serial_() {
+        esphome::uart::UARTComponent* get_hw_serial_() {
             return this->hw_serial_;
         }
 
@@ -242,7 +243,7 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         void enforce_remote_temperature_sensor_timeout();
 
         // Retrieve the HardwareSerial pointer from friend and subclasses.
-        HardwareSerial *hw_serial_;
+        esphome::uart::UARTComponent* hw_serial_;
         int baud_ = 0;
         int rx_pin_ = -1;
         int tx_pin_ = -1;

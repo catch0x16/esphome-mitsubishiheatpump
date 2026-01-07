@@ -42,7 +42,7 @@ static const char* TAG = "MitsubishiHeatPump"; // Logging tag
  *   poll_interval: polling interval in milliseconds
  */
 MitsubishiHeatPump::MitsubishiHeatPump(
-        HardwareSerial* hw_serial,
+        uart::UARTComponent* hw_serial,
         uint32_t poll_interval
 ) :
     PollingComponent{poll_interval}, // member initializers list
@@ -71,15 +71,6 @@ bool MitsubishiHeatPump::verify_serial() {
         return false;
     }
 
-#ifdef USE_LOGGER
-    if (this->get_hw_serial_() == logger::global_logger->get_hw_serial()) {
-        ESP_LOGW(TAG, "  You're using the same serial port for logging"
-                " and the MitsubishiHeatPump component. Please disable"
-                " logging over the serial port by setting"
-                " logger:baud_rate to 0.");
-        return false;
-    }
-#endif
     // unless something went wrong, assume we have a valid serial configuration
     return true;
 }
@@ -711,9 +702,6 @@ void MitsubishiHeatPump::setup() {
 
     devicestate::ConnectionMetadata connectionMetadata;
     connectionMetadata.hardwareSerial = this->get_hw_serial_();
-    connectionMetadata.baud = this->baud_;
-    connectionMetadata.rxPin = this->rx_pin_;
-    connectionMetadata.txPin = this->tx_pin_;
 
     ESP_LOGCONFIG(
             TAG,
@@ -821,14 +809,6 @@ esphome::optional<float> MitsubishiHeatPump::load(ESPPreferenceObject& storage) 
 
 void MitsubishiHeatPump::dump_config() {
     this->banner();
-    ESP_LOGI(TAG, "  espmphp baud rate %d", this->baud_);
-    ESP_LOGI(TAG, "  espmphp rxPin %d", this->rx_pin_);
-    ESP_LOGI(TAG, "  espmphp txPin %d", this->tx_pin_);
-    if (this->dsm != nullptr) {
-        ESP_LOGI(TAG, "  dsm baud rate %d", this->dsm->hp->bitrate_);
-        ESP_LOGI(TAG, "  dsm rxPin %d", this->dsm->hp->rxPin_);
-        ESP_LOGI(TAG, "  dsm txPin %d", this->dsm->hp->txPin_);
-    }
     ESP_LOGI(TAG, "  Supports HEAT: %s", YESNO(true));
     ESP_LOGI(TAG, "  Supports COOL: %s", YESNO(true));
     ESP_LOGI(TAG, "  Supports AWAY mode: %s", YESNO(false));

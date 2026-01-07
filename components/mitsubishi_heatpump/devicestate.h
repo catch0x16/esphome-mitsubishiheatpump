@@ -4,6 +4,7 @@
 #include "esphome.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/sensor/sensor.h"
+#include "esphome/components/uart/uart.h"
 
 #ifndef DEVICESTATE_H
 #define DEVICESTATE_H
@@ -101,10 +102,7 @@ namespace devicestate {
   DeviceState toDeviceState(heatpumpSettings *currentSettings);
 
   struct ConnectionMetadata {
-    HardwareSerial *hardwareSerial;
-    int baud;
-    int rxPin;
-    int txPin;
+    esphome::uart::UARTComponent* hardwareSerial;
   };
 
   class DeviceStateManager {

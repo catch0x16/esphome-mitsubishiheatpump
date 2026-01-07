@@ -5,7 +5,9 @@ from esphome.components import (
     select,
     binary_sensor,
     sensor,
+    uart,
 )
+from esphome.components.uart import UARTParityOptions
 
 from esphome.components.logger import HARDWARE_UART_TO_SERIAL
 from esphome.const import (
@@ -28,6 +30,7 @@ from esphome.const import (
     CONF_STATE_CLASS,
     CONF_ACCURACY_DECIMALS,
     CONF_FORCE_UPDATE,
+    CONF_UART_ID,
     DEVICE_CLASS_TEMPERATURE,
     DEVICE_CLASS_FREQUENCY,
     DEVICE_CLASS_POWER,
@@ -44,7 +47,8 @@ from esphome.core import CORE, coroutine
 sensor_ns = cg.esphome_ns.namespace("sensor")
 StateClasses = sensor_ns.enum("StateClass")
 
-AUTO_LOAD = ["climate", "select", "binary_sensor"]
+AUTO_LOAD = ["climate", "select", "binary_sensor", "uart"]
+DEPENDENCIES = ["uart"]
 
 CONF_SUPPORTS = "supports"
 
@@ -85,7 +89,7 @@ CONF_REMOTE_IDLE_TIMEOUT = "remote_temperature_idle_timeout_minutes"
 CONF_REMOTE_PING_TIMEOUT = "remote_temperature_ping_timeout_minutes"
 
 MitsubishiHeatPump = cg.global_ns.class_(
-    "MitsubishiHeatPump", climate.Climate, cg.PollingComponent
+    "MitsubishiHeatPump", climate.Climate, cg.PollingComponent, uart.UARTDevice
 )
 
 MitsubishiACSelect = cg.global_ns.class_(
@@ -105,6 +109,49 @@ def valid_uart(uart):
 
 InternalPowerOnSensor = cg.global_ns.class_("InternalPowerOn", binary_sensor.BinarySensor, cg.Component)
 
+
+# --- Fonction d'aide pour récupérer les pins TX/RX (identique à votre version corrigée) ---
+def get_uart_pins_from_config(core_config, target_uart_id_str):
+    tx_pin_num = -1
+    rx_pin_num = -1
+    uart_config_found = {}
+    for uart_conf_item in core_config.get("uart", []):
+        if str(uart_conf_item[CONF_ID]) == target_uart_id_str:
+            uart_config_found = uart_conf_item
+            break
+    if uart_config_found:
+        tx_pin_schema = uart_config_found.get(CONF_TX_PIN)
+        if tx_pin_schema:
+            if isinstance(tx_pin_schema, dict) and "number" in tx_pin_schema:
+                tx_pin_num = tx_pin_schema["number"]
+            elif isinstance(tx_pin_schema, int):
+                tx_pin_num = tx_pin_schema
+        rx_pin_schema = uart_config_found.get(CONF_RX_PIN)
+        if rx_pin_schema:
+            if isinstance(rx_pin_schema, dict) and "number" in rx_pin_schema:
+                rx_pin_num = rx_pin_schema["number"]
+            elif isinstance(rx_pin_schema, int):
+                rx_pin_num = rx_pin_schema
+    return tx_pin_num, rx_pin_num
+
+
+def get_uart_port_index(core_config, target_uart_id_str):
+    # ESPHome ne fournit pas directement l'index de contrôleur; on l'infère
+    # via l'ordre de déclaration ou restons à 0 par défaut.
+    # On tente d'associer l'objet id() à sa position.
+    idx = 0
+    for i, uart_conf_item in enumerate(core_config.get("uart", [])):
+        if str(uart_conf_item[CONF_ID]) == target_uart_id_str:
+            idx = i  # souvent 0 => UART0, 1 => UART1, 2 => UART2
+            break
+    # Clamp 0..2
+    if idx < 0:
+        idx = 0
+    if idx > 2:
+        idx = 2
+    return idx
+
+
 SELECT_SCHEMA = select.select_schema(MitsubishiACSelect).extend(
     {cv.GenerateID(CONF_ID): cv.declare_id(MitsubishiACSelect)}
 )
@@ -112,7 +159,7 @@ SELECT_SCHEMA = select.select_schema(MitsubishiACSelect).extend(
 CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
     {
         cv.GenerateID(): cv.declare_id(MitsubishiHeatPump),
-        cv.Optional(CONF_HARDWARE_UART, default="UART0"): valid_uart,
+        cv.GenerateID(CONF_UART_ID): cv.use_id(uart.UARTComponent),
         cv.Optional(CONF_BAUD_RATE): cv.positive_int,
         cv.Optional(CONF_REMOTE_OPERATING_TIMEOUT): cv.positive_int,
         cv.Optional(CONF_REMOTE_IDLE_TIMEOUT): cv.positive_int,
@@ -155,17 +202,33 @@ CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
 
 @coroutine
 def to_code(config):
-    serial = HARDWARE_UART_TO_SERIAL[PLATFORM_ESP8266][config[CONF_HARDWARE_UART]]
-    var = cg.new_Pvariable(config[CONF_ID], cg.RawExpression(f"&{serial}"))
+    uart_id_object = config[CONF_UART_ID]
+    uart_var = yield cg.get_variable(uart_id_object)
+    var = cg.new_Pvariable(config[CONF_ID], uart_var)
 
-    if CONF_BAUD_RATE in config:
-        cg.add(var.set_baud_rate(config[CONF_BAUD_RATE]))
+    #cg.add(var.set_installer_mode(config[CONF_INSTALLER_MODE]))
 
-    if CONF_RX_PIN in config:
-        cg.add(var.set_rx_pin(config[CONF_RX_PIN]))
+    cg.add(uart_var.set_data_bits(8))
+    cg.add(uart_var.set_parity(UARTParityOptions.UART_CONFIG_PARITY_EVEN))
+    cg.add(uart_var.set_stop_bits(1))
 
-    if CONF_TX_PIN in config:
-        cg.add(var.set_tx_pin(config[CONF_TX_PIN]))
+    #uart_id_str_for_lookup = str(uart_id_object)
+    #tx_pin, rx_pin = get_uart_pins_from_config(CORE.config, uart_id_str_for_lookup)
+    #cg.add(var.set_tx_rx_pins(tx_pin, rx_pin))
+    #uart_port_index = get_uart_port_index(CORE.config, uart_id_str_for_lookup)
+    #cg.add(var.set_uart_port(uart_port_index))
+
+    #serial = HARDWARE_UART_TO_SERIAL[PLATFORM_ESP8266][config[CONF_HARDWARE_UART]]
+    #var = cg.new_Pvariable(config[CONF_ID], cg.RawExpression(f"&{serial}"))
+
+    #if CONF_BAUD_RATE in config:
+    #    cg.add(var.set_baud_rate(config[CONF_BAUD_RATE]))
+
+    #if CONF_RX_PIN in config:
+    #    cg.add(var.set_rx_pin(config[CONF_RX_PIN]))
+
+    #if CONF_TX_PIN in config:
+    #    cg.add(var.set_tx_pin(config[CONF_TX_PIN]))
 
     if CONF_REMOTE_OPERATING_TIMEOUT in config:
         cg.add(var.set_remote_operating_timeout_minutes(config[CONF_REMOTE_OPERATING_TIMEOUT]))

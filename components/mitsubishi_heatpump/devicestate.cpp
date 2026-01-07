@@ -6,6 +6,9 @@ using namespace esphome;
 #include "floats.h"
 #include <cmath>
 
+#include "io_device.h"
+#include "uart_io_device.h"
+
 namespace devicestate {
 
     static const char* TAG = "DeviceStateManager"; // Logging tag
@@ -277,12 +280,11 @@ namespace devicestate {
         this->disconnected = 0;
 
         ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
-        this->hp = new HeatPump(
-            connectionMetadata.hardwareSerial,
-            connectionMetadata.rxPin,
-            connectionMetadata.txPin,
-            connectionMetadata.baud
+
+        IIODevice* io_device = new UARTIODevice(
+            connectionMetadata.hardwareSerial
         );
+        this->hp = new HeatPump(io_device);
         this->hp->enableExternalUpdate();
 
         #ifdef USE_CALLBACKS

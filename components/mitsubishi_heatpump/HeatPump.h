@@ -17,7 +17,8 @@
 #define __HeatPump_H__
 #include <stdint.h>
 #include <math.h>
-#include <HardwareSerial.h>
+
+#include "io_device.h"
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
 #else
@@ -192,8 +193,6 @@ class HeatPump
     heatpumpStatus currentStatus {0, false, {TIMER_MODE_MAP[0], 0, 0, 0, 0}, 0};
 
     heatpumpFunctions functions;
-  
-    HardwareSerial * _HardSerial {nullptr};
 
     unsigned long lastSend;
     bool waitForRead;
@@ -217,6 +216,7 @@ class HeatPump
     byte checkSum(byte bytes[], int len);
     void createPacket(byte *packet, heatpumpSettings settings);
     void createInfoPacket(byte *packet, byte packetType);
+    int readByte();
     int readPacket();
     void readAllPackets();
     void writePacket(byte *packet, int length);
@@ -231,9 +231,7 @@ class HeatPump
     PACKET_CALLBACK_SIGNATURE {nullptr};
 
   public:
-    int rxPin_; // save rx pin for retry ESP32
-    int txPin_; // save tx pin for retry ESP32
-    int bitrate_;
+    devicestate::IIODevice* io_device_;
 
     // indexes for INFOMODE array (public so they can be optionally passed to sync())
     const int RQST_PKT_SETTINGS  = 0;
@@ -243,7 +241,7 @@ class HeatPump
     const int RQST_PKT_STANDBY   = 5;
 
     // general
-    HeatPump(HardwareSerial *serial, int rxPin, int txPin, int bitRate);
+    HeatPump(devicestate::IIODevice* io_device);
 
     bool connect();
     bool update();
