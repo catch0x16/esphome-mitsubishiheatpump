@@ -85,8 +85,7 @@ bool MitsubishiHeatPump::verify_serial() {
 }
 
 void MitsubishiHeatPump::banner() {
-    ESP_LOGI(TAG, "ESPHome MitsubishiHeatPump version %s",
-            ESPMHP_VERSION);
+    ESP_LOGI(TAG, "ESPHome MitsubishiHeatPump version %s", ESPMHP_VERSION);
 }
 
 void MitsubishiHeatPump::update() {
@@ -822,6 +821,9 @@ esphome::optional<float> MitsubishiHeatPump::load(ESPPreferenceObject& storage) 
 
 void MitsubishiHeatPump::dump_config() {
     this->banner();
+    ESP_LOGI(TAG, "  baud rate %d", this->baud_);
+    ESP_LOGI(TAG, "  rxPin %d", this->rx_pin_);
+    ESP_LOGI(TAG, "  txPin %d", this->tx_pin_);
     ESP_LOGI(TAG, "  Supports HEAT: %s", YESNO(true));
     ESP_LOGI(TAG, "  Supports COOL: %s", YESNO(true));
     ESP_LOGI(TAG, "  Supports AWAY mode: %s", YESNO(false));
