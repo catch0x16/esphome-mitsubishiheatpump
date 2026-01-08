@@ -755,6 +755,8 @@ void MitsubishiHeatPump::setup() {
     );
 
     ESP_LOGCONFIG(TAG, "Calling dsm->initialize()");
+    this->dsm->initialize();
+    /*
     if (!this->dsm->initialize()) {
         ESP_LOGCONFIG(
                 TAG,
@@ -763,6 +765,7 @@ void MitsubishiHeatPump::setup() {
         );
         this->mark_failed();
     }
+    */
 
     // create various setpoint persistence:
     cool_storage = global_preferences->make_preference<uint8_t>(this->get_object_id_hash() + 1);

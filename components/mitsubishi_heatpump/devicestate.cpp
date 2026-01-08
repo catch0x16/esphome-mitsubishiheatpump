@@ -307,7 +307,7 @@ namespace devicestate {
     void DeviceStateManager::hpSettingsChanged() {
         heatpumpSettings currentSettings = hp->getSettings();
         ESP_LOGI(TAG, "Heatpump Settings Changed:");
-        //this->log_heatpump_settings(currentSettings);
+        this->log_heatpump_settings(currentSettings);
 
         if (currentSettings.power == NULL) {
             /*
@@ -353,6 +353,7 @@ namespace devicestate {
             ESP_LOGW(TAG, "HeatPump status initialized.");
         }
 
+        this->log_heatpump_status(currentStatus);
         const DeviceStatus newDeviceStatus = devicestate::toDeviceStatus(&currentStatus);
         if (!devicestate::deviceStatusEqual(this->deviceStatus, newDeviceStatus)) {
             this->deviceStatus = newDeviceStatus;
@@ -708,6 +709,14 @@ namespace devicestate {
         ESP_LOGI(TAG, "  vane: %s", currentSettings.vane);
         ESP_LOGI(TAG, "  wideVane: %s", currentSettings.wideVane);
         ESP_LOGI(TAG, "  connected: %s", TRUEFALSE(currentSettings.connected));
+    }
+
+    void DeviceStateManager::log_heatpump_status(heatpumpStatus currentStatus) {
+        ESP_LOGI(TAG, "  roomTemperature: %f", currentStatus.roomTemperature);
+        ESP_LOGI(TAG, "  compressorFrequency: %f", currentStatus.compressorFrequency);
+        ESP_LOGI(TAG, "  inputPower: %f", currentStatus.inputPower);
+        ESP_LOGI(TAG, "  kWh: %f", currentStatus.kWh);
+        ESP_LOGI(TAG, "  operating: %s", TRUEFALSE(currentStatus.operating));
     }
 
     void DeviceStateManager::dump_state() {

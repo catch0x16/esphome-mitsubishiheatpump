@@ -18,6 +18,8 @@
 */
 #include "HeatPump.h"
 
+#include "esphome.h"
+
 // Structures //////////////////////////////////////////////////////////////////
 
 bool operator==(const heatpumpSettings& lhs, const heatpumpSettings& rhs) {
@@ -101,6 +103,9 @@ bool HeatPump::connect() {
   while(!canRead()) { delay(10); }
   int packetType = readPacket();
   connected = (packetType == RCVD_PKT_CONNECT_SUCCESS);
+  while (!connected) {
+    ESP_LOGE("HeatPump", "failed due to invalid packet: %d", packetType);
+  }
   return connected;
   //}
 }

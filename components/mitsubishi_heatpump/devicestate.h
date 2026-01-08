@@ -1,5 +1,6 @@
 #define USE_CALLBACKS
 
+#include <cstdint>
 #include "HeatPump.h"
 #include "esphome.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
@@ -147,6 +148,7 @@ namespace devicestate {
 
       void dump_state();
       void log_heatpump_settings(heatpumpSettings currentSettings);
+      void log_heatpump_status(heatpumpStatus currentStatus);
       static void log_packet(byte* packet, unsigned int length, char* packetDirection);
 
       float getRoundedTemp(float value);
