@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "name": "ESPHome ESP-IDF",
+      "compileCommands": "${workspaceFolder}/.esphome/build/test-device/.pioenvs/test-device/compile_commands.json",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "${workspaceFolder}/.esphome/build/test-device/src"
+      ],
+      "defines": [
+        "ESP32",
+        "ESP_PLATFORM",
+        "USE_ESP_IDF",
+        "USE_ESP32",
+        "USE_ESP32_FRAMEWORK_ESP_IDF",
+        "ESPHOME_LOG_LEVEL=ESPHOME_LOG_LEVEL_DEBUG"
+      ],
+      "cStandard": "c17",
+      "cppStandard": "c++20",
+      "intelliSenseMode": "gcc-x64"
+    }
+  ],
+  "version": 4
+}

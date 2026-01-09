@@ -1,0 +1,29 @@
+esphome:
+  name: test-device
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+
+uart:
+  id: hp_uart
+  tx_pin: 17
+  rx_pin: 16
+  baud_rate: 2400
+
+sensor:
+
+external_components:
+  - source: components
+
+climate:
+  - platform: mitsubishi_heatpump
+    name: "Test Heatpump"
+    uart_id: hp_uart
+    control_parameters:
+      kp: 0.0
+      ki: 0.0
+      kd: 0.0

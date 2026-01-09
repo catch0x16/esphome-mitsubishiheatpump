@@ -1,0 +1,33 @@
+{
+  "storage_version": 1,
+  "name": "test-device",
+  "friendly_name": null,
+  "comment": null,
+  "esphome_version": "2025.12.5",
+  "src_version": 1,
+  "address": null,
+  "web_port": null,
+  "esp_platform": "ESP32",
+  "build_path": "/Users/admin/projects/esphome-mitsubishiheatpump/.esphome/build/test-device",
+  "firmware_bin_path": "/Users/admin/projects/esphome-mitsubishiheatpump/.esphome/build/test-device/.pioenvs/test-device/firmware.bin",
+  "loaded_integrations": [
+    "binary_sensor",
+    "climate",
+    "esp32",
+    "esphome",
+    "external_components",
+    "logger",
+    "mitsubishi_heatpump",
+    "preferences",
+    "select",
+    "sensor",
+    "socket",
+    "uart"
+  ],
+  "loaded_platforms": [
+    "climate/mitsubishi_heatpump"
+  ],
+  "no_mdns": false,
+  "framework": "esp-idf",
+  "core_platform": "esp32"
+}
