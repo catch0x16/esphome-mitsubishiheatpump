@@ -5,6 +5,8 @@ using namespace esphome;
 
 #include "floats.h"
 #include <cmath>
+#include <cstring>
+#include <string>
 
 #include "io_device.h"
 #include "uart_io_device.h"
@@ -288,17 +290,17 @@ namespace devicestate {
         this->hp->enableExternalUpdate();
 
         #ifdef USE_CALLBACKS
-            hp->setSettingsChangedCallback(
-                    [this]() {
-                        this->hpSettingsChanged();
-                    }
-            );
+            std::function<void()> settingsChanged = [this]() {
+                this->hpSettingsChanged();
+            };
 
-            hp->setStatusChangedCallback(
-                    [this](heatpumpStatus currentStatus) {
-                        this->hpStatusChanged(currentStatus);
-                    }
-            );
+            hp->setSettingsChangedCallback(settingsChanged);
+
+            std::function<void(heatpumpStatus)> statusChanged = [this](heatpumpStatus currentStatus) {
+                this->hpStatusChanged(currentStatus);
+            };
+
+            hp->setStatusChangedCallback(statusChanged);
 
             hp->setPacketCallback(this->log_packet);
         #endif
@@ -364,7 +366,9 @@ namespace devicestate {
     }
 
     void DeviceStateManager::log_packet(byte* packet, unsigned int length, char* packetDirection) {
-        String packetHex;
+        //String packetHex;
+        std::string packetHex;
+        packetHex.reserve(length * 3 + 1); // "FF " par octet
         char textBuf[15];
 
         for (int i = 0; i < length; i++) {
@@ -486,7 +490,7 @@ namespace devicestate {
 
         const uint32_t end = esphome::millis();
         if (this->shouldThrottle(end)) {
-            ESP_LOGD(TAG, "Throttling internal turn on: %i seconds remaining", remaining);
+            ESP_LOGD(TAG, "Throttling internal turn on");
             return false;
         }
 
@@ -506,19 +510,24 @@ namespace devicestate {
     }
 
     bool DeviceStateManager::internalTurnOff() {
+        ESP_LOGW(TAG, "Turning off");
         if (!this->isInitialized()) {
             ESP_LOGW(TAG, "Cannot change internal power off until initialized");
             return false;
         }
 
+        ESP_LOGW(TAG, "Check throttle");
         const uint32_t end = esphome::millis();
         if (this->shouldThrottle(end)) {
-            ESP_LOGD(TAG, "Throttling internal turn off: %i seconds remaining", remaining);
+            ESP_LOGW(TAG, "Throttling internal turn off");
             return false;
         }
 
+        ESP_LOGW(TAG, "Set power OFF");
         this->hp->setPowerSetting("OFF");
+        ESP_LOGW(TAG, "Commit change");
         if (this->commit()) {
+            ESP_LOGW(TAG, "Change committed.");
             this->lastInternalPowerUpdate = end;
             this->internalPowerOn = false;
             ESP_LOGW(TAG, "Performed internal turn off!");
@@ -698,50 +707,40 @@ namespace devicestate {
     }
 
     bool DeviceStateManager::commit() {
-        return this->hp->update();
+        ESP_LOGW(TAG, "DeviceStateManager attempting commit");
+        const bool result = this->hp->update();
+        ESP_LOGW(TAG, "DeviceStateManager completed commit: %s", TRUEFALSE(result));
+        return result;
     }
 
     void DeviceStateManager::log_heatpump_settings(heatpumpSettings currentSettings) {
-        ESP_LOGI(TAG, "  power: %s", currentSettings.power);
-        ESP_LOGI(TAG, "  mode: %s", currentSettings.mode);
-        ESP_LOGI(TAG, "  temperature: %f", currentSettings.temperature);
-        ESP_LOGI(TAG, "  fan: %s", currentSettings.fan);
-        ESP_LOGI(TAG, "  vane: %s", currentSettings.vane);
-        ESP_LOGI(TAG, "  wideVane: %s", currentSettings.wideVane);
-        ESP_LOGI(TAG, "  connected: %s", TRUEFALSE(currentSettings.connected));
+        ESP_LOGD(TAG, "  power: %s", currentSettings.power);
+        ESP_LOGD(TAG, "  mode: %s", currentSettings.mode);
+        ESP_LOGD(TAG, "  temperature: %f", currentSettings.temperature);
+        ESP_LOGD(TAG, "  fan: %s", currentSettings.fan);
+        ESP_LOGD(TAG, "  vane: %s", currentSettings.vane);
+        ESP_LOGD(TAG, "  wideVane: %s", currentSettings.wideVane);
+        ESP_LOGD(TAG, "  connected: %s", TRUEFALSE(currentSettings.connected));
     }
 
     void DeviceStateManager::log_heatpump_status(heatpumpStatus currentStatus) {
-        ESP_LOGI(TAG, "  roomTemperature: %f", currentStatus.roomTemperature);
-        ESP_LOGI(TAG, "  compressorFrequency: %f", currentStatus.compressorFrequency);
-        ESP_LOGI(TAG, "  inputPower: %f", currentStatus.inputPower);
-        ESP_LOGI(TAG, "  kWh: %f", currentStatus.kWh);
-        ESP_LOGI(TAG, "  operating: %s", TRUEFALSE(currentStatus.operating));
+        ESP_LOGD(TAG, "  roomTemperature: %f", currentStatus.roomTemperature);
+        ESP_LOGD(TAG, "  compressorFrequency: %f", currentStatus.compressorFrequency);
+        ESP_LOGD(TAG, "  inputPower: %f", currentStatus.inputPower);
+        ESP_LOGD(TAG, "  kWh: %f", currentStatus.kWh);
+        ESP_LOGD(TAG, "  operating: %s", TRUEFALSE(currentStatus.operating));
     }
 
     void DeviceStateManager::dump_state() {
         ESP_LOGI(TAG, "Internal State");
         ESP_LOGI(TAG, "  powerOn: %s", TRUEFALSE(this->isInternalPowerOn()));
         ESP_LOGI(TAG, "  connected: %s", TRUEFALSE(this->hp->isConnected()));
-        /*
-        struct DeviceState {
-            bool active;
-            DeviceMode mode;
-            float targetTemperature;
-        };
-        */
+
         ESP_LOGI(TAG, "Device State");
         ESP_LOGI(TAG, "  active: %s", TRUEFALSE(this->deviceState.active));
         ESP_LOGI(TAG, "  mode: %s", devicestate::deviceModeToString(this->deviceState.mode));
         ESP_LOGI(TAG, "  targetTemperature: %f", this->deviceState.targetTemperature);
 
-        /*
-        struct DeviceStatus {
-            bool operating;
-            float currentTemperature;
-            int compressorFrequency;
-        };
-        */
         ESP_LOGI(TAG, "Heatpump Status");
         ESP_LOGI(TAG, "  roomTemperature: %.2f", this->deviceStatus.currentTemperature);
         ESP_LOGI(TAG, "  operating: %s", TRUEFALSE(this->deviceStatus.operating));

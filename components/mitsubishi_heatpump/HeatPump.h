@@ -15,32 +15,24 @@
 */
 #ifndef __HeatPump_H__
 #define __HeatPump_H__
-#include <stdint.h>
-#include <math.h>
+#include <cstdint>
+#include <cmath>
+#include <cstring>
+#include <string>
 
-#include "io_device.h"
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
 #else
-#include "WProgram.h"
+
 #endif
 
-/* 
- * Callback function definitions. Code differs for the ESP8266 platform, which requires the functional library.
- * Based on callback implementation in the Arduino Client for MQTT library (https://github.com/knolleary/pubsubclient)
- */
-#if defined(ESP8266) || defined(ESP32)
+#include "io_device.h"
+
 #include <functional>
 #define ON_CONNECT_CALLBACK_SIGNATURE std::function<void()> onConnectCallback
 #define SETTINGS_CHANGED_CALLBACK_SIGNATURE std::function<void()> settingsChangedCallback
 #define STATUS_CHANGED_CALLBACK_SIGNATURE std::function<void(heatpumpStatus newStatus)> statusChangedCallback
 #define PACKET_CALLBACK_SIGNATURE std::function<void(byte* packet, unsigned int length, char* packetDirection)> packetCallback
-#else
-#define ON_CONNECT_CALLBACK_SIGNATURE void (*onConnectCallback)()
-#define SETTINGS_CHANGED_CALLBACK_SIGNATURE void (*settingsChangedCallback)()
-#define STATUS_CHANGED_CALLBACK_SIGNATURE void (*statusChangedCallback)(heatpumpStatus newStatus)
-#define PACKET_CALLBACK_SIGNATURE void (*packetCallback)(byte* packet, unsigned int length, char* packetDirection)
-#endif
 
 typedef uint8_t byte;
 

@@ -209,10 +209,6 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
             return this->hw_serial_;
         }
 
-        //Print a warning message if we're using the sole hardware UART on an
-        //ESP8266 or UART0 on ESP32, or if no serial was provided
-        bool verify_serial();
-
         // various prefs to save mode-specific temperatures, akin to how the IR
         // remote works.
         esphome::ESPPreferenceObject cool_storage;
