@@ -20,97 +20,17 @@
 #include <cstring>
 #include <string>
 
-#if defined(ARDUINO) && ARDUINO >= 100
-#include "Arduino.h"
-#else
+#include "Globals.h"
 
-#endif
+#include "cn105_types.h"
+#include "heatpumpFunctions.h"
 
+#include "protocol.h"
 #include "io_device.h"
 
-#include <functional>
-#define ON_CONNECT_CALLBACK_SIGNATURE std::function<void()> onConnectCallback
-#define SETTINGS_CHANGED_CALLBACK_SIGNATURE std::function<void()> settingsChangedCallback
-#define STATUS_CHANGED_CALLBACK_SIGNATURE std::function<void(heatpumpStatus newStatus)> statusChangedCallback
-#define PACKET_CALLBACK_SIGNATURE std::function<void(byte* packet, unsigned int length, char* packetDirection)> packetCallback
+using namespace devicestate;
 
-typedef uint8_t byte;
-
-struct heatpumpSettings {
-  const char* power;
-  const char* mode;
-  float temperature;
-  const char* fan;
-  const char* vane; //vertical vane, up/down
-  const char* wideVane; //horizontal vane, left/right
-  bool iSee;   //iSee sensor, at the moment can only detect it, not set it
-  bool connected;
-};
-
-bool operator==(const heatpumpSettings& lhs, const heatpumpSettings& rhs);
-bool operator!=(const heatpumpSettings& lhs, const heatpumpSettings& rhs);
-
-struct heatpumpTimers {
-  const char* mode;
-  int onMinutesSet;
-  int onMinutesRemaining;
-  int offMinutesSet;
-  int offMinutesRemaining;
-};
-
-bool operator==(const heatpumpTimers& lhs, const heatpumpTimers& rhs);
-bool operator!=(const heatpumpTimers& lhs, const heatpumpTimers& rhs);
-
-struct heatpumpStatus {
-  float roomTemperature;
-  bool operating; // if true, the heatpump is operating to reach the desired temperature
-  heatpumpTimers timers;
-  float compressorFrequency;
-  float inputPower;
-  float kWh;
-  float runtimeHours;
-};
-
-#define MAX_FUNCTION_CODE_COUNT 30
-
-struct heatpumpFunctionCodes {
-  bool valid[MAX_FUNCTION_CODE_COUNT];
-  int code[MAX_FUNCTION_CODE_COUNT];
-};
-
-class heatpumpFunctions  {
-  private:
-    byte raw[MAX_FUNCTION_CODE_COUNT];
-    bool _isValid1;
-    bool _isValid2;
-
-    int getCode(byte b);
-    int getValue(byte b);
-
-  public:
-    heatpumpFunctions();
-
-    bool isValid() const;
-    
-    // data must be 15 bytes
-    void setData1(byte* data);
-    void setData2(byte* data);
-    void getData1(byte* data) const;
-    void getData2(byte* data) const;
-    
-    void clear();
-
-    int getValue(int code);
-    bool setValue(int code, int value);
-
-    heatpumpFunctionCodes getAllCodes();   
-
-    bool operator==(const heatpumpFunctions& rhs);
-    bool operator!=(const heatpumpFunctions& rhs);
-};
-
-class HeatPump
-{
+class HeatPump : public devicestate::IProtocol {
   private:
     static const int PACKET_LEN = 22;
     static const int PACKET_SENT_INTERVAL_MS = 1000;
@@ -182,7 +102,7 @@ class HeatPump
     unsigned long lastWanted;
 
     // initialise to all off, then it will update shortly after connect;
-    heatpumpStatus currentStatus {0, false, {TIMER_MODE_MAP[0], 0, 0, 0, 0}, 0};
+    heatpumpStatus currentStatus{ 0, 0, false, {TIMER_MODE_MAP[0], 0, 0, 0, 0}, 0, 0, 0, 0 };
 
     heatpumpFunctions functions;
 
@@ -216,6 +136,8 @@ class HeatPump
     void prepareSetPacket(byte* packet, int length);
     void buildAndSendRequestPacket(int packetType);
 
+    void log_packet(byte* packet, unsigned int length, char* packetDirection);
+
     // callbacks
     ON_CONNECT_CALLBACK_SIGNATURE {nullptr};
     SETTINGS_CHANGED_CALLBACK_SIGNATURE {nullptr};
@@ -235,34 +157,35 @@ class HeatPump
     // general
     HeatPump(devicestate::IIODevice* io_device);
 
-    bool connect();
-    bool update();
-    void sync(byte packetType = PACKET_TYPE_DEFAULT);
+    bool connect() override;
+    bool update() override;
+    void sync(byte packetType = PACKET_TYPE_DEFAULT) override;
     void enableExternalUpdate();
     void disableExternalUpdate();
     void enableAutoUpdate();
     void disableAutoUpdate();
 
     // settings
-    heatpumpSettings getSettings();
+    heatpumpSettings getSettings() override;
     // wanted settings
     heatpumpSettings getWantedSettings();
     void setSettings(heatpumpSettings settings);
     void setPowerSetting(bool setting);
     bool getPowerSettingBool(); 
     const char* getPowerSetting();
-    void setPowerSetting(const char* setting);
+    void setPowerSetting(const char* setting) override;
+
     const char* getModeSetting();
-    void setModeSetting(const char* setting);
+    void setModeSetting(const char* setting) override;
     float getTemperature();
     void setTemperature(float setting);
     void setRemoteTemperature(float setting);
     const char* getFanSpeed();
-    void setFanSpeed(const char* setting);
+    void setFanSpeed(const char* setting) override;
     const char* getVaneSetting();
-    void setVaneSetting(const char* setting);
+    void setVaneSetting(const char* setting) override;
     const char* getWideVaneSetting();
-    void setWideVaneSetting(const char* setting);
+    void setWideVaneSetting(const char* setting) override;
     bool getIseeBool();
     void setFastSync(bool setting);
     // hacks
@@ -285,8 +208,8 @@ class HeatPump
 
     // callbacks
     void setOnConnectCallback(ON_CONNECT_CALLBACK_SIGNATURE);
-    void setSettingsChangedCallback(SETTINGS_CHANGED_CALLBACK_SIGNATURE);
-    void setStatusChangedCallback(STATUS_CHANGED_CALLBACK_SIGNATURE);
+    void setSettingsChangedCallback(SETTINGS_CHANGED_CALLBACK_SIGNATURE) override;
+    void setStatusChangedCallback(STATUS_CHANGED_CALLBACK_SIGNATURE) override;
     void setPacketCallback(PACKET_CALLBACK_SIGNATURE);
 
     // expert users only!

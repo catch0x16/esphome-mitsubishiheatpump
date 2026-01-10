@@ -262,6 +262,26 @@ namespace devicestate {
       esphome::sensor::Sensor* device_status_runtime_hours,
       esphome::sensor::Sensor* pid_set_point_correction
     ) {
+        this->connection_ = new DummyConnection();
+        this->scheduler_ = new RequestScheduler(
+            // send_callback: envoie un paquet via buildAndSendInfoPacket
+            [this](uint8_t code) {
+                ESP_LOGW(TAG, "buildAndSendInfoPacket: %d", code);
+                //this->connection_->buildAndSendInfoPacket(code);
+            },
+            // timeout_callback: utilise set_timeout de Component
+            [this](const std::string& name, uint32_t timeout_ms, std::function<void()> callback) {
+                ESP_LOGW(TAG, "set_timeout: %s -> %d", name.c_str(), timeout_ms);
+                //this->connection_->set_timeout(name.c_str(), timeout_ms, std::move(callback));
+            },
+            // terminate_callback: termine le cycle
+            [this]() {
+                ESP_LOGW(TAG, "terminateCycle");
+                /*this->terminateCycle();*/
+            },
+            // context_callback: retourne this pour les callbacks canSend et onResponse
+            [this]() -> IConnection* { return this->connection_; }
+        );
         this->connectionMetadata = connectionMetadata;
 
         this->minTemp = minTemp;
@@ -286,28 +306,25 @@ namespace devicestate {
         IIODevice* io_device = new UARTIODevice(
             connectionMetadata.hardwareSerial
         );
-        this->hp = new HeatPump(io_device);
-        this->hp->enableExternalUpdate();
+        this->hpProtocol = new HeatPump(io_device);
 
         #ifdef USE_CALLBACKS
             std::function<void()> settingsChanged = [this]() {
                 this->hpSettingsChanged();
             };
 
-            hp->setSettingsChangedCallback(settingsChanged);
+            this->hpProtocol->setSettingsChangedCallback(settingsChanged);
 
             std::function<void(heatpumpStatus)> statusChanged = [this](heatpumpStatus currentStatus) {
                 this->hpStatusChanged(currentStatus);
             };
 
-            hp->setStatusChangedCallback(statusChanged);
-
-            hp->setPacketCallback(this->log_packet);
+            this->hpProtocol->setStatusChangedCallback(statusChanged);
         #endif
     }
 
     void DeviceStateManager::hpSettingsChanged() {
-        heatpumpSettings currentSettings = hp->getSettings();
+        heatpumpSettings currentSettings = this->hpProtocol->getSettings();
         ESP_LOGI(TAG, "Heatpump Settings Changed:");
         this->log_heatpump_settings(currentSettings);
 
@@ -365,35 +382,14 @@ namespace devicestate {
         ESP_LOGW(TAG, "Callback hpStatusChanged completed");
     }
 
-    void DeviceStateManager::log_packet(byte* packet, unsigned int length, char* packetDirection) {
-        //String packetHex;
-        std::string packetHex;
-        packetHex.reserve(length * 3 + 1); // "FF " par octet
-        char textBuf[15];
-
-        for (int i = 0; i < length; i++) {
-            memset(textBuf, 0, 15);
-            sprintf(textBuf, "%02X ", packet[i]);
-            packetHex += textBuf;
-        }
-        
-        if (strcmp(packetDirection, "packetRecv") == 0) {
-            const char* packetName = HeatPump::lookupRecvPacketName(packet);
-            ESP_LOGD(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
-        } else {
-            const char* packetName = HeatPump::lookupSendPacketName(packet);
-            ESP_LOGD(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
-        }
-    }
-
     bool DeviceStateManager::isInitialized() {
         return this->settingsInitialized && this->statusInitialized;
     }
 
     bool DeviceStateManager::connect() {
-        if (this->hp->connect()) {
+        if (this->hpProtocol->connect()) {
             ESP_LOGW(TAG, "Connect succeeded");
-            this->hp->sync();
+            this->hpProtocol->sync();
             return true;
         }
         ESP_LOGW(TAG, "Connect failed");
@@ -413,11 +409,12 @@ namespace devicestate {
     }
 
     void DeviceStateManager::update() {
+        this->scheduler_->send_next_after(0x00); // 0x00 -> start, pick first eligible
         //this->dump_config();
-        this->hp->sync();
+        this->hpProtocol->sync();
     #ifndef USE_CALLBACKS
         this->hpSettingsChanged();
-        heatpumpStatus currentStatus = hp->getStatus();
+        heatpumpStatus currentStatus = this->hpProtocol->getStatus();
         this->hpStatusChanged(currentStatus);
     #endif
 
@@ -426,7 +423,7 @@ namespace devicestate {
         }
 
         DeviceState deviceState = this->getDeviceState();
-        if (!this->hp->isConnected()) {
+        if (!this->hpProtocol->isConnected()) {
             this->disconnected += 1;
             ESP_LOGW(TAG, "Device not connected: %d", this->disconnected);
             if (this->disconnected >= 500) {
@@ -465,13 +462,13 @@ namespace devicestate {
     void DeviceStateManager::turnOn(DeviceMode mode) {
         const char* deviceMode = deviceModeToString(mode);
 
-        this->hp->setModeSetting(deviceMode);
-        this->hp->setPowerSetting("ON");
+        this->hpProtocol->setModeSetting(deviceMode);
+        this->hpProtocol->setPowerSetting("ON");
         this->internalPowerOn = true;
     }
 
     void DeviceStateManager::turnOff() {
-        this->hp->setPowerSetting("OFF");
+        this->hpProtocol->setPowerSetting("OFF");
         this->internalPowerOn = false;
     }
 
@@ -495,8 +492,8 @@ namespace devicestate {
         }
 
         const char* deviceMode = deviceModeToString(this->deviceState.mode);
-        this->hp->setModeSetting(deviceMode);
-        this->hp->setPowerSetting("ON");
+        this->hpProtocol->setModeSetting(deviceMode);
+        this->hpProtocol->setPowerSetting("ON");
         this->internalSetCorrectedTemperature(this->getTargetTemperature());
         if (this->commit()) {
             this->lastInternalPowerUpdate = end;
@@ -524,7 +521,7 @@ namespace devicestate {
         }
 
         ESP_LOGW(TAG, "Set power OFF");
-        this->hp->setPowerSetting("OFF");
+        this->hpProtocol->setPowerSetting("OFF");
         ESP_LOGW(TAG, "Commit change");
         if (this->commit()) {
             ESP_LOGW(TAG, "Change committed.");
@@ -555,7 +552,7 @@ namespace devicestate {
             return false;
         }
 
-        this->hp->setFanSpeed(newMode);
+        this->hpProtocol->setFanSpeed(newMode);
         if (!commit) {
             return true;
         }
@@ -586,7 +583,7 @@ namespace devicestate {
             return false;
         }
 
-        this->hp->setVaneSetting(newMode);
+        this->hpProtocol->setVaneSetting(newMode);
         if (!commit) {
             return true;
         }
@@ -617,7 +614,7 @@ namespace devicestate {
             return false;
         }
 
-        this->hp->setWideVaneSetting(newMode);
+        this->hpProtocol->setWideVaneSetting(newMode);
         if (!commit) {
             return true;
         }
@@ -683,7 +680,7 @@ namespace devicestate {
 
         const float oldCorrectedTargetTemperature = this->correctedTargetTemperature;
         this->correctedTargetTemperature = adjustedCorrectedTemperature;
-        this->hp->setTemperature(this->correctedTargetTemperature);
+        this->hpProtocol->setTemperature(this->correctedTargetTemperature);
 
         ESP_LOGW(TAG, "internalSetCorrectedTemperature: Adjusted corrected temperature: oldCorrection={%f} newCorrection={%f} roundedNewCorrection={%f} deviceTarget={%f} componentTarget={%f}", oldCorrectedTargetTemperature, adjustedCorrectedTemperature, roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, this->getTargetTemperature());
         return true;
@@ -695,7 +692,7 @@ namespace devicestate {
         const float oldTargetTemperature = this->targetTemperature;
         this->targetTemperature = adjustedTargetTemperature;
         ESP_LOGW(TAG, "setTargetTemperature: Device target temp changing from %f to %f", oldTargetTemperature, this->targetTemperature);
-        this->hp->setTemperature(this->targetTemperature);
+        this->hpProtocol->setTemperature(this->targetTemperature);
     }
 
     void DeviceStateManager::setRemoteTemperature(const float current) {
@@ -703,12 +700,12 @@ namespace devicestate {
             ? std::ceil(current * 2.0) / 2.0
             : std::floor(current * 2.0) / 2.0;
 
-        this->hp->setRemoteTemperature(normalizedCurrent);
+        this->hpProtocol->setRemoteTemperature(normalizedCurrent);
     }
 
     bool DeviceStateManager::commit() {
         ESP_LOGW(TAG, "DeviceStateManager attempting commit");
-        const bool result = this->hp->update();
+        const bool result = this->hpProtocol->update();
         ESP_LOGW(TAG, "DeviceStateManager completed commit: %s", TRUEFALSE(result));
         return result;
     }
@@ -734,7 +731,7 @@ namespace devicestate {
     void DeviceStateManager::dump_state() {
         ESP_LOGI(TAG, "Internal State");
         ESP_LOGI(TAG, "  powerOn: %s", TRUEFALSE(this->isInternalPowerOn()));
-        ESP_LOGI(TAG, "  connected: %s", TRUEFALSE(this->hp->isConnected()));
+        ESP_LOGI(TAG, "  connected: %s", TRUEFALSE(this->hpProtocol->isConnected()));
 
         ESP_LOGI(TAG, "Device State");
         ESP_LOGI(TAG, "  active: %s", TRUEFALSE(this->deviceState.active));
@@ -750,7 +747,7 @@ namespace devicestate {
         ESP_LOGI(TAG, "  runtimeHours: %f", this->deviceStatus.runtimeHours);
 
         ESP_LOGI(TAG, "Heatpump Settings");
-        heatpumpSettings currentSettings = this->hp->getSettings();
+        heatpumpSettings currentSettings = this->hpProtocol->getSettings();
         this->log_heatpump_settings(currentSettings);
     }
 
@@ -764,7 +761,7 @@ namespace devicestate {
         this->device_status_runtime_hours->publish_state(this->deviceStatus.runtimeHours);
 
         // Public device state
-        this->device_state_connected->publish_state(this->hp->isConnected());
+        this->device_state_connected->publish_state(this->hpProtocol->isConnected());
         this->internal_power_on->publish_state(this->internalPowerOn);
         this->device_state_active->publish_state(this->deviceState.active);
         this->device_set_point->publish_state(this->deviceState.targetTemperature);

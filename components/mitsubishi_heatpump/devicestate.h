@@ -7,6 +7,11 @@
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/uart/uart.h"
 
+#include "request_scheduler.h"
+#include "info_request.h"
+
+#include "protocol.h"
+
 #ifndef DEVICESTATE_H
 #define DEVICESTATE_H
 
@@ -110,6 +115,9 @@ namespace devicestate {
     private:
       ConnectionMetadata connectionMetadata;
 
+      IConnection* connection_;
+      RequestScheduler* scheduler_;
+
       float minTemp;
       float maxTemp;
 
@@ -171,8 +179,7 @@ namespace devicestate {
         esphome::sensor::Sensor* pid_set_point_correction
       );
 
-      // HeatPump object using the underlying Arduino library.
-      HeatPump* hp;
+      IProtocol* hpProtocol;
 
       DeviceStatus getDeviceStatus();
       DeviceState getDeviceState();

@@ -38,10 +38,7 @@ static const char* ESPMHP_VERSION = "2.5.0";
 library reconnects, but doesn't then follow up with our data request.*/
 static const uint32_t ESPMHP_POLL_INTERVAL_DEFAULT = 500; // in milliseconds,
                                                            // 0 < X <= 9000
-static const uint8_t ESPMHP_MIN_TEMPERATURE = 16; // degrees C,
-                                                  // defined by hardware
-static const uint8_t ESPMHP_MAX_TEMPERATURE = 31; // degrees C,
-                                                  //defined by hardware
+
 static const float   ESPMHP_TARGET_TEMPERATURE_STEP = 0.5; // temperature setting step,
                                                     // in degrees C
 static const float   ESPMHP_CURRENT_TEMPERATURE_STEP = 0.1; // temperature setting step,
