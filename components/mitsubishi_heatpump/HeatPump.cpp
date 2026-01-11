@@ -18,20 +18,17 @@
 */
 #include "HeatPump.h"
 
-#include "esphome.h"
-
-#define CUSTOM_MILLIS() esphome::millis()
-#define CUSTOM_DELAY(x) esphome::delay(x)
+#include "Globals.h"
 
 // Constructor /////////////////////////////////////////////////////////////////
 
 HeatPump::HeatPump(devicestate::IIODevice* io_device) :
     io_device_{io_device} {
 
-  lastWanted = CUSTOM_MILLIS();
+  lastWanted = CUSTOM_MILLIS;
   lastSend = 0;
   infoMode = 0;
-  lastRecv = CUSTOM_MILLIS() - (PACKET_SENT_INTERVAL_MS * 10);
+  lastRecv = CUSTOM_MILLIS - (PACKET_SENT_INTERVAL_MS * 10);
   autoUpdate = false;
   firstRun = true;
   tempMode = false;
@@ -95,7 +92,7 @@ bool HeatPump::update() {
 }
 
 void HeatPump::sync(byte packetType) {
-  if((!connected) || (CUSTOM_MILLIS() - lastRecv > (PACKET_SENT_INTERVAL_MS * 10))) {
+  if((!connected) || (CUSTOM_MILLIS - lastRecv > (PACKET_SENT_INTERVAL_MS * 10))) {
     connect();
   }
   else if(canRead()) {
@@ -163,7 +160,7 @@ bool HeatPump::getPowerSettingBool() {
 
 void HeatPump::setPowerSetting(bool setting) {
   wantedSettings.power = lookupByteMapIndex(POWER_MAP, 2, POWER_MAP[setting ? 1 : 0]) > -1 ? POWER_MAP[setting ? 1 : 0] : POWER_MAP[0];
-  lastWanted = CUSTOM_MILLIS();
+  lastWanted = CUSTOM_MILLIS;
 }
 
 const char* HeatPump::getPowerSetting() {
@@ -177,7 +174,7 @@ void HeatPump::setPowerSetting(const char* setting) {
   } else {
     wantedSettings.power = POWER_MAP[0];
   }
-  lastWanted = CUSTOM_MILLIS();
+  lastWanted = CUSTOM_MILLIS;
 }
 
 const char* HeatPump::getModeSetting() {
@@ -191,7 +188,7 @@ void HeatPump::setModeSetting(const char* setting) {
   } else {
     wantedSettings.mode = MODE_MAP[0];
   }
-  lastWanted = CUSTOM_MILLIS();
+  lastWanted = CUSTOM_MILLIS;
 }
 
 float HeatPump::getTemperature() {
@@ -208,7 +205,7 @@ void HeatPump::setTemperature(float setting) {
     setting = setting / 2;
     wantedSettings.temperature = setting < 10 ? 10 : (setting > 31 ? 31 : setting);
   }
-  lastWanted = CUSTOM_MILLIS();
+  lastWanted = CUSTOM_MILLIS;
 }
 
 void HeatPump::setRemoteTemperature(float setting) {
@@ -247,7 +244,7 @@ void HeatPump::setFanSpeed(const char* setting) {
   } else {
     wantedSettings.fan = FAN_MAP[0];
   }
-  lastWanted = CUSTOM_MILLIS();
+  lastWanted = CUSTOM_MILLIS;
 }
 
 const char* HeatPump::getVaneSetting() {
@@ -261,7 +258,7 @@ void HeatPump::setVaneSetting(const char* setting) {
   } else {
     wantedSettings.vane = VANE_MAP[0];
   }
-  lastWanted = CUSTOM_MILLIS();
+  lastWanted = CUSTOM_MILLIS;
 }
 
 const char* HeatPump::getWideVaneSetting() {
@@ -275,7 +272,7 @@ void HeatPump::setWideVaneSetting(const char* setting) {
   } else {
     wantedSettings.wideVane = WIDEVANE_MAP[0];
   }
-  lastWanted = CUSTOM_MILLIS();
+  lastWanted = CUSTOM_MILLIS;
 }
 
 bool HeatPump::getIseeBool() { //no setter yet
@@ -381,11 +378,11 @@ int HeatPump::lookupByteMapValue(const int valuesMap[], const byte byteMap[], in
 }
 
 bool HeatPump::canSend(bool isInfo) {
-  return (CUSTOM_MILLIS() - (isInfo ? PACKET_INFO_INTERVAL_MS : PACKET_SENT_INTERVAL_MS)) > lastSend;
+  return (CUSTOM_MILLIS - (isInfo ? PACKET_INFO_INTERVAL_MS : PACKET_SENT_INTERVAL_MS)) > lastSend;
 }  
 
 bool HeatPump::canRead() {
-  return (waitForRead && (CUSTOM_MILLIS() - PACKET_SENT_INTERVAL_MS) > lastSend);
+  return (waitForRead && (CUSTOM_MILLIS - PACKET_SENT_INTERVAL_MS) > lastSend);
 }
 
 byte HeatPump::checkSum(byte bytes[], int len) {
@@ -472,7 +469,7 @@ void HeatPump::writePacket(byte *packet, int length) {
     packetCallback(packet, length, (char*)"packetSent");
   }
   waitForRead = true;
-  lastSend = CUSTOM_MILLIS();
+  lastSend = CUSTOM_MILLIS;
 }
 
 const char* HeatPump::lookupRecvPacketName(const byte *packet) {
@@ -577,7 +574,7 @@ int HeatPump::readPacket() {
       checksum = (0xfc - dataSum) & 0xff;
 
       if(data[dataLength] == checksum) {
-        lastRecv = CUSTOM_MILLIS();
+        lastRecv = CUSTOM_MILLIS;
         if(packetCallback) {
           byte packet[37]; // we are going to put header[5] and data[32] into this, so the whole packet is sent to the callback
           for(int i=0; i<INFOHEADER_LEN; i++) {
@@ -620,7 +617,7 @@ int HeatPump::readPacket() {
 
               // if this is the first time we have synced with the heatpump, set wantedSettings to receivedSettings
               // hack: add grace period of a few seconds before respecting external changes
-              if(firstRun || (autoUpdate && externalUpdate && CUSTOM_MILLIS() - lastWanted > AUTOUPDATE_GRACE_PERIOD_IGNORE_EXTERNAL_UPDATES_MS)) {
+              if(firstRun || (autoUpdate && externalUpdate && CUSTOM_MILLIS - lastWanted > AUTOUPDATE_GRACE_PERIOD_IGNORE_EXTERNAL_UPDATES_MS)) {
                 wantedSettings = currentSettings;
                 firstRun = false;
               }

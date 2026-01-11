@@ -109,6 +109,7 @@ namespace devicestate {
   class DeviceStateManager {
     private:
       ConnectionMetadata connectionMetadata;
+      HeatPump* hp;
 
       float minTemp;
       float maxTemp;
@@ -170,9 +171,6 @@ namespace devicestate {
         esphome::sensor::Sensor* device_status_runtime_hours,
         esphome::sensor::Sensor* pid_set_point_correction
       );
-
-      // HeatPump object using the underlying Arduino library.
-      HeatPump* hp;
 
       DeviceStatus getDeviceStatus();
       DeviceState getDeviceState();

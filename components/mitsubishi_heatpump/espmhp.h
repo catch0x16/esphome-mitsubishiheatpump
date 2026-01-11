@@ -28,6 +28,9 @@
 using namespace devicestate;
 
 #include "HeatPump.h"
+#include "cycle_management.h"
+#include "request_scheduler.h"
+#include "logging.h"
 
 #ifndef ESPMHP_H
 #define ESPMHP_H
@@ -44,7 +47,7 @@ static const float   ESPMHP_TARGET_TEMPERATURE_STEP = 0.5; // temperature settin
 static const float   ESPMHP_CURRENT_TEMPERATURE_STEP = 0.1; // temperature setting step,
                                                     // in degrees C
 
-class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::climate::Climate, public esphome::uart::UARTDevice {
+class MitsubishiHeatPump : public esphome::Component, public esphome::climate::Climate, public esphome::uart::UARTDevice {
     public:
 
         /**
@@ -91,6 +94,9 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         void set_hysterisis_off(float hysterisisOff) { this->hysterisisOff_ = hysterisisOff; }
         void set_hysterisis_on(float hysterisisOn) { this->hysterisisOn_ = hysterisisOn; }
 
+        uint32_t get_update_interval() const;
+        void set_update_interval(uint32_t update_interval);
+
         // handle a change in device;
         void updateDevice();
 
@@ -98,7 +104,10 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         void setup() override;
 
         // This is called every poll_interval.
-        void update() override;
+        void loop() override;
+
+        // This is called every poll_interval.
+        void update();
 
         // Configure the climate object with traits that we support.
         esphome::climate::ClimateTraits traits() override;
@@ -229,6 +238,12 @@ class MitsubishiHeatPump : public esphome::PollingComponent, public esphome::cli
         void on_vertical_swing_change(const std::string &swing);
 
     private:
+        cycleManagement loopCycle{};
+        uint32_t update_interval_;
+
+         RequestScheduler* scheduler_;
+         void terminateCycle();
+
         /// The current temperature of the climate device, as reported from the integration.
         float remote_temperature{NAN};
         bool remote_temperature_updated{false};

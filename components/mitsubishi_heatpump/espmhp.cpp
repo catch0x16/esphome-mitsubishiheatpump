@@ -44,10 +44,23 @@ static const char* TAG = "MitsubishiHeatPump"; // Logging tag
 MitsubishiHeatPump::MitsubishiHeatPump(
         uart::UARTComponent* hw_serial,
         uint32_t poll_interval
-) :
-    PollingComponent{poll_interval}, // member initializers list
-    hw_serial_{hw_serial}
+) : hw_serial_{hw_serial}
 {
+    this->scheduler_ = new RequestScheduler(
+            // send_callback: envoie un paquet via buildAndSendInfoPacket
+            [this](uint8_t code) {
+                //this->buildAndSendInfoPacket(code);
+            },
+            // timeout_callback: utilise set_timeout de Component
+            [this](const std::string& name, uint32_t timeout_ms, std::function<void()> callback) {
+                //this->set_timeout(name.c_str(), timeout_ms, std::move(callback));
+            },
+            // terminate_callback: termine le cycle
+            [this]() {
+                this->terminateCycle();
+            }
+        );
+
     this->traits_.add_feature_flags(
         climate::CLIMATE_SUPPORTS_ACTION |
         climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE
@@ -57,13 +70,82 @@ MitsubishiHeatPump::MitsubishiHeatPump(
     this->traits_.set_visual_target_temperature_step(ESPMHP_TARGET_TEMPERATURE_STEP);
     this->traits_.set_visual_current_temperature_step(ESPMHP_CURRENT_TEMPERATURE_STEP);
 
+    this->loopCycle.init();
+
     // Assume a succesful connection was made to the ESPHome controller on
     // launch.
     this->ping();
 }
 
+uint32_t MitsubishiHeatPump::get_update_interval() const { return this->update_interval_; }
+void MitsubishiHeatPump::set_update_interval(uint32_t update_interval) {
+    //ESP_LOGD(TAG, "Setting update interval to %lu", update_interval);
+    log_debug_uint32(TAG, "Setting update interval to ", update_interval);
+
+    this->update_interval_ = update_interval;
+    //this->autoUpdate = (update_interval != 0);
+}
+
+void MitsubishiHeatPump::terminateCycle() {
+    //if (this->shouldSendExternalTemperature_) {
+        // We will receive ACK packet for this.
+        // Sending WantedSettings must be delayed in this case (lastSend timestamp updated).        
+    //    ESP_LOGD(LOG_REMOTE_TEMP, "Sending remote temperature...");
+    //    this->sendRemoteTemperature();
+    //}
+
+    this->loopCycle.cycleEnded();
+
+    //if (this->hp_uptime_connection_sensor_ != nullptr) {
+        // if the uptime connection sensor is configured
+        // we trigger  manual update at the end of a cycle.
+    //    this->hp_uptime_connection_sensor_->update();
+    //}
+
+    //this->nbCompleteCycles_++;
+}
+
 void MitsubishiHeatPump::banner() {
     ESP_LOGI(TAG, "ESPHome MitsubishiHeatPump version %s", ESPMHP_VERSION);
+}
+
+/**
+ * @brief Executes the main loop for the CN105Climate component.
+ * This function is called repeatedly in the main program loop.
+ */
+void MitsubishiHeatPump::loop() {
+    // Bootstrap connexion CN105 (UART + CONNECT) depuis loop()
+    //this->maybe_start_connection_();
+
+    // Tant que la connexion n'a pas réussi, on ne lance AUCUN cycle/écriture (sinon ça court-circuite le délai).
+    // On continue quand même à lire/processer l'input afin de détecter le 0x7A/0x7B (connection success).
+    //const bool can_talk_to_hp = this->isHeatpumpConnected_;
+
+    //if (this->processInput()) {
+        // if we don't get any input: no read op
+    //    return;
+    //}
+
+    //if (!can_talk_to_hp) {
+    //    return;
+    //}
+
+//    if ((this->wantedSettings.hasChanged) && (!this->loopCycle.isCycleRunning())) {
+//        this->checkPendingWantedSettings();
+//    } else if ((this->wantedRunStates.hasChanged) && (!this->loopCycle.isCycleRunning())) {
+//        this->checkPendingWantedRunStates();
+//    } else {
+    if (this->loopCycle.isCycleRunning()) {                         // if we are  running an update cycle
+        this->loopCycle.checkTimeout(this->update_interval_);
+    } else { // we are not running a cycle
+        if (this->loopCycle.hasUpdateIntervalPassed(this->get_update_interval())) {
+            this->loopCycle.cycleStarted();
+            //this->buildAndSendRequestsInfoPackets();            // initiate an update cycle with this->cycleStarted();
+            this->update();
+            this->loopCycle.cycleEnded();
+        }
+    }
+    //}
 }
 
 void MitsubishiHeatPump::update() {
