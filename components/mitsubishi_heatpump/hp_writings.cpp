@@ -13,7 +13,7 @@ uint8_t CN105Protocol::checkSum(uint8_t bytes[], int len) {
 
 void CN105Protocol::sendFirstConnectionPacket() {
     if (this->isUARTConnected_) {
-        this->lastReconnectTimeMs = CUSTOM_MILLIS;          // marker to prevent to many reconnections
+        this->lastReconnectTimeMs = CUSTOM_MILLIS();          // marker to prevent to many reconnections
         this->setHeatpumpConnected(false);
         uint8_t packet[CONNECT_LEN];
         memcpy(packet, CONNECT, CONNECT_LEN);
@@ -30,8 +30,8 @@ void CN105Protocol::sendFirstConnectionPacket() {
 
         this->writePacket(packet, CONNECT_LEN, false);      // checkIsActive=false because it's the first packet and we don't have any reply yet
 
-        this->lastSend = CUSTOM_MILLIS;
-        this->lastConnectRqTimeMs = CUSTOM_MILLIS;
+        this->lastSend = CUSTOM_MILLIS();
+        this->lastConnectRqTimeMs = CUSTOM_MILLIS();
         this->nbHeatpumpConnections_++;
 
         // we wait for a 10s timeout to check if the hp has replied to connection packet
@@ -89,7 +89,7 @@ void CN105Protocol::writePacket(uint8_t* packet, int length, bool checkIsActive)
         }
 
         // Prevent sending wantedSettings too soon after writing for example the remote temperature update packet
-        this->lastSend = CUSTOM_MILLIS;
+        this->lastSend = CUSTOM_MILLIS();
 
     } else {
         ESP_LOGW(TAG, "could not write as asked, because UART is not connected");
@@ -336,7 +336,7 @@ void CN105Protocol::publishWantedRunStatesStateToHA() {
 
 void CN105Protocol::sendWantedSettingsDelegate() {
     this->wantedSettings.hasBeenSent = true;
-    this->lastSend = CUSTOM_MILLIS;
+    this->lastSend = CUSTOM_MILLIS();
     ESP_LOGI(TAG, "sending wantedSettings..");
     this->debugSettings("wantedSettings", wantedSettings);
     // and then we send the update packet

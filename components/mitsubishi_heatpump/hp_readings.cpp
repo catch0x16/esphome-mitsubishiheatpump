@@ -147,7 +147,7 @@ void CN105Protocol::processDataPacket() {
 
     if (this->checkSum()) {
         // checkPoint of a heatpump response
-        this->lastResponseMs = CUSTOM_MILLIS;    //esphome::CUSTOM_MILLIS;
+        this->lastResponseMs = CUSTOM_MILLIS();    //esphome::CUSTOM_MILLIS();
 
         // processing the specific command
         processCommand();
@@ -494,7 +494,7 @@ void CN105Protocol::processCommand() {
         //this->isHeatpumpConnected_ = true;
         this->setHeatpumpConnected(true);
         // let's say that the last complete cycle was over now
-        this->loopCycle.lastCompleteCycleMs = CUSTOM_MILLIS;
+        this->loopCycle.lastCompleteCycleMs = CUSTOM_MILLIS();
         this->currentSettings.resetSettings();      // each time we connect, we need to reset current setting to force a complete sync with ha component state and receievdSettings
         this->currentRunStates.resetSettings();
         break;

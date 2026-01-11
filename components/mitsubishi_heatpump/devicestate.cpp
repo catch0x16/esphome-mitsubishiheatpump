@@ -306,6 +306,8 @@ namespace devicestate {
         IIODevice* io_device = new UARTIODevice(
             connectionMetadata.hardwareSerial
         );
+
+        IProtocol* protocol = new CN105Protocol(io_device);
         this->hpProtocol = new HeatPump(io_device);
 
         #ifdef USE_CALLBACKS
