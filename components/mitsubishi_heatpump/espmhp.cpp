@@ -21,7 +21,7 @@
 #include "espmhp.h"
 using namespace esphome;
 
-#include "devicestate.h"
+#include "devicestatemanager.h"
 using namespace devicestate;
 
 #include "hysterisis_workflowstep.h"
@@ -44,22 +44,24 @@ static const char* TAG = "MitsubishiHeatPump"; // Logging tag
 MitsubishiHeatPump::MitsubishiHeatPump(
         uart::UARTComponent* hw_serial,
         uint32_t poll_interval
-) : hw_serial_{hw_serial}
-{
-    this->scheduler_ = new RequestScheduler(
+) : hw_serial_{hw_serial},
+    scheduler_(
             // send_callback: envoie un paquet via buildAndSendInfoPacket
             [this](uint8_t code) {
+                ESP_LOGI(TAG, "scheduled code: %d", code);
                 //this->buildAndSendInfoPacket(code);
             },
             // timeout_callback: utilise set_timeout de Component
             [this](const std::string& name, uint32_t timeout_ms, std::function<void()> callback) {
                 //this->set_timeout(name.c_str(), timeout_ms, std::move(callback));
+                ESP_LOGI(TAG, "timeout set: %s for %d ms", name.c_str(), timeout_ms);
             },
             // terminate_callback: termine le cycle
             [this]() {
+                ESP_LOGI(TAG, "terminate cycle");
                 this->terminateCycle();
             }
-        );
+        ) {
 
     this->traits_.add_feature_flags(
         climate::CLIMATE_SUPPORTS_ACTION |
@@ -141,8 +143,8 @@ void MitsubishiHeatPump::loop() {
         if (this->loopCycle.hasUpdateIntervalPassed(this->get_update_interval())) {
             this->loopCycle.cycleStarted();
             //this->buildAndSendRequestsInfoPackets();            // initiate an update cycle with this->cycleStarted();
-            this->update();
-            this->loopCycle.cycleEnded();
+            //this->update();
+            this->scheduler_.send_next_after(0x00); // This will call terminate cycle when complete
         }
     }
     //}

@@ -1,6 +1,6 @@
 #include "esphome.h"
 
-#include "devicestate.h"
+#include "devicestate_types.h"
 using namespace devicestate;
 
 #ifndef HYSTERISIS_WORKFLOWSTEP_H
@@ -24,8 +24,8 @@ namespace workflow {
             float hysterisisOn;
             float hysterisisOff;
         
-            void executeHysterisisWorkflowStep(HysterisisResult* result, devicestate::DeviceStateManager* deviceManager);
-            HysterisisResult getHysterisisResult(const float currentTemperature, devicestate::DeviceStateManager* deviceManager);
+            void executeHysterisisWorkflowStep(HysterisisResult* result, devicestate::IDeviceStateManager* deviceManager);
+            HysterisisResult getHysterisisResult(const float currentTemperature, devicestate::IDeviceStateManager* deviceManager);
         
         public:
             HysterisisWorkflowStep(
@@ -33,7 +33,7 @@ namespace workflow {
                 const float hysterisisOff
             );
         
-            void run(const float currentTemperature, devicestate::DeviceStateManager* deviceManager);
+            void run(const float currentTemperature, devicestate::IDeviceStateManager* deviceManager);
         };
 
     }

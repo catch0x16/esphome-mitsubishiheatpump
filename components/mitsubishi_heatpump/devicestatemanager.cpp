@@ -1,4 +1,4 @@
-#include "devicestate.h"
+#include "devicestatemanager.h"
 
 #include "espmhp.h"
 using namespace esphome;

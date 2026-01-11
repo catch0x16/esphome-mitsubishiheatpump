@@ -1,7 +1,7 @@
 #include "esphome.h"
 using namespace esphome;
 
-#include "devicestate.h"
+#include "devicestatemanager.h"
 using namespace devicestate;
 
 namespace workflow {
@@ -19,7 +19,7 @@ namespace workflow {
         }
         
         void HysterisisWorkflowStep::executeHysterisisWorkflowStep(
-                HysterisisResult* result, devicestate::DeviceStateManager* deviceManager) {
+                HysterisisResult* result, devicestate::IDeviceStateManager* deviceManager) {
             if (result->active) {
                 ESP_LOGV(TAG, "Active while %s: delta={%f} current={%f} targetTemperature={%f}", result->label.c_str(), result->delta, result->currentTemperature, result->targetTemperature);
                 if (result->delta > this->hysterisisOff) {
@@ -36,7 +36,7 @@ namespace workflow {
         }
         
         HysterisisResult HysterisisWorkflowStep::getHysterisisResult(
-                const float currentTemperature, devicestate::DeviceStateManager* deviceManager) {
+                const float currentTemperature, devicestate::IDeviceStateManager* deviceManager) {
             HysterisisResult result;
         
             const float targetTemperature = deviceManager->getTargetTemperature();
@@ -71,7 +71,7 @@ namespace workflow {
             return result;
         }
         
-        void HysterisisWorkflowStep::run(const float currentTemperature, devicestate::DeviceStateManager* deviceManager) {
+        void HysterisisWorkflowStep::run(const float currentTemperature, devicestate::IDeviceStateManager* deviceManager) {
             HysterisisResult result = this->getHysterisisResult(currentTemperature, deviceManager);
             if (result.shouldRun) {
                 this->executeHysterisisWorkflowStep(&result, deviceManager);

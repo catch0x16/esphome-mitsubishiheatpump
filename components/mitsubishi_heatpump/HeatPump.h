@@ -27,6 +27,7 @@
 #endif
 
 #include "cn105_types.h"
+#include "cn105_protocol.h"
 
 #include "io_device.h"
 

@@ -3,7 +3,7 @@
 #include "esphome.h"
 using namespace esphome;
 
-#include "devicestate.h"
+#include "devicestatemanager.h"
 using namespace devicestate;
 
 namespace workflow {
@@ -40,7 +40,7 @@ namespace workflow {
             this->adaptivePID->enable_adaptation(true);
         }
 
-        bool PidWorkflowStep::ensurePIDTarget(devicestate::DeviceStateManager* deviceManager) {
+        bool PidWorkflowStep::ensurePIDTarget(devicestate::IDeviceStateManager* deviceManager) {
             if (devicestate::same_float(deviceManager->getTargetTemperature(), this->adaptivePID->get_target(), 0.01f)) {
                 return false;
             }
@@ -50,7 +50,7 @@ namespace workflow {
             return true;
         }
 
-        void PidWorkflowStep::run(const float currentTemperature, devicestate::DeviceStateManager* deviceManager) {
+        void PidWorkflowStep::run(const float currentTemperature, devicestate::IDeviceStateManager* deviceManager) {
             const bool updatedPidTarget = this->ensurePIDTarget(deviceManager);
 
             // if pid target is not updated and internal power is not on

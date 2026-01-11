@@ -3,7 +3,7 @@
 
 #include "esphome.h"
 
-#include "devicestate.h"
+#include "devicestate_types.h"
 using namespace devicestate;
 
 #include "adaptive_pid.h"
@@ -21,7 +21,7 @@ namespace workflow {
             float maxAdjustmentOver;
             float maxAdjustmentUnder;
 
-            bool ensurePIDTarget(devicestate::DeviceStateManager* deviceManager);
+            bool ensurePIDTarget(devicestate::IDeviceStateManager* deviceManager);
         
         public:
             PidWorkflowStep(
@@ -35,7 +35,7 @@ namespace workflow {
                 const float maxAdjustmentOver
             );
         
-            void run(const float currentTemperature, devicestate::DeviceStateManager* deviceManager);
+            void run(const float currentTemperature, devicestate::IDeviceStateManager* deviceManager);
         };
 
     }
