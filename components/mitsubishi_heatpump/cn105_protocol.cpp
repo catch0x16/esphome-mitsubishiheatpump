@@ -1,5 +1,3 @@
-#pragma once
-
 #include "cn105_protocol.h"
 
 #include "esphome.h"
