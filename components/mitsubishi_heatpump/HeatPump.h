@@ -84,14 +84,9 @@ class HeatPump
     bool wideVaneAdj;
     bool fastSync = false;
 
-    const char* lookupByteMapValue(const char* valuesMap[], const byte byteMap[], int len, byte byteValue);
-    int    lookupByteMapValue(const int valuesMap[], const byte byteMap[], int len, byte byteValue);
-    int    lookupByteMapIndex(const char* valuesMap[], int len, const char* lookupValue);
-    int    lookupByteMapIndex(const int valuesMap[], int len, int lookupValue);
-
     bool canSend(bool isInfo);
     bool canRead();
-    byte checkSum(byte bytes[], int len);
+
     void createPacket(byte *packet, heatpumpSettings settings);
     void createInfoPacket(byte *packet, byte packetType);
     int readByte();
@@ -99,7 +94,6 @@ class HeatPump
     void readAllPackets();
     void writePacket(byte *packet, int length);
     void prepareInfoPacket(byte* packet, int length);
-    void prepareSetPacket(byte* packet, int length);
     void buildAndSendRequestPacket(int packetType);
 
     // callbacks
@@ -171,7 +165,5 @@ class HeatPump
     // expert users only!
     void sendCustomPacket(byte data[], int len); 
 
-    static const char* lookupRecvPacketName(const byte *packet);
-    static const char* lookupSendPacketName(const byte *packet);
 };
 #endif

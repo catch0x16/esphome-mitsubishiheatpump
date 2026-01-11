@@ -143,7 +143,7 @@ void MitsubishiHeatPump::loop() {
         if (this->loopCycle.hasUpdateIntervalPassed(this->get_update_interval())) {
             this->loopCycle.cycleStarted();
             //this->buildAndSendRequestsInfoPackets();            // initiate an update cycle with this->cycleStarted();
-            //this->update();
+            this->update();
             this->scheduler_.send_next_after(0x00); // This will call terminate cycle when complete
         }
     }

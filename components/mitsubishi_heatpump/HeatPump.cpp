@@ -23,7 +23,8 @@
 // Constructor /////////////////////////////////////////////////////////////////
 
 HeatPump::HeatPump(devicestate::IIODevice* io_device) :
-    io_device_{io_device} {
+    io_device_{io_device},
+    hpProtocol{} {
 
   lastWanted = CUSTOM_MILLIS;
   lastSend = 0;
@@ -159,7 +160,7 @@ bool HeatPump::getPowerSettingBool() {
 }
 
 void HeatPump::setPowerSetting(bool setting) {
-  wantedSettings.power = lookupByteMapIndex(POWER_MAP, 2, POWER_MAP[setting ? 1 : 0]) > -1 ? POWER_MAP[setting ? 1 : 0] : POWER_MAP[0];
+  wantedSettings.power = hpProtocol.lookupByteMapIndex(POWER_MAP, 2, POWER_MAP[setting ? 1 : 0]) > -1 ? POWER_MAP[setting ? 1 : 0] : POWER_MAP[0];
   lastWanted = CUSTOM_MILLIS;
 }
 
@@ -168,7 +169,7 @@ const char* HeatPump::getPowerSetting() {
 }
 
 void HeatPump::setPowerSetting(const char* setting) {
-  int index = lookupByteMapIndex(POWER_MAP, 2, setting);
+  int index = hpProtocol.lookupByteMapIndex(POWER_MAP, 2, setting);
   if (index > -1) {
     wantedSettings.power = POWER_MAP[index];
   } else {
@@ -182,7 +183,7 @@ const char* HeatPump::getModeSetting() {
 }
 
 void HeatPump::setModeSetting(const char* setting) {
-  int index = lookupByteMapIndex(MODE_MAP, 5, setting);
+  int index = hpProtocol.lookupByteMapIndex(MODE_MAP, 5, setting);
   if (index > -1) {
     wantedSettings.mode = MODE_MAP[index];
   } else {
@@ -197,7 +198,7 @@ float HeatPump::getTemperature() {
 
 void HeatPump::setTemperature(float setting) {
   if(!tempMode){
-    wantedSettings.temperature = lookupByteMapIndex(TEMP_MAP, 16, (int)(setting + 0.5)) > -1 ? setting : TEMP_MAP[0];
+    wantedSettings.temperature = hpProtocol.lookupByteMapIndex(TEMP_MAP, 16, (int)(setting + 0.5)) > -1 ? setting : TEMP_MAP[0];
   }
   else {
     setting = setting * 2;
@@ -211,7 +212,7 @@ void HeatPump::setTemperature(float setting) {
 void HeatPump::setRemoteTemperature(float setting) {
   byte packet[PACKET_LEN] = {};
   
-  prepareSetPacket(packet, PACKET_LEN);
+  hpProtocol.prepareSetPacket(packet, PACKET_LEN);
 
   packet[5] = 0x07;
   if(setting > 0) {
@@ -226,7 +227,7 @@ void HeatPump::setRemoteTemperature(float setting) {
     packet[8] = 0x80; //MHK1 send 80, even though it could be 00, since ControlByte is 00
   } 
   // add the checksum
-  byte chkSum = checkSum(packet, 21);
+  byte chkSum = hpProtocol.checkSum(packet, 21);
   packet[21] = chkSum;
   while(!canSend(false)) { CUSTOM_DELAY(10); }
   writePacket(packet, PACKET_LEN);
@@ -238,7 +239,7 @@ const char* HeatPump::getFanSpeed() {
 
 
 void HeatPump::setFanSpeed(const char* setting) {
-  int index = lookupByteMapIndex(FAN_MAP, 6, setting);
+  int index = hpProtocol.lookupByteMapIndex(FAN_MAP, 6, setting);
   if (index > -1) {
     wantedSettings.fan = FAN_MAP[index];
   } else {
@@ -252,7 +253,7 @@ const char* HeatPump::getVaneSetting() {
 }
 
 void HeatPump::setVaneSetting(const char* setting) {
-  int index = lookupByteMapIndex(VANE_MAP, 7, setting);
+  int index = hpProtocol.lookupByteMapIndex(VANE_MAP, 7, setting);
   if (index > -1) {
     wantedSettings.vane = VANE_MAP[index];
   } else {
@@ -266,7 +267,7 @@ const char* HeatPump::getWideVaneSetting() {
 }
 
 void HeatPump::setWideVaneSetting(const char* setting) {
-  int index = lookupByteMapIndex(WIDEVANE_MAP, 7, setting);
+  int index = hpProtocol.lookupByteMapIndex(WIDEVANE_MAP, 7, setting);
   if (index > -1) {
     wantedSettings.wideVane = WIDEVANE_MAP[index];
   } else {
@@ -332,50 +333,13 @@ void HeatPump::sendCustomPacket(byte data[], int packetLength) {
   }
 
   // add checksum
-  byte chkSum = checkSum(packet, (packetLength-1));
+  byte chkSum = hpProtocol.checkSum(packet, (packetLength-1));
   packet[(packetLength-1)] = chkSum;
 
   writePacket(packet, packetLength);
 }
 
 // Private Methods //////////////////////////////////////////////////////////////
-
-int HeatPump::lookupByteMapIndex(const int valuesMap[], int len, int lookupValue) {
-  for (int i = 0; i < len; i++) {
-    if (valuesMap[i] == lookupValue) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-int HeatPump::lookupByteMapIndex(const char* valuesMap[], int len, const char* lookupValue) {
-  for (int i = 0; i < len; i++) {
-    if (strcasecmp(valuesMap[i], lookupValue) == 0) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-
-const char* HeatPump::lookupByteMapValue(const char* valuesMap[], const byte byteMap[], int len, byte byteValue) {
-  for (int i = 0; i < len; i++) {
-    if (byteMap[i] == byteValue) {
-      return valuesMap[i];
-    }
-  }
-  return valuesMap[0];
-}
-
-int HeatPump::lookupByteMapValue(const int valuesMap[], const byte byteMap[], int len, byte byteValue) {
-  for (int i = 0; i < len; i++) {
-    if (byteMap[i] == byteValue) {
-      return valuesMap[i];
-    }
-  }
-  return valuesMap[0];
-}
 
 bool HeatPump::canSend(bool isInfo) {
   return (CUSTOM_MILLIS - (isInfo ? PACKET_INFO_INTERVAL_MS : PACKET_SENT_INTERVAL_MS)) > lastSend;
@@ -385,27 +349,19 @@ bool HeatPump::canRead() {
   return (waitForRead && (CUSTOM_MILLIS - PACKET_SENT_INTERVAL_MS) > lastSend);
 }
 
-byte HeatPump::checkSum(byte bytes[], int len) {
-  byte sum = 0;
-  for (int i = 0; i < len; i++) {
-    sum += bytes[i];
-  }
-  return (0xfc - sum) & 0xff;
-}
-
 void HeatPump::createPacket(byte *packet, heatpumpSettings settings) {
-  prepareSetPacket(packet, PACKET_LEN);
+  hpProtocol.prepareSetPacket(packet, PACKET_LEN);
   
   if(settings.power != currentSettings.power) {
-    packet[8]  = POWER[lookupByteMapIndex(POWER_MAP, 2, settings.power)];
+    packet[8]  = POWER[hpProtocol.lookupByteMapIndex(POWER_MAP, 2, settings.power)];
     packet[6] += CONTROL_PACKET_1[0];
   }
   if(settings.mode!= currentSettings.mode) {
-    packet[9]  = MODE[lookupByteMapIndex(MODE_MAP, 5, settings.mode)];
+    packet[9]  = MODE[hpProtocol.lookupByteMapIndex(MODE_MAP, 5, settings.mode)];
     packet[6] += CONTROL_PACKET_1[1];
   }
   if(!tempMode && settings.temperature!= currentSettings.temperature) {
-    packet[10] = TEMP[lookupByteMapIndex(TEMP_MAP, 16, settings.temperature)];
+    packet[10] = TEMP[hpProtocol.lookupByteMapIndex(TEMP_MAP, 16, settings.temperature)];
     packet[6] += CONTROL_PACKET_1[2];
   }
   else if(tempMode && settings.temperature!= currentSettings.temperature) {
@@ -414,19 +370,19 @@ void HeatPump::createPacket(byte *packet, heatpumpSettings settings) {
     packet[6] += CONTROL_PACKET_1[2];
   }
   if(settings.fan!= currentSettings.fan) {
-    packet[11] = FAN[lookupByteMapIndex(FAN_MAP, 6, settings.fan)];
+    packet[11] = FAN[hpProtocol.lookupByteMapIndex(FAN_MAP, 6, settings.fan)];
     packet[6] += CONTROL_PACKET_1[3];
   }
   if(settings.vane!= currentSettings.vane) {
-    packet[12] = VANE[lookupByteMapIndex(VANE_MAP, 7, settings.vane)];
+    packet[12] = VANE[hpProtocol.lookupByteMapIndex(VANE_MAP, 7, settings.vane)];
     packet[6] += CONTROL_PACKET_1[4];
   }
   if(settings.wideVane!= currentSettings.wideVane) {
-    packet[18] = WIDEVANE[lookupByteMapIndex(WIDEVANE_MAP, 7, settings.wideVane)] | (wideVaneAdj ? 0x80 : 0x00);
+    packet[18] = WIDEVANE[hpProtocol.lookupByteMapIndex(WIDEVANE_MAP, 7, settings.wideVane)] | (wideVaneAdj ? 0x80 : 0x00);
     packet[7] += CONTROL_PACKET_2[0];
   }
   // add the checksum
-  byte chkSum = checkSum(packet, 21);
+  byte chkSum = hpProtocol.checkSum(packet, 21);
   packet[21] = chkSum;
 }
 
@@ -456,7 +412,7 @@ void HeatPump::createInfoPacket(byte *packet, byte packetType) {
   }
 
   // add the checksum
-  byte chkSum = checkSum(packet, 21);
+  byte chkSum = hpProtocol.checkSum(packet, 21);
   packet[21] = chkSum;
 }
 
@@ -470,46 +426,6 @@ void HeatPump::writePacket(byte *packet, int length) {
   }
   waitForRead = true;
   lastSend = CUSTOM_MILLIS;
-}
-
-const char* HeatPump::lookupRecvPacketName(const byte *packet) {
-  const byte dataZero = packet[5];
-  switch (dataZero) {
-    case 0x00:
-      return "ack";
-    case 0x02:
-      return "settings";
-    case 0x03:
-      return "roomTemp";
-    case 0x05:
-      return "timer";
-    case 0x06:
-      return "status";
-    default:
-      return "unknown";
-  }
-}
-
-const char* HeatPump::lookupSendPacketName(const byte *packet) {
-  const byte dataZero = packet[5];
-  switch (dataZero) {
-    case 0x01:
-      return "setSettings";
-    case 0x02:
-      return "getSettings";
-    case 0x03:
-      return "getRoomTemp";
-    case 0x05:
-      return "getTimers";
-    case 0x06:
-      return "getStatus";
-    case 0x07:
-      return "setRoomTemp";
-    case 0x09:
-      return "getStandBy";
-    default:
-      return "unknown";
-  }
 }
 
 int HeatPump::readByte() {
@@ -590,9 +506,9 @@ int HeatPump::readPacket() {
           switch(data[0]) {
             case 0x02: { // setting information
               heatpumpSettings receivedSettings;
-              receivedSettings.power       = lookupByteMapValue(POWER_MAP, POWER, 2, data[3]);
+              receivedSettings.power       = hpProtocol.lookupByteMapValue(POWER_MAP, POWER, 2, data[3]);
               receivedSettings.iSee = data[4] > 0x08 ? true : false;
-              receivedSettings.mode = lookupByteMapValue(MODE_MAP, MODE, 5, receivedSettings.iSee  ? (data[4] - 0x08) : data[4]);
+              receivedSettings.mode = hpProtocol.lookupByteMapValue(MODE_MAP, MODE, 5, receivedSettings.iSee  ? (data[4] - 0x08) : data[4]);
 
               if(data[11] != 0x00) {
                 int temp = data[11];
@@ -600,12 +516,12 @@ int HeatPump::readPacket() {
                 receivedSettings.temperature = (float)temp / 2;
                 tempMode =  true;
               } else {
-                receivedSettings.temperature = lookupByteMapValue(TEMP_MAP, TEMP, 16, data[5]);
+                receivedSettings.temperature = hpProtocol.lookupByteMapValue(TEMP_MAP, TEMP, 16, data[5]);
               }
 
-              receivedSettings.fan         = lookupByteMapValue(FAN_MAP, FAN, 6, data[6]);
-              receivedSettings.vane        = lookupByteMapValue(VANE_MAP, VANE, 7, data[7]);
-              receivedSettings.wideVane    = lookupByteMapValue(WIDEVANE_MAP, WIDEVANE, 7, data[10] & 0x0F);
+              receivedSettings.fan         = hpProtocol.lookupByteMapValue(FAN_MAP, FAN, 6, data[6]);
+              receivedSettings.vane        = hpProtocol.lookupByteMapValue(VANE_MAP, VANE, 7, data[7]);
+              receivedSettings.wideVane    = hpProtocol.lookupByteMapValue(WIDEVANE_MAP, WIDEVANE, 7, data[10] & 0x0F);
               wideVaneAdj = (data[10] & 0xF0) == 0x80 ? true : false;
               
               if(settingsChangedCallback && receivedSettings != currentSettings) {
@@ -643,7 +559,7 @@ int HeatPump::readPacket() {
                 temp -= 128;
                 receivedStatus.roomTemperature = (float)temp / 2;
               } else {
-                receivedStatus.roomTemperature = lookupByteMapValue(ROOM_TEMP_MAP, ROOM_TEMP, 32, data[3]);
+                receivedStatus.roomTemperature = hpProtocol.lookupByteMapValue(ROOM_TEMP_MAP, ROOM_TEMP, 32, data[3]);
               }
 
               receivedStatus.runtimeHours = float((data[11] << 16) | (data[12] << 8) | data[13]) / 60;
@@ -663,7 +579,7 @@ int HeatPump::readPacket() {
 
             case 0x05: { // timer packet
               heatpumpTimers receivedTimers;
-              receivedTimers.mode                = lookupByteMapValue(TIMER_MODE_MAP, TIMER_MODE, 4, data[3]);
+              receivedTimers.mode                = hpProtocol.lookupByteMapValue(TIMER_MODE_MAP, TIMER_MODE, 4, data[3]);
               receivedTimers.onMinutesSet        = data[4] * TIMER_INCREMENT_MINUTES;
               receivedTimers.onMinutesRemaining  = data[6] * TIMER_INCREMENT_MINUTES;
               receivedTimers.offMinutesSet       = data[5] * TIMER_INCREMENT_MINUTES;
@@ -763,22 +679,6 @@ void HeatPump::buildAndSendRequestPacket(int packetType) {
   this->writePacket(packet, PACKET_LEN);
 }
 
-void HeatPump::prepareInfoPacket(byte* packet, int length) {
-  memset(packet, 0, length * sizeof(byte));
-  
-  for (int i = 0; i < INFOHEADER_LEN && i < length; i++) {
-    packet[i] = INFOHEADER[i];
-  }  
-}
-
-void HeatPump::prepareSetPacket(byte* packet, int length) {
-  memset(packet, 0, length * sizeof(byte));
-  
-  for (int i = 0; i < HEADER_LEN && i < length; i++) {
-    packet[i] = HEADER[i];
-  }  
-}
-
 heatpumpFunctions HeatPump::getFunctions() {
   functions.clear();
   
@@ -787,11 +687,11 @@ heatpumpFunctions HeatPump::getFunctions() {
 
   prepareInfoPacket(packet1, PACKET_LEN);
   packet1[5] = FUNCTIONS_GET_PART1;
-  packet1[21] = checkSum(packet1, 21);
+  packet1[21] = hpProtocol.checkSum(packet1, 21);
 
   prepareInfoPacket(packet2, PACKET_LEN);
   packet2[5] = FUNCTIONS_GET_PART2;
-  packet2[21] = checkSum(packet2, 21);
+  packet2[21] = hpProtocol.checkSum(packet2, 21);
   
   while(!canSend(false)) { CUSTOM_DELAY(10); }
   writePacket(packet1, PACKET_LEN);
@@ -819,10 +719,10 @@ bool HeatPump::setFunctions(heatpumpFunctions const& functions) {
   byte packet1[PACKET_LEN] = {};
   byte packet2[PACKET_LEN] = {};
 
-  prepareSetPacket(packet1, PACKET_LEN);
+  hpProtocol.prepareSetPacket(packet1, PACKET_LEN);
   packet1[5] = FUNCTIONS_SET_PART1;
   
-  prepareSetPacket(packet2, PACKET_LEN);
+  hpProtocol.prepareSetPacket(packet2, PACKET_LEN);
   packet2[5] = FUNCTIONS_SET_PART2;
   
   functions.getData1(&packet1[6]);
@@ -838,8 +738,8 @@ bool HeatPump::setFunctions(heatpumpFunctions const& functions) {
       return false;
   }
 
-  packet1[21] = checkSum(packet1, 21);
-  packet2[21] = checkSum(packet2, 21);
+  packet1[21] = hpProtocol.checkSum(packet1, 21);
+  packet2[21] = hpProtocol.checkSum(packet2, 21);
 
   while(!canSend(false)) { CUSTOM_DELAY(10); }
   writePacket(packet1, PACKET_LEN);

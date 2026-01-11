@@ -376,14 +376,6 @@ namespace devicestate {
             sprintf(textBuf, "%02X ", packet[i]);
             packetHex += textBuf;
         }
-        
-        if (strcmp(packetDirection, "packetRecv") == 0) {
-            const char* packetName = HeatPump::lookupRecvPacketName(packet);
-            ESP_LOGD(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
-        } else {
-            const char* packetName = HeatPump::lookupSendPacketName(packet);
-            ESP_LOGD(TAG, "PKT: [%s] (%s) %s", packetDirection, packetName, packetHex.c_str());
-        }
     }
 
     bool DeviceStateManager::isInitialized() {
