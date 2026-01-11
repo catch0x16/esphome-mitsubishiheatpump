@@ -26,7 +26,12 @@
 
 #endif
 
+#include "cn105_protocol.h"
+
 #include "io_device.h"
+
+#include "heatpumpFunctions.h"
+using namespace devicestate;
 
 #include <functional>
 #define ON_CONNECT_CALLBACK_SIGNATURE std::function<void()> onConnectCallback
@@ -35,79 +40,6 @@
 #define PACKET_CALLBACK_SIGNATURE std::function<void(byte* packet, unsigned int length, char* packetDirection)> packetCallback
 
 typedef uint8_t byte;
-
-struct heatpumpSettings {
-  const char* power;
-  const char* mode;
-  float temperature;
-  const char* fan;
-  const char* vane; //vertical vane, up/down
-  const char* wideVane; //horizontal vane, left/right
-  bool iSee;   //iSee sensor, at the moment can only detect it, not set it
-  bool connected;
-};
-
-bool operator==(const heatpumpSettings& lhs, const heatpumpSettings& rhs);
-bool operator!=(const heatpumpSettings& lhs, const heatpumpSettings& rhs);
-
-struct heatpumpTimers {
-  const char* mode;
-  int onMinutesSet;
-  int onMinutesRemaining;
-  int offMinutesSet;
-  int offMinutesRemaining;
-};
-
-bool operator==(const heatpumpTimers& lhs, const heatpumpTimers& rhs);
-bool operator!=(const heatpumpTimers& lhs, const heatpumpTimers& rhs);
-
-struct heatpumpStatus {
-  float roomTemperature;
-  bool operating; // if true, the heatpump is operating to reach the desired temperature
-  heatpumpTimers timers;
-  float compressorFrequency;
-  float inputPower;
-  float kWh;
-  float runtimeHours;
-};
-
-#define MAX_FUNCTION_CODE_COUNT 30
-
-struct heatpumpFunctionCodes {
-  bool valid[MAX_FUNCTION_CODE_COUNT];
-  int code[MAX_FUNCTION_CODE_COUNT];
-};
-
-class heatpumpFunctions  {
-  private:
-    byte raw[MAX_FUNCTION_CODE_COUNT];
-    bool _isValid1;
-    bool _isValid2;
-
-    int getCode(byte b);
-    int getValue(byte b);
-
-  public:
-    heatpumpFunctions();
-
-    bool isValid() const;
-    
-    // data must be 15 bytes
-    void setData1(byte* data);
-    void setData2(byte* data);
-    void getData1(byte* data) const;
-    void getData2(byte* data) const;
-    
-    void clear();
-
-    int getValue(int code);
-    bool setValue(int code, int value);
-
-    heatpumpFunctionCodes getAllCodes();   
-
-    bool operator==(const heatpumpFunctions& rhs);
-    bool operator!=(const heatpumpFunctions& rhs);
-};
 
 class HeatPump
 {
@@ -182,7 +114,7 @@ class HeatPump
     unsigned long lastWanted;
 
     // initialise to all off, then it will update shortly after connect;
-    heatpumpStatus currentStatus {0, false, {TIMER_MODE_MAP[0], 0, 0, 0, 0}, 0};
+    heatpumpStatus currentStatus{ 0, 0, false, {TIMER_MODE_MAP[0], 0, 0, 0, 0}, 0, 0, 0, 0 };
 
     heatpumpFunctions functions;
 
