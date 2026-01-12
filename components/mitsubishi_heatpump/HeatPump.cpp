@@ -27,18 +27,23 @@ static const char* TAG = "HeatPump"; // Logging tag
 HeatPump::HeatPump(devicestate::IIODevice* io_device, RequestScheduler scheduler) :
     io_device_{io_device},
     scheduler{scheduler},
+    hpState(
+      currentSettings, wantedSettings,
+      currentRunStates, wantedRunStates,
+      false, false
+    ),
     hpProtocol{} {
 
   lastWanted = CUSTOM_MILLIS;
   lastSend = 0;
   infoMode = 0;
   lastRecv = CUSTOM_MILLIS - (PACKET_SENT_INTERVAL_MS * 10);
-  autoUpdate = false;
   firstRun = true;
-  tempMode = false;
+  //tempMode = false;
   waitForRead = false;
-  externalUpdate = false;
-  wideVaneAdj = false;
+  autoUpdate = true;
+  externalUpdate = true;
+  //wideVaneAdj = false;
   functions = heatpumpFunctions();
 }
 
@@ -162,23 +167,6 @@ void HeatPump::sync(byte packetType) {
   }
 }
 
-void HeatPump::enableExternalUpdate() {
-  autoUpdate = true;
-  externalUpdate = true;
-}
-
-void HeatPump::disableExternalUpdate() {
-  externalUpdate = false;
-}
-
-void HeatPump::enableAutoUpdate() {
-  autoUpdate = true;
-}
-
-void HeatPump::disableAutoUpdate() {
-  autoUpdate = false;
-}
-
 heatpumpSettings HeatPump::getSettings() {
   return currentSettings;
 }
@@ -187,21 +175,8 @@ unsigned long HeatPump::getLastWanted() {
   return lastWanted;
 }
 
-void HeatPump::setFastSync(bool setting) {
-  fastSync = setting;
-}
-
 bool HeatPump::isConnected() {
   return connected;
-}
-
-void HeatPump::setSettings(heatpumpSettings settings) {
-  setPowerSetting(settings.power);
-  setModeSetting(settings.mode);
-  setTemperature(settings.temperature);
-  setFanSpeed(settings.fan);
-  setVaneSetting(settings.vane);
-  setWideVaneSetting(settings.wideVane);
 }
 
 bool HeatPump::getPowerSettingBool() {
@@ -246,7 +221,7 @@ float HeatPump::getTemperature() {
 }
 
 void HeatPump::setTemperature(float setting) {
-  if(!tempMode){
+  if(!hpState.getTempMode()){
     wantedSettings.temperature = lookupByteMapIndex(TEMP_MAP, 16, (int)(setting + 0.5)) > -1 ? setting : TEMP_MAP[0];
   }
   else {
@@ -341,16 +316,6 @@ bool HeatPump::getOperating() {
   return currentStatus.operating;
 }
 
-float HeatPump::FahrenheitToCelsius(int tempF) {
-  float temp = (tempF - 32) / 1.8;                
-  return ((float)round(temp*2))/2;                 //Round to nearest 0.5C
-}
-
-int HeatPump::CelsiusToFahrenheit(float tempC) {
-  float temp = (tempC * 1.8) + 32;                //round up if heat, down if cool or any other mode
-  return (int)(temp + 0.5);
-}
-
 void HeatPump::setOnConnectCallback(ON_CONNECT_CALLBACK_SIGNATURE) {
   this->onConnectCallback = onConnectCallback;
 }
@@ -365,27 +330,6 @@ void HeatPump::setStatusChangedCallback(STATUS_CHANGED_CALLBACK_SIGNATURE) {
 
 void HeatPump::setPacketCallback(PACKET_CALLBACK_SIGNATURE) {
   this->packetCallback = packetCallback;
-}
-
-//#### WARNING, THE FOLLOWING METHOD CAN F--K YOUR HP UP, USE WISELY ####
-void HeatPump::sendCustomPacket(byte data[], int packetLength) {
-  while(!canSend(false)) { CUSTOM_DELAY(10); }
-
-  packetLength += 2; // +2 for first header byte and checksum
-  packetLength = (packetLength > PACKET_LEN) ? PACKET_LEN : packetLength; // ensure we are not exceeding PACKET_LEN
-  byte packet[packetLength];
-  packet[0] = HEADER[0]; // add first header byte
-
-  // add data
-  for (int i = 0; i < packetLength; i++) {
-    packet[(i+1)] = data[i]; 
-  }
-
-  // add checksum
-  byte chkSum = checkSum(packet, (packetLength-1));
-  packet[(packetLength-1)] = chkSum;
-
-  writePacket(packet, packetLength);
 }
 
 // Private Methods //////////////////////////////////////////////////////////////
@@ -409,11 +353,11 @@ void HeatPump::createPacket(byte *packet, heatpumpSettings settings) {
     packet[9]  = MODE[lookupByteMapIndex(MODE_MAP, 5, settings.mode)];
     packet[6] += CONTROL_PACKET_1[1];
   }
-  if(!tempMode && settings.temperature!= currentSettings.temperature) {
+  if(!hpState.getTempMode() && settings.temperature!= currentSettings.temperature) {
     packet[10] = TEMP[lookupByteMapIndex(TEMP_MAP, 16, settings.temperature)];
     packet[6] += CONTROL_PACKET_1[2];
   }
-  else if(tempMode && settings.temperature!= currentSettings.temperature) {
+  else if(hpState.getTempMode() && settings.temperature!= currentSettings.temperature) {
     float temp = (settings.temperature * 2) + 128;
     packet[19] = (int)temp;
     packet[6] += CONTROL_PACKET_1[2];
@@ -427,7 +371,7 @@ void HeatPump::createPacket(byte *packet, heatpumpSettings settings) {
     packet[6] += CONTROL_PACKET_1[4];
   }
   if(settings.wideVane!= currentSettings.wideVane) {
-    packet[18] = WIDEVANE[lookupByteMapIndex(WIDEVANE_MAP, 7, settings.wideVane)] | (wideVaneAdj ? 0x80 : 0x00);
+    packet[18] = WIDEVANE[lookupByteMapIndex(WIDEVANE_MAP, 7, settings.wideVane)] | (hpState.shouldWideVaneAdj() ? 0x80 : 0x00);
     packet[7] += CONTROL_PACKET_2[0];
   }
   // add the checksum
@@ -533,7 +477,7 @@ int HeatPump::readPacket() {
                 int temp = data[11];
                 temp -= 128;
                 receivedSettings.temperature = (float)temp / 2;
-                tempMode =  true;
+                hpState.setTempMode(true);
               } else {
                 receivedSettings.temperature = lookupByteMapValue(TEMP_MAP, TEMP, 16, data[5]);
               }
@@ -541,7 +485,7 @@ int HeatPump::readPacket() {
               receivedSettings.fan         = lookupByteMapValue(FAN_MAP, FAN, 6, data[6]);
               receivedSettings.vane        = lookupByteMapValue(VANE_MAP, VANE, 7, data[7]);
               receivedSettings.wideVane    = lookupByteMapValue(WIDEVANE_MAP, WIDEVANE, 7, data[10] & 0x0F);
-              wideVaneAdj = (data[10] & 0xF0) == 0x80 ? true : false;
+              hpState.setWideVaneAdj((data[10] & 0xF0) == 0x80 ? true : false);
               
               if(settingsChangedCallback && receivedSettings != currentSettings) {
                 currentSettings = receivedSettings;

@@ -40,6 +40,10 @@ namespace devicestate {
         return tempMode;
     }
 
+    void CN105State::setTempMode(bool value) {
+        tempMode = value;
+    }
+
     wantedHeatpumpSettings CN105State::getWantedSettings() {
         return wantedSettings;
     }

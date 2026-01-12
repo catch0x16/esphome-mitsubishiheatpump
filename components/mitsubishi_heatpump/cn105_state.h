@@ -35,6 +35,7 @@ namespace devicestate {
             bool shouldWideVaneAdj();
 
             bool getTempMode();
+            void setTempMode(bool value);
 
             const char* getModeSetting();
             const char* getPowerSetting();

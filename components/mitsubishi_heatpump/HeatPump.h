@@ -58,7 +58,13 @@ class HeatPump
 
     // these settings will be initialised in connect()
     heatpumpSettings currentSettings {};
-    heatpumpSettings wantedSettings {};
+    wantedHeatpumpSettings wantedSettings {};
+
+    heatpumpRunStates currentRunStates {};
+    wantedHeatpumpRunStates wantedRunStates {};
+
+    CN105State hpState;
+
     // Hacks
     unsigned long lastWanted;
 
@@ -74,9 +80,9 @@ class HeatPump
     bool connected = false;
     bool autoUpdate;
     bool firstRun;
-    bool tempMode;
+    //bool tempMode;
     bool externalUpdate;
-    bool wideVaneAdj;
+    //bool wideVaneAdj;
     bool fastSync = false;
 
     bool canSend(bool isInfo);
@@ -107,15 +113,10 @@ class HeatPump
     uint8_t translatePacket(int packetType);
     void buildAndSendInfoPacket(uint8_t code);
     void sync(byte packetType = PACKET_TYPE_DEFAULT);
-    void enableExternalUpdate();
-    void disableExternalUpdate();
-    void enableAutoUpdate();
-    void disableAutoUpdate();
 
     // settings
     heatpumpSettings getSettings();
 
-    void setSettings(heatpumpSettings settings);
     void setPowerSetting(bool setting);
     bool getPowerSettingBool(); 
     const char* getPowerSetting();
@@ -132,7 +133,6 @@ class HeatPump
     const char* getWideVaneSetting();
     void setWideVaneSetting(const char* setting);
     bool getIseeBool();
-    void setFastSync(bool setting);
     // hacks
     unsigned long getLastWanted();
 
@@ -146,19 +146,12 @@ class HeatPump
     // NOTE: These methods have been tested with a PVA (P-series air handler) unit and has not been tested with anything else. Use at your own risk.
     heatpumpFunctions getFunctions();
     bool setFunctions(heatpumpFunctions const& functions);
-    
-    // helpers
-    float FahrenheitToCelsius(int tempF);
-    int CelsiusToFahrenheit(float tempC);
 
     // callbacks
     void setOnConnectCallback(ON_CONNECT_CALLBACK_SIGNATURE);
     void setSettingsChangedCallback(SETTINGS_CHANGED_CALLBACK_SIGNATURE);
     void setStatusChangedCallback(STATUS_CHANGED_CALLBACK_SIGNATURE);
     void setPacketCallback(PACKET_CALLBACK_SIGNATURE);
-
-    // expert users only!
-    void sendCustomPacket(byte data[], int len); 
 
 };
 #endif

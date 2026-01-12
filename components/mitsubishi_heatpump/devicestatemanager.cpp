@@ -57,7 +57,6 @@ namespace devicestate {
             connectionMetadata.hardwareSerial
         );
         this->hp = new HeatPump(io_device, scheduler);
-        this->hp->enableExternalUpdate();
 
         #ifdef USE_CALLBACKS
             std::function<void()> settingsChanged = [this]() {
