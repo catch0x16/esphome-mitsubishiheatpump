@@ -2,6 +2,7 @@
 
 #include "cn105_types.h"
 #include "cn105_utils.h"
+#include "heatpumpFunctions.h"
 
 using namespace devicestate;
 
@@ -11,6 +12,8 @@ namespace devicestate {
         private:
             heatpumpSettings currentSettings{};
             wantedHeatpumpSettings wantedSettings{};
+
+            heatpumpFunctions functions;
 
             heatpumpRunStates currentRunStates{};
             wantedHeatpumpRunStates wantedRunStates{};
@@ -26,6 +29,10 @@ namespace devicestate {
                 heatpumpRunStates currentRunStates, wantedHeatpumpRunStates wantedRunStates,
                 bool wideVaneAdj, bool tempMode);
 
+            heatpumpSettings getCurrentSettings();
+            void setCurrentSettings(heatpumpSettings currentSettings);
+            heatpumpRunStates getCurrentRunStates();
+
             wantedHeatpumpSettings getWantedSettings();
             wantedHeatpumpRunStates getWantedRunStates();
 
@@ -39,6 +46,8 @@ namespace devicestate {
 
             const char* getModeSetting();
             const char* getPowerSetting();
+            bool getPowerSettingBool();
+
             const char* getVaneSetting();
             const char* getWideVaneSetting();
             const char* getAirflowControlSetting();
@@ -50,11 +59,13 @@ namespace devicestate {
             bool getCirculatorRunState();
 
             void setModeSetting(const char* setting);
+            void setPowerSetting(bool setting);
             void setPowerSetting(const char* setting);
             void setVaneSetting(const char* setting);
             void setWideVaneSetting(const char* setting);
             void setAirflowControlSetting(const char* setting);
             void setFanSpeed(const char* setting);
+            void setTemperatureSetting(float setting);
     };
 
 }

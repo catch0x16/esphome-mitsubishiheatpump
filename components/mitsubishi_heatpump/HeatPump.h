@@ -56,13 +56,6 @@ class HeatPump
     static const int PACKET_INFO_INTERVAL_MS = 2000;
     static const int AUTOUPDATE_GRACE_PERIOD_IGNORE_EXTERNAL_UPDATES_MS = 30000;
 
-    // these settings will be initialised in connect()
-    heatpumpSettings currentSettings {};
-    wantedHeatpumpSettings wantedSettings {};
-
-    heatpumpRunStates currentRunStates {};
-    wantedHeatpumpRunStates wantedRunStates {};
-
     CN105State hpState;
 
     // Hacks
@@ -88,7 +81,7 @@ class HeatPump
     bool canSend(bool isInfo);
     bool canRead();
 
-    void createPacket(byte *packet, heatpumpSettings settings);
+    void createPacket(byte *packet);
 
     int readByte();
     int readPacket();
@@ -117,29 +110,18 @@ class HeatPump
     // settings
     heatpumpSettings getSettings();
 
-    void setPowerSetting(bool setting);
-    bool getPowerSettingBool(); 
-    const char* getPowerSetting();
     void setPowerSetting(const char* setting);
-    const char* getModeSetting();
+    
     void setModeSetting(const char* setting);
-    float getTemperature();
     void setTemperature(float setting);
     void setRemoteTemperature(float setting);
-    const char* getFanSpeed();
     void setFanSpeed(const char* setting);
-    const char* getVaneSetting();
     void setVaneSetting(const char* setting);
-    const char* getWideVaneSetting();
     void setWideVaneSetting(const char* setting);
-    bool getIseeBool();
-    // hacks
-    unsigned long getLastWanted();
+    
 
     // status
     heatpumpStatus getStatus();
-    float getRoomTemperature();
-    bool getOperating();
     bool isConnected();
 
     // functions

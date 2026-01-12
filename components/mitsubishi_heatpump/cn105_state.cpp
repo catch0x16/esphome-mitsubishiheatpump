@@ -6,6 +6,8 @@ using namespace devicestate;
 namespace devicestate {
 
     CN105State::CN105State() {
+        this->functions = heatpumpFunctions();
+
         this->wantedSettings.resetSettings();
         this->wantedRunStates.resetSettings();
 
@@ -44,8 +46,20 @@ namespace devicestate {
         tempMode = value;
     }
 
+    heatpumpSettings CN105State::getCurrentSettings() {
+        return currentSettings;
+    }
+
+    void CN105State::setCurrentSettings(heatpumpSettings currentSettings) {
+        this->currentSettings = currentSettings;
+    }
+
     wantedHeatpumpSettings CN105State::getWantedSettings() {
         return wantedSettings;
+    }
+
+    heatpumpRunStates CN105State::getCurrentRunStates() {
+        return currentRunStates;
     }
 
     wantedHeatpumpRunStates CN105State::getWantedRunStates() {
@@ -66,6 +80,10 @@ namespace devicestate {
         } else {
             return this->currentSettings.power;
         }
+    }
+
+     bool CN105State::getPowerSettingBool() {
+        return this->getPowerSetting() == POWER_MAP[1];
     }
 
     const char* CN105State::getVaneSetting() {
@@ -102,6 +120,7 @@ namespace devicestate {
             return this->currentSettings.temperature;
         }
     }
+
     const char* CN105State::getAirflowControlSetting() {
         if (this->wantedRunStates.airflow_control) {
             return this->wantedRunStates.airflow_control;
@@ -109,6 +128,7 @@ namespace devicestate {
             return this->currentRunStates.airflow_control;
         }
     }
+
     bool CN105State::getAirPurifierRunState() {
         if (this->wantedRunStates.air_purifier != this->currentRunStates.air_purifier) {
             return this->wantedRunStates.air_purifier;
@@ -116,6 +136,7 @@ namespace devicestate {
             return this->currentRunStates.air_purifier;
         }
     }
+
     bool CN105State::getNightModeRunState() {
         if (this->wantedRunStates.night_mode != this->currentRunStates.night_mode) {
             return this->wantedRunStates.night_mode;
@@ -123,6 +144,7 @@ namespace devicestate {
             return this->currentRunStates.night_mode;
         }
     }
+
     bool CN105State::getCirculatorRunState() {
         if (this->wantedRunStates.circulator != this->currentRunStates.circulator) {
             return this->wantedRunStates.circulator;
@@ -138,6 +160,10 @@ namespace devicestate {
         } else {
             wantedSettings.mode = MODE_MAP[0];
         }
+    }
+
+    void CN105State::setPowerSetting(bool setting) {
+        wantedSettings.power = lookupByteMapIndex(POWER_MAP, 2, POWER_MAP[setting ? 1 : 0]) > -1 ? POWER_MAP[setting ? 1 : 0] : POWER_MAP[0];
     }
 
     void CN105State::setPowerSetting(const char* setting) {
@@ -183,6 +209,20 @@ namespace devicestate {
         } else {
             wantedRunStates.airflow_control = AIRFLOW_CONTROL_MAP[0];
         }
+    }
+
+    void CN105State::setTemperatureSetting(float setting) {
+          float temperature;
+        if(!this->getTempMode()){
+            temperature = lookupByteMapIndex(TEMP_MAP, 16, (int)(setting + 0.5)) > -1 ? setting : TEMP_MAP[0];
+        }
+        else {
+            setting = setting * 2;
+            setting = round(setting);
+            setting = setting / 2;
+            temperature = setting < 10 ? 10 : (setting > 31 ? 31 : setting);
+        }
+        wantedSettings.temperature = temperature;
     }
 
 }
