@@ -8,6 +8,44 @@ namespace devicestate {
     CN105State::CN105State() {
         this->wantedSettings.resetSettings();
         this->wantedRunStates.resetSettings();
+
+        this->wideVaneAdj = false;
+        this->tempMode = false;
+    }
+
+    CN105State::CN105State(heatpumpSettings currentSettings, wantedHeatpumpSettings wantedSettings,
+                heatpumpRunStates currentRunStates, wantedHeatpumpRunStates wantedRunStates,
+                bool wideVaneAdj, bool tempMode) {
+        this->currentSettings = currentSettings;
+        this->wantedSettings = wantedSettings;
+        this->currentRunStates = currentRunStates;
+        this->wantedRunStates = wantedRunStates;
+        this->wideVaneAdj = wideVaneAdj;
+        this->tempMode = tempMode;
+    }
+
+    bool CN105State::isUpdated() {
+        return wantedSettings.hasChanged || wantedRunStates.hasChanged;
+    }
+
+    void CN105State::setWideVaneAdj(bool value) {
+        this->wideVaneAdj = value;
+    }
+
+    bool CN105State::shouldWideVaneAdj() {
+        return wideVaneAdj;
+    }
+
+    bool CN105State::getTempMode() {
+        return tempMode;
+    }
+
+    wantedHeatpumpSettings CN105State::getWantedSettings() {
+        return wantedSettings;
+    }
+
+    wantedHeatpumpRunStates CN105State::getWantedRunStates() {
+        return wantedRunStates;
     }
 
     const char* CN105State::getModeSetting() {

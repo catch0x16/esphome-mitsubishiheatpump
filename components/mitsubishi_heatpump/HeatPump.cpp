@@ -130,10 +130,6 @@ heatpumpSettings HeatPump::getSettings() {
   return currentSettings;
 }
 
-heatpumpSettings HeatPump::getWantedSettings() {
-  return wantedSettings;
-}
-
 unsigned long HeatPump::getLastWanted() {
   return lastWanted;
 }
@@ -381,6 +377,36 @@ void HeatPump::createPacket(byte *packet, heatpumpSettings settings) {
     packet[18] = WIDEVANE[lookupByteMapIndex(WIDEVANE_MAP, 7, settings.wideVane)] | (wideVaneAdj ? 0x80 : 0x00);
     packet[7] += CONTROL_PACKET_2[0];
   }
+  // add the checksum
+  byte chkSum = checkSum(packet, 21);
+  packet[21] = chkSum;
+}
+
+void HeatPump::createInfoPacket(byte *packet, byte packetType) {
+  // add the header to the packet
+  for (int i = 0; i < INFOHEADER_LEN; i++) {
+    packet[i] = INFOHEADER[i];
+  }
+  
+  // set the mode - settings or room temperature
+  if(packetType != PACKET_TYPE_DEFAULT) {
+    packet[5] = INFOMODE[packetType];
+  } else {
+    // request current infoMode, and increment for the next request
+    packet[5] = INFOMODE[infoMode];
+    // if enable fastSync we only request RQST_PKT_SETTINGS, RQST_PKT_ROOM_TEMP and RQST_PKT_STATUS, so the sync will be 2x faster
+    if (infoMode == (fastSync ? 2 : (INFOMODE_LEN - 1))) {
+      infoMode = 0;
+    } else {
+      infoMode++;
+    }
+  }
+
+  // pad the packet out
+  for (int i = 0; i < 15; i++) {
+    packet[i + 6] = 0x00;
+  }
+
   // add the checksum
   byte chkSum = checkSum(packet, 21);
   packet[21] = chkSum;

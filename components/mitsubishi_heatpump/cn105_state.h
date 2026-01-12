@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cn105_types.h"
+#include "cn105_utils.h"
 
 using namespace devicestate;
 
@@ -14,8 +15,26 @@ namespace devicestate {
             heatpumpRunStates currentRunStates{};
             wantedHeatpumpRunStates wantedRunStates{};
 
+            bool wideVaneAdj;
+            bool tempMode;
+
         public:
             CN105State();
+
+            CN105State(
+                heatpumpSettings currentSettings, wantedHeatpumpSettings wantedSettings,
+                heatpumpRunStates currentRunStates, wantedHeatpumpRunStates wantedRunStates,
+                bool wideVaneAdj, bool tempMode);
+
+            wantedHeatpumpSettings getWantedSettings();
+            wantedHeatpumpRunStates getWantedRunStates();
+
+            bool isUpdated();
+
+            void setWideVaneAdj(bool value);
+            bool shouldWideVaneAdj();
+
+            bool getTempMode();
 
             const char* getModeSetting();
             const char* getPowerSetting();

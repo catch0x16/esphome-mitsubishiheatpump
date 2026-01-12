@@ -8,60 +8,6 @@ namespace devicestate {
 
     static const char* TAG = "CN105Protocol"; // Logging tag
 
-    uint8_t checkSum(uint8_t bytes[], int len) {
-        uint8_t sum = 0;
-        for (int i = 0; i < len; i++) {
-            sum += bytes[i];
-        }
-        return (0xfc - sum) & 0xff;
-    }
-
-    int lookupByteMapIndex(const int valuesMap[], int len, int lookupValue, const char* debugInfo) {
-        for (int i = 0; i < len; i++) {
-            if (valuesMap[i] == lookupValue) {
-                return i;
-            }
-        }
-        ESP_LOGW("lookup", "%s caution value %d not found, returning -1", debugInfo, lookupValue);
-        return -1;
-    }
-
-    int lookupByteMapIndex(const char* valuesMap[], int len, const char* lookupValue, const char* debugInfo) {
-        for (int i = 0; i < len; i++) {
-            if (strcasecmp(valuesMap[i], lookupValue) == 0) {
-                return i;
-            }
-        }
-        ESP_LOGW("lookup", "%s caution value %s not found, returning -1", debugInfo, lookupValue);
-        return -1;
-    }
-
-    const char* lookupByteMapValue(const char* valuesMap[], const uint8_t byteMap[], int len, uint8_t byteValue, const char* debugInfo, const char* defaultValue) {
-        for (int i = 0; i < len; i++) {
-            if (byteMap[i] == byteValue) {
-                return valuesMap[i];
-            }
-        }
-
-        if (defaultValue != nullptr) {
-            return defaultValue;
-        } else {
-            ESP_LOGW("lookup", "%s caution: value %d not found, returning value at index 0", debugInfo, byteValue);
-            return valuesMap[0];
-        }
-
-    }
-
-    int lookupByteMapValue(const int valuesMap[], const uint8_t byteMap[], int len, uint8_t byteValue, const char* debugInfo) {
-        for (int i = 0; i < len; i++) {
-            if (byteMap[i] == byteValue) {
-                return valuesMap[i];
-            }
-        }
-        ESP_LOGW("lookup", "%s caution: value %d not found, returning value at index 0", debugInfo, byteValue);
-        return valuesMap[0];
-    }
-
     // Write Protocol
 
     void CN105Protocol::prepareSetPacket(uint8_t* packet, int length) {
@@ -91,6 +37,63 @@ namespace devicestate {
         // add the checksum
         uint8_t chkSum = checkSum(packet, 21);
         packet[21] = chkSum;
+    }
+
+    void CN105Protocol::createPacket(uint8_t* packet, CN105State& hpState) {
+        prepareSetPacket(packet, PACKET_LEN);
+
+        //ESP_LOGD(TAG, "checking differences bw asked settings and current ones...");
+        ESP_LOGD(TAG, "building packet for writing...");
+
+        wantedHeatpumpSettings wantedSettings = hpState.getWantedSettings();
+        if (wantedSettings.power != nullptr) {
+            ESP_LOGD(TAG, "power -> %s", hpState.getPowerSetting());
+            int idx = lookupByteMapIndex(POWER_MAP, 2, hpState.getPowerSetting(), "power (write)");
+            if (idx >= 0) { packet[8] = POWER[idx]; packet[6] += CONTROL_PACKET_1[0]; } else { ESP_LOGW(TAG, "Ignoring invalid power setting while building packet"); }
+        }
+
+        if (wantedSettings.mode != nullptr) {
+            ESP_LOGD(TAG, "heatpump mode -> %s", hpState.getModeSetting());
+            int idx = lookupByteMapIndex(MODE_MAP, 5, hpState.getModeSetting(), "mode (write)");
+            if (idx >= 0) { packet[9] = MODE[idx]; packet[6] += CONTROL_PACKET_1[1]; } else { ESP_LOGW(TAG, "Ignoring invalid mode setting while building packet"); }
+        }
+
+        if (wantedSettings.temperature != -1) {
+            if (!hpState.getTempMode()) {
+                ESP_LOGD(TAG, "temperature (tempmode is false) -> %f", hpState.getTemperatureSetting());
+                int idx = lookupByteMapIndex(TEMP_MAP, 16, hpState.getTemperatureSetting(), "temperature (write)");
+                if (idx >= 0) { packet[10] = TEMP[idx]; packet[6] += CONTROL_PACKET_1[2]; } else { ESP_LOGW(TAG, "Ignoring invalid temperature setting while building packet"); }
+            } else {
+                ESP_LOGD(TAG, "temperature (tempmode is true) -> %f", hpState.getTemperatureSetting());
+                float temp = (hpState.getTemperatureSetting() * 2) + 128;
+                packet[19] = (int)temp;
+                packet[6] += CONTROL_PACKET_1[2];
+            }
+        }
+
+        if (wantedSettings.fan != nullptr) {
+            ESP_LOGD(TAG, "heatpump fan -> %s", hpState.getFanSpeedSetting());
+            int idx = lookupByteMapIndex(FAN_MAP, 6, hpState.getFanSpeedSetting(), "fan (write)");
+            if (idx >= 0) { packet[11] = FAN[idx]; packet[6] += CONTROL_PACKET_1[3]; } else { ESP_LOGW(TAG, "Ignoring invalid fan setting while building packet"); }
+        }
+
+        if (wantedSettings.vane != nullptr) {
+            ESP_LOGD(TAG, "heatpump vane -> %s", hpState.getVaneSetting());
+            int idx = lookupByteMapIndex(VANE_MAP, 7, hpState.getVaneSetting(), "vane (write)");
+            if (idx >= 0) { packet[12] = VANE[idx]; packet[6] += CONTROL_PACKET_1[4]; } else { ESP_LOGW(TAG, "Ignoring invalid vane setting while building packet"); }
+        }
+
+        if (wantedSettings.wideVane != nullptr) {
+            ESP_LOGD(TAG, "heatpump widevane -> %s", hpState.getWideVaneSetting());
+            int idx = lookupByteMapIndex(WIDEVANE_MAP, 8, hpState.getWideVaneSetting(), "wideVane (write)");
+            if (idx >= 0) { packet[18] = WIDEVANE[idx] | (hpState.shouldWideVaneAdj() ? 0x80 : 0x00); packet[7] += CONTROL_PACKET_2[0]; } else { ESP_LOGW(TAG, "Ignoring invalid wideVane setting while building packet"); }
+        }
+
+        // add the checksum
+        uint8_t chkSum = checkSum(packet, 21);
+        packet[21] = chkSum;
+        //ESP_LOGD(TAG, "debug before write packet:");
+        //this->hpPacketDebug(packet, 22, "WRITE");
     }
 
     // Write Protocol
