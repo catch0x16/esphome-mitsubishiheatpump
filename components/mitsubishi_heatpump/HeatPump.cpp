@@ -40,7 +40,7 @@ HeatPump::HeatPump(devicestate::IIODevice* io_device, RequestScheduler scheduler
   autoUpdate = true;
   externalUpdate = true;
   //wideVaneAdj = false;
-  //functions = heatpumpFunctions();
+  functions = heatpumpFunctions();
 }
 
 // Public Methods //////////////////////////////////////////////////////////////
