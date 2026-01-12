@@ -59,6 +59,47 @@ bool HeatPump::connect() {
   //}
 }
 
+void HeatPump::buildAndSendRequestPacket(int packetType) {
+    // Legacy path kept temporarily if some callsites still pass packetType indices.
+    // Map legacy indices to real codes and delegate to buildAndSendInfoPacket.
+    uint8_t code = 0x02; // default to settings
+    switch (packetType) {
+    case 0: code = 0x02; break; // RQST_PKT_SETTINGS
+    case 1: code = 0x03; break; // RQST_PKT_ROOM_TEMP
+    case 2: code = 0x06; break; // RQST_PKT_STATUS
+    case 3: code = 0x04; break; // RQST_PKT_UNKNOWN
+    case 4: code = 0x05; break; // RQST_PKT_TIMERS
+    case 5: code = 0x09; break; // RQST_PKT_STANDBY
+    default: code = 0x02; break;
+    }
+    this->buildAndSendInfoPacket(code);
+}
+
+/*
+void HeatPump::buildAndSendRequestPacket(int packetType) {
+    // Legacy path kept temporarily if some callsites still pass packetType indices.
+    // Map legacy indices to real codes and delegate to buildAndSendInfoPacket.
+    uint8_t code = 0x02; // default to settings
+    switch (packetType) {
+    case 0: code = 0x02; break; // RQST_PKT_SETTINGS
+    case 1: code = 0x03; break; // RQST_PKT_ROOM_TEMP
+    case 2: code = 0x04; break; // RQST_PKT_UNKNOWN
+    case 3: code = 0x05; break; // RQST_PKT_TIMERS
+    case 4: code = 0x06; break; // RQST_PKT_STATUS
+    case 5: code = 0x09; break; // RQST_PKT_STANDBY
+    case 6: code = 0x42; break; // RQST_PKT_HVAC_OPTIONS
+    default: code = 0x02; break;
+    }
+    this->buildAndSendInfoPacket(code);
+}
+*/
+
+void HeatPump::buildAndSendInfoPacket(uint8_t code) {
+    uint8_t packet[PACKET_LEN] = {};
+    hpProtocol.createInfoPacket(packet, code);
+    this->writePacket(packet, PACKET_LEN);
+}
+
 bool HeatPump::update() {
   while(!canSend(false)) { CUSTOM_DELAY(10); }
 
@@ -103,9 +144,16 @@ void HeatPump::sync(byte packetType) {
     update();
   }
   else if(canSend(true)) {
-    byte packet[PACKET_LEN] = {};
-    hpProtocol.createInfoPacket(packet, packetType);
-    writePacket(packet, PACKET_LEN);
+    if (packetType == PACKET_TYPE_DEFAULT) {
+      this->buildAndSendRequestPacket(infoMode);
+      if (infoMode == (fastSync ? 2 : 5)) {
+        infoMode = 0;
+      } else {
+        infoMode++;
+      }
+    } else {
+      this->buildAndSendRequestPacket(packetType);
+    }
   }
 }
 
@@ -382,36 +430,6 @@ void HeatPump::createPacket(byte *packet, heatpumpSettings settings) {
   packet[21] = chkSum;
 }
 
-void HeatPump::createInfoPacket(byte *packet, byte packetType) {
-  // add the header to the packet
-  for (int i = 0; i < INFOHEADER_LEN; i++) {
-    packet[i] = INFOHEADER[i];
-  }
-  
-  // set the mode - settings or room temperature
-  if(packetType != PACKET_TYPE_DEFAULT) {
-    packet[5] = INFOMODE[packetType];
-  } else {
-    // request current infoMode, and increment for the next request
-    packet[5] = INFOMODE[infoMode];
-    // if enable fastSync we only request RQST_PKT_SETTINGS, RQST_PKT_ROOM_TEMP and RQST_PKT_STATUS, so the sync will be 2x faster
-    if (infoMode == (fastSync ? 2 : (INFOMODE_LEN - 1))) {
-      infoMode = 0;
-    } else {
-      infoMode++;
-    }
-  }
-
-  // pad the packet out
-  for (int i = 0; i < 15; i++) {
-    packet[i + 6] = 0x00;
-  }
-
-  // add the checksum
-  byte chkSum = checkSum(packet, 21);
-  packet[21] = chkSum;
-}
-
 void HeatPump::writePacket(byte *packet, int length) {
   for (int i = 0; i < length; i++) {
       io_device_->write((uint8_t)packet[i]);
@@ -621,8 +639,6 @@ int HeatPump::readPacket() {
                 statusChangedCallback(currentStatus);
               }
 
-              //this->buildAndSendRequestPacket(RQST_PKT_STANDBY);
-
               return RCVD_PKT_STATUS;
             }
 
@@ -667,12 +683,6 @@ void HeatPump::readAllPackets() {
   while (io_device_->available() > 0) {
     readPacket();
   }
-}
-
-void HeatPump::buildAndSendRequestPacket(int packetType) {
-  uint8_t packet[PACKET_LEN] = {};
-  hpProtocol.createInfoPacket(packet, packetType);
-  this->writePacket(packet, PACKET_LEN);
 }
 
 heatpumpFunctions HeatPump::getFunctions() {

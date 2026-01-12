@@ -52,16 +52,6 @@ class HeatPump
     static const int PACKET_INFO_INTERVAL_MS = 2000;
     static const int AUTOUPDATE_GRACE_PERIOD_IGNORE_EXTERNAL_UPDATES_MS = 30000;
 
-    static const int INFOMODE_LEN = 6;
-    const byte INFOMODE[INFOMODE_LEN] = {
-      0x02, // request a settings packet - RQST_PKT_SETTINGS
-      0x03, // request the current room temp - RQST_PKT_ROOM_TEMP
-      0x06, // request status - RQST_PKT_STATUS
-      0x04, // unknown
-      0x05, // request the timers - RQST_PKT_TIMERS
-      0x09  // request standby mode (maybe?) RQST_PKT_STANDBY
-    };
-
     // these settings will be initialised in connect()
     heatpumpSettings currentSettings {};
     heatpumpSettings wantedSettings {};
@@ -89,14 +79,12 @@ class HeatPump
     bool canRead();
 
     void createPacket(byte *packet, heatpumpSettings settings);
-    void createInfoPacket(byte *packet, byte packetType);
 
     int readByte();
     int readPacket();
     void readAllPackets();
     void writePacket(byte *packet, int length);
     void prepareInfoPacket(byte* packet, int length);
-    void buildAndSendRequestPacket(int packetType);
 
     // callbacks
     ON_CONNECT_CALLBACK_SIGNATURE {nullptr};
@@ -112,6 +100,8 @@ class HeatPump
 
     bool connect();
     bool update();
+    void buildAndSendRequestPacket(int packetType);
+    void buildAndSendInfoPacket(uint8_t code);
     void sync(byte packetType = PACKET_TYPE_DEFAULT);
     void enableExternalUpdate();
     void disableExternalUpdate();

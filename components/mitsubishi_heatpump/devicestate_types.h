@@ -71,7 +71,7 @@ namespace devicestate {
     float runtimeHours;
   };
   bool deviceStatusEqual(const DeviceStatus& left, const DeviceStatus& right);
-  DeviceStatus toDeviceState(heatpumpStatus *currentStatus);
+  DeviceStatus toDeviceStatus(heatpumpStatus *currentStatus);
 
   struct DeviceState {
     bool active;

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include "devicestate_types.h"
+#include "request_scheduler.h"
 #include "HeatPump.h"
 #include "esphome.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
@@ -22,7 +23,7 @@ namespace devicestate {
   class DeviceStateManager : public IDeviceStateManager {
     private:
       ConnectionMetadata connectionMetadata;
-      HeatPump* hp;
+      RequestScheduler scheduler;
 
       float minTemp;
       float maxTemp;
@@ -72,6 +73,7 @@ namespace devicestate {
     public:
       DeviceStateManager(
         ConnectionMetadata connectionMetadata,
+        RequestScheduler scheduler,
         const float minTemp,
         const float maxTemp,
         esphome::binary_sensor::BinarySensor* internal_power_on,
@@ -86,6 +88,9 @@ namespace devicestate {
         esphome::sensor::Sensor* device_status_runtime_hours,
         esphome::sensor::Sensor* pid_set_point_correction
       );
+
+      
+      HeatPump* hp;
 
       DeviceStatus getDeviceStatus();
       DeviceState getDeviceState();

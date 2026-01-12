@@ -49,12 +49,12 @@ MitsubishiHeatPump::MitsubishiHeatPump(
             // send_callback: envoie un paquet via buildAndSendInfoPacket
             [this](uint8_t code) {
                 ESP_LOGI(TAG, "scheduled code: %d", code);
-                //this->buildAndSendInfoPacket(code);
+                //this->dsm->hp->buildAndSendInfoPacket(code);
             },
             // timeout_callback: utilise set_timeout de Component
             [this](const std::string& name, uint32_t timeout_ms, std::function<void()> callback) {
-                //this->set_timeout(name.c_str(), timeout_ms, std::move(callback));
                 ESP_LOGI(TAG, "timeout set: %s for %d ms", name.c_str(), timeout_ms);
+                //this->set_timeout(name.c_str(), timeout_ms, std::move(callback));
             },
             // terminate_callback: termine le cycle
             [this]() {
@@ -141,9 +141,11 @@ void MitsubishiHeatPump::loop() {
         this->loopCycle.checkTimeout(this->update_interval_);
     } else { // we are not running a cycle
         if (this->loopCycle.hasUpdateIntervalPassed(this->get_update_interval())) {
+            // Replaces
+            // /this->buildAndSendRequestsInfoPackets();            // initiate an update cycle with this->cycleStarted();
             this->loopCycle.cycleStarted();
-            //this->buildAndSendRequestsInfoPackets();            // initiate an update cycle with this->cycleStarted();
             this->update();
+            
             this->scheduler_.send_next_after(0x00); // This will call terminate cycle when complete
         }
     }
@@ -801,6 +803,7 @@ void MitsubishiHeatPump::setup() {
     ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
     this->dsm = new devicestate::DeviceStateManager(
         connectionMetadata,
+        scheduler_,
         this->min_temp,
         this->max_temp,
         this->internal_power_on,
