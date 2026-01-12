@@ -30,6 +30,9 @@
 #include "cn105_protocol.h"
 #include "cn105_state.h"
 
+#include "info_request.h"
+#include "request_scheduler.h"
+
 #include "io_device.h"
 
 #include "heatpumpFunctions.h"
@@ -47,6 +50,7 @@ class HeatPump
 {
   private:
     CN105Protocol hpProtocol;
+    RequestScheduler scheduler;
 
     static const int PACKET_SENT_INTERVAL_MS = 1000;
     static const int PACKET_INFO_INTERVAL_MS = 2000;
@@ -96,11 +100,11 @@ class HeatPump
     devicestate::IIODevice* io_device_;
 
     // general
-    HeatPump(devicestate::IIODevice* io_device);
+    HeatPump(devicestate::IIODevice* io_device, RequestScheduler scheduler);
 
     bool connect();
     bool update();
-    void buildAndSendRequestPacket(int packetType);
+    uint8_t translatePacket(int packetType);
     void buildAndSendInfoPacket(uint8_t code);
     void sync(byte packetType = PACKET_TYPE_DEFAULT);
     void enableExternalUpdate();

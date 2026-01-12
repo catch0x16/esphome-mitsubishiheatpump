@@ -56,7 +56,7 @@ namespace devicestate {
         IIODevice* io_device = new UARTIODevice(
             connectionMetadata.hardwareSerial
         );
-        this->hp = new HeatPump(io_device);
+        this->hp = new HeatPump(io_device, scheduler);
         this->hp->enableExternalUpdate();
 
         #ifdef USE_CALLBACKS

@@ -20,10 +20,13 @@
 
 #include "Globals.h"
 
+static const char* TAG = "HeatPump"; // Logging tag
+
 // Constructor /////////////////////////////////////////////////////////////////
 
-HeatPump::HeatPump(devicestate::IIODevice* io_device) :
+HeatPump::HeatPump(devicestate::IIODevice* io_device, RequestScheduler scheduler) :
     io_device_{io_device},
+    scheduler{scheduler},
     hpProtocol{} {
 
   lastWanted = CUSTOM_MILLIS;
@@ -59,7 +62,7 @@ bool HeatPump::connect() {
   //}
 }
 
-void HeatPump::buildAndSendRequestPacket(int packetType) {
+uint8_t HeatPump::translatePacket(int packetType) {
     // Legacy path kept temporarily if some callsites still pass packetType indices.
     // Map legacy indices to real codes and delegate to buildAndSendInfoPacket.
     uint8_t code = 0x02; // default to settings
@@ -72,7 +75,7 @@ void HeatPump::buildAndSendRequestPacket(int packetType) {
     case 5: code = 0x09; break; // RQST_PKT_STANDBY
     default: code = 0x02; break;
     }
-    this->buildAndSendInfoPacket(code);
+    return code;
 }
 
 /*
@@ -145,14 +148,16 @@ void HeatPump::sync(byte packetType) {
   }
   else if(canSend(true)) {
     if (packetType == PACKET_TYPE_DEFAULT) {
-      this->buildAndSendRequestPacket(infoMode);
+      const uint8_t code = this->translatePacket(infoMode);
+      this->buildAndSendInfoPacket(code);
       if (infoMode == (fastSync ? 2 : 5)) {
         infoMode = 0;
       } else {
         infoMode++;
       }
     } else {
-      this->buildAndSendRequestPacket(packetType);
+      const uint8_t code = this->translatePacket(packetType);
+      this->buildAndSendInfoPacket(code);
     }
   }
 }

@@ -49,7 +49,7 @@ MitsubishiHeatPump::MitsubishiHeatPump(
             // send_callback: envoie un paquet via buildAndSendInfoPacket
             [this](uint8_t code) {
                 ESP_LOGI(TAG, "scheduled code: %d", code);
-                //this->dsm->hp->buildAndSendInfoPacket(code);
+                this->dsm->hp->buildAndSendInfoPacket(code);
             },
             // timeout_callback: utilise set_timeout de Component
             [this](const std::string& name, uint32_t timeout_ms, std::function<void()> callback) {
