@@ -7,8 +7,12 @@ using namespace esphome;
 
 static const char* TAG = "cycleManagement"; // Logging tag
 
-void cycleManagement::checkTimeout(unsigned int update_interval) {
-    if (doesCycleTimeOut(update_interval)) {                          // does it last too long ?                    
+void cycleManagement::setUpdateInterval(unsigned int value) {
+    update_interval = value;
+}
+
+void cycleManagement::checkTimeout() {
+    if (doesCycleTimeOut()) {                          // does it last too long ?                    
         ESP_LOGW(TAG, "Cycle timeout, reseting cycle...");
         cycleEnded(true);
     }
@@ -56,12 +60,12 @@ void cycleManagement::cycleEnded(bool timedOut) {
 
 }
 
-bool cycleManagement::hasUpdateIntervalPassed(unsigned int update_interval) {
+bool cycleManagement::hasUpdateIntervalPassed() {
     if (CUSTOM_MILLIS < lastCompleteCycleMs) return false;      // must be checked because operands are they are unsigned
     return (CUSTOM_MILLIS - lastCompleteCycleMs) > update_interval;
 }
 
-bool cycleManagement::doesCycleTimeOut(unsigned int update_interval) {
+bool cycleManagement::doesCycleTimeOut() {
     if (CUSTOM_MILLIS < lastCycleStartMs) return false;         // must be checked because operands are they are unsigned
     return (CUSTOM_MILLIS - lastCycleStartMs) > (2 * update_interval) + 1000;
 }

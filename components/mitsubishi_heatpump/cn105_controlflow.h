@@ -3,6 +3,7 @@
 #include "cn105_types.h"
 #include "cn105_state.h"
 
+#include "cycle_management.h"
 #include "request_scheduler.h"
 
 using namespace devicestate;
@@ -22,7 +23,7 @@ namespace devicestate {
             void buildAndSendRequestPacket(int packetType);
             void buildAndSendInfoPacket(uint8_t code);
 
-            void loop(CN105State& hpState);
+            void loop(cycleManagement& loopCycle, CN105State& hpState);
     };
 
 }

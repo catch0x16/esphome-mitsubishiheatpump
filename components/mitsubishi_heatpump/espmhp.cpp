@@ -68,6 +68,7 @@ void MitsubishiHeatPump::set_update_interval(uint32_t update_interval) {
     log_debug_uint32(TAG, "Setting update interval to ", update_interval);
 
     this->update_interval_ = update_interval;
+    this->loopCycle.setUpdateInterval(this->update_interval_);
     //this->autoUpdate = (update_interval != 0);
 }
 
@@ -113,9 +114,9 @@ void MitsubishiHeatPump::loop() {
 //        this->checkPendingWantedRunStates();
 //    } else {
     if (this->loopCycle.isCycleRunning()) {                         // if we are  running an update cycle
-        this->loopCycle.checkTimeout(this->update_interval_);
+        this->loopCycle.checkTimeout();
     } else { // we are not running a cycle
-        if (this->loopCycle.hasUpdateIntervalPassed(this->get_update_interval())) {
+        if (this->loopCycle.hasUpdateIntervalPassed()) {
             // Replaces
             // /this->buildAndSendRequestsInfoPackets();            // initiate an update cycle with this->cycleStarted();
             this->loopCycle.cycleStarted();

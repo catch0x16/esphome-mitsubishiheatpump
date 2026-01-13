@@ -40,8 +40,32 @@ namespace devicestate {
         this->buildAndSendInfoPacket(code);
     }
 
-    void CN105ControlFlow::loop(CN105State& hpState) {
-        this->scheduler_.send_next_after(0x00); // This will call terminate cycle when complete
+    void CN105ControlFlow::loop(cycleManagement& loopCycle, CN105State& hpState) {
+        // Bootstrap connexion CN105 (UART + CONNECT) depuis loop()
+        //this->maybe_start_connection_();
+
+        // Tant que la connexion n'a pas réussi, on ne lance AUCUN cycle/écriture (sinon ça court-circuite le délai).
+        // On continue quand même à lire/processer l'input afin de détecter le 0x7A/0x7B (connection success).
+        //const bool can_talk_to_hp = this->isHeatpumpConnected_;
+
+//        if (!this->processInput()) {                                            // if we don't get any input: no read op
+            //if (!can_talk_to_hp) {
+            //    return;
+            //}
+            if ((hpState.getWantedSettings().hasChanged) && (!loopCycle.isCycleRunning())) {
+  //              this->checkPendingWantedSettings();
+            } else if ((hpState.getWantedRunStates().hasChanged) && (!loopCycle.isCycleRunning())) {
+    //            this->checkPendingWantedRunStates();
+            } else {
+                if (loopCycle.isCycleRunning()) {                         // if we are  running an update cycle
+                    loopCycle.checkTimeout();
+                } else { // we are not running a cycle
+                    if (loopCycle.hasUpdateIntervalPassed()) {
+                        //this->buildAndSendRequestsInfoPackets();            // initiate an update cycle with this->cycleStarted();
+                    }
+                }
+            }
+        //}
     }
 
 }
