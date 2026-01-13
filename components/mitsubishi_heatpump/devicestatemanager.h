@@ -9,10 +9,12 @@
 
 #include "cycle_management.h"
 
+#include "io_device.h"
+
 #include "esphome.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/sensor/sensor.h"
-#include "esphome/components/uart/uart.h"
+
 
 #ifndef DEVICESTATE_H
 #define DEVICESTATE_H
@@ -21,14 +23,11 @@
 
 namespace devicestate {
 
-  struct ConnectionMetadata {
-    esphome::uart::UARTComponent* hardwareSerial;
-  };
-
   class DeviceStateManager : public IDeviceStateManager {
     private:
-      ConnectionMetadata connectionMetadata;
-      CN105State hpState;
+      CN105Connection* hpConnection;
+      CN105State* hpState;
+      CN105ControlFlow* hpControlFlow;
 
       float minTemp;
       float maxTemp;
@@ -77,7 +76,9 @@ namespace devicestate {
 
     public:
       DeviceStateManager(
-        ConnectionMetadata connectionMetadata,
+        IIODevice* io_device,
+        CN105Connection* hpConnection,
+        CN105State* hpState,
         const float minTemp,
         const float maxTemp,
         esphome::binary_sensor::BinarySensor* internal_power_on,
@@ -93,7 +94,6 @@ namespace devicestate {
         esphome::sensor::Sensor* pid_set_point_correction
       );
 
-      
       HeatPump* hp;
 
       DeviceStatus getDeviceStatus();

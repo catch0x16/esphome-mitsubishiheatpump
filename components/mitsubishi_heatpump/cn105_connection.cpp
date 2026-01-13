@@ -22,6 +22,66 @@ namespace devicestate {
         return isHeatpumpConnected_;
     }
 
+    void CN105Connection::ensureConnection() {
+        if (this->conn_bootstrap_started_) return;
+
+        // Timeout global: au bout de 2 minutes on démarre même sans WiFi
+        if (!this->conn_timeout_armed_) {
+            this->conn_timeout_armed_ = true;
+            timeoutCallback_("cn105_bootstrap_timeout", 120000, [this]() {
+                if (this->conn_bootstrap_started_) return;
+                ESP_LOGW(LOG_CONN_TAG, "Bootstrap connexion: timeout 120s, démarrage CN105 malgré tout");
+                this->conn_bootstrap_started_ = true;
+                this->setupUART();
+                this->sendFirstConnectionPacket();
+                });
+        }
+
+    #ifdef USE_WIFI
+        if (wifi::global_wifi_component != nullptr && !wifi::global_wifi_component->is_connected()) {
+            if (!this->conn_wait_logged_) {
+                this->conn_wait_logged_ = true;
+                ESP_LOGI(LOG_CONN_TAG, "Bootstrap connexion: attente WiFi avant init UART/CONNECT");
+            }
+            return;
+        }
+    #endif
+
+        // Délai de grâce pour laisser le flux de logs OTA se connecter (évite de rater la séquence CONNECT)
+        const uint32_t grace_ms = this->conn_bootstrap_delay_ms_;
+        const uint32_t elapsed = CUSTOM_MILLIS - this->boot_ms_;
+        if (elapsed < grace_ms) {
+            if (!this->conn_grace_logged_) {
+                this->conn_grace_logged_ = true;
+                ESP_LOGI(LOG_CONN_TAG, "Bootstrap connexion: délai de grâce %ums pour logs OTA", grace_ms);
+            }
+            return;
+        }
+
+        this->conn_bootstrap_started_ = true;
+        ESP_LOGI(LOG_CONN_TAG, "Bootstrap connexion: init UART + envoi CONNECT (loop)");
+        this->setupUART();
+        this->sendFirstConnectionPacket();
+    }
+
+    void CN105Connection::reconnectIfConnectionLost() {
+        long reconnectTimeMs = CUSTOM_MILLIS - this->lastReconnectTimeMs;
+
+        if (reconnectTimeMs < this->update_interval_) {
+            return;
+        }
+
+        if (!this->isHeatpumpConnectionActive()) {
+            long connectTimeMs = CUSTOM_MILLIS - this->lastConnectRqTimeMs;
+            if (connectTimeMs > this->update_interval_) {
+                long lrTimeMs = CUSTOM_MILLIS - this->lastResponseMs;
+                ESP_LOGW(TAG, "Heatpump has not replied for %ld s", lrTimeMs / 1000);
+                ESP_LOGI(TAG, "We think Heatpump is not connected anymore..");
+                this->reconnectUART();
+            }
+        }
+    }
+
     /**
      * Seek the byte pointer to the beginning of the array
      * Initializes few variables
@@ -207,7 +267,7 @@ namespace devicestate {
         // or a wantedSettings update ack
     }
 
-    void CN105Connection::processCommand(CommandCallback commandCallback) {
+    void CN105Connection::processCommand(ConnectedCallback connectedCallback, PacketCallback packetCallback) {
         switch (this->command) {
         case 0x61:  /* last update was successful */
             hpPacketDebug(this->storedInputData, this->bytesRead + 1, LOG_ACK);
@@ -215,7 +275,7 @@ namespace devicestate {
             break;
 
         case 0x62:  /* packet contains data (room °C, settings, timer, status, or functions...)*/
-            this->getDataFromResponsePacket();
+            packetCallback(this->data, this->dataLength);
             break;
         case 0x7a:  // Connection success (User / standard)
         case 0x7b:  // Connection success (Installer / extended)
@@ -226,14 +286,14 @@ namespace devicestate {
             hpPacketDebug(this->storedInputData, this->bytesRead + 1, LOG_CONN_TAG);
             this->isHeatpumpConnected_ = true;
 
-            commandCallback(this->command);
+            connectedCallback();
             break;
         default:
             break;
         }
     }
 
-    void CN105Connection::processDataPacket(CommandCallback commandCallback) {
+    void CN105Connection::processDataPacket(ConnectedCallback connectedCallback, PacketCallback packetCallback) {
         ESP_LOGV(TAG, "processing data packet...");
 
         this->data = &storedInputData[5];
@@ -252,11 +312,11 @@ namespace devicestate {
             this->lastResponseMs = CUSTOM_MILLIS;    //esphome::CUSTOM_MILLIS;
 
             // processing the specific command
-            processCommand(commandCallback);
+            processCommand(connectedCallback, packetCallback);
         }
     }
 
-    void CN105Connection::parse(uint8_t inputData, CommandCallback commandCallback) {
+    void CN105Connection::parse(uint8_t inputData, ConnectedCallback connectedCallback, PacketCallback packetCallback) {
         ESP_LOGV("Decoder", "--> %02X [nb: %d]", inputData, this->bytesRead);
 
         bool hasNext = false;
@@ -285,7 +345,7 @@ namespace devicestate {
                 }
 
                 if ((this->bytesRead) == this->dataLength + 5) {
-                    this->processDataPacket(commandCallback);
+                    this->processDataPacket(connectedCallback, packetCallback);
                     this->initBytePointer();
                 } else {                                        // packet is still filling
                     this->bytesRead++;                          // more data to come
@@ -299,13 +359,13 @@ namespace devicestate {
 
     }
 
-    bool CN105Connection::processInput(CommandCallback commandCallback) {
+    bool CN105Connection::processInput(ConnectedCallback connectedCallback, PacketCallback packetCallback) {
         bool processed = false;
         while (this->io_device_->available()) {
             processed = true;
             uint8_t inputData;
             if (this->io_device_->read(&inputData)) {
-                parse(inputData, commandCallback);
+                parse(inputData, connectedCallback, packetCallback);
             }
         }
         return processed;

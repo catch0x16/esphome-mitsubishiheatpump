@@ -26,6 +26,8 @@ namespace devicestate {
             void parseStatus0x06(uint8_t* packet, CN105State& hpState);
             void parseFunctions0x20(uint8_t* packet, CN105State& hpState);
             void parseFunctions0x22(uint8_t* packet, CN105State& hpState);
+
+            void getDataFromResponsePacket(const uint8_t* packet, const int dataLength, CN105State& hpState);
             // Read Protocol
 
     };

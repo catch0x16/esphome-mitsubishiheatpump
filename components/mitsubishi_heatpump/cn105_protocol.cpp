@@ -204,6 +204,62 @@ namespace devicestate {
     void CN105Protocol::parseFunctions0x22(uint8_t* packet, CN105State& hpState) {
         hpState.getFunctions().setData2(&packet[1]);
     }
-    // Read Protocol
 
+    void CN105Protocol::getDataFromResponsePacket(const uint8_t* packet, const int dataLength, CN105State& hpState) {
+        // D'abord, laissons l'orchestrateur traiter les codes connus
+        const uint8_t code = packet[0];
+        // Sinon, switch pour les cas non gérés par l'orchestrateur
+        switch (code) {
+
+        case 0x04:
+            /* unknown */
+            ESP_LOGI("Decoder", "[0x04 is unknown : not implemented]");
+            //this->last_received_packet_sensor->publish_state("0x62-> 0x04: Data -> Unknown");
+            break;
+
+        case 0x05:
+            /* timer packet */
+            ESP_LOGW("Decoder", "[0x05 is Timer : not implemented]");
+            //this->last_received_packet_sensor->publish_state("0x62-> 0x05: Data -> Timer Packet");
+            break;
+
+        case 0x06:
+            break; // orchestrator
+        case 0x09:
+            break; // orchestrator
+
+        case 0x10:
+            ESP_LOGD("Decoder", "[0x10 is Unknown : not implemented]");
+            //this->getAutoModeStateFromResponsePacket();
+            break;
+
+        case 0x20: // fallthrough
+            if (dataLength == 0x10) {
+                //this->parseFunctions0x20(packet, hpState);
+                ESP_LOGE(LOG_CYCLE_TAG, "Got functions packet 1, requesting part 2");
+                //this->getFunctionsPart2();
+            }
+            break;
+        case 0x22: {
+            ESP_LOGD("Decoder", "[Packet Functions 0x20 et 0x22]");
+            //this->last_received_packet_sensor->publish_state("0x62-> 0x20/0x22: Data -> Packet functions");
+            if (dataLength == 0x10) {
+                //this->parseFunctions0x22(packet, hpState);
+                ESP_LOGE(LOG_CYCLE_TAG, "Got functions packet 2");
+                //this->functionsArrived();
+            }
+        }
+                break;
+
+        case 0x42:
+            break; // orchestrator
+
+        default:
+            ESP_LOGW("Decoder", "packet type [%02X] <-- unknown and unexpected", packet[0]);
+            //this->last_received_packet_sensor->publish_state("0x62-> ?? : Data -> Unknown");
+            break;
+        }
+
+    }
+    // Read Protocol
 }

@@ -32,6 +32,11 @@ using namespace workflow::pid;
 
 #include "floats.h"
 
+#include "cn105_connection.h"
+#include "cn105_state.h"
+#include "io_device.h"
+#include "uart_io_device.h"
+
 static const char* TAG = "MitsubishiHeatPump"; // Logging tag
 
 /**
@@ -92,42 +97,6 @@ void MitsubishiHeatPump::banner() {
  * This function is called repeatedly in the main program loop.
  */
 void MitsubishiHeatPump::loop() {
-    // Bootstrap connexion CN105 (UART + CONNECT) depuis loop()
-    //this->maybe_start_connection_();
-
-    // Tant que la connexion n'a pas réussi, on ne lance AUCUN cycle/écriture (sinon ça court-circuite le délai).
-    // On continue quand même à lire/processer l'input afin de détecter le 0x7A/0x7B (connection success).
-    //const bool can_talk_to_hp = this->isHeatpumpConnected_;
-
-    //if (this->processInput()) {
-        // if we don't get any input: no read op
-    //    return;
-    //}
-
-    //if (!can_talk_to_hp) {
-    //    return;
-    //}
-
-//    if ((this->wantedSettings.hasChanged) && (!this->loopCycle.isCycleRunning())) {
-//        this->checkPendingWantedSettings();
-//    } else if ((this->wantedRunStates.hasChanged) && (!this->loopCycle.isCycleRunning())) {
-//        this->checkPendingWantedRunStates();
-//    } else {
-    if (this->loopCycle.isCycleRunning()) {                         // if we are  running an update cycle
-        this->loopCycle.checkTimeout();
-    } else { // we are not running a cycle
-        if (this->loopCycle.hasUpdateIntervalPassed()) {
-            // Replaces
-            // /this->buildAndSendRequestsInfoPackets();            // initiate an update cycle with this->cycleStarted();
-            this->loopCycle.cycleStarted();
-            this->update();
-            this->loopCycle.cycleEnded();
-        }
-    }
-    //}
-}
-
-void MitsubishiHeatPump::update() {
     // This will be called every "update_interval" milliseconds.
     this->dsm->update(loopCycle);
     if (!this->dsm->isInitialized()) {
@@ -135,10 +104,12 @@ void MitsubishiHeatPump::update() {
         return;
     }
 
-    this->updateDevice();
+    if (false) {
+        this->updateDevice();
 
-    this->enforce_remote_temperature_sensor_timeout();
-    this->run_workflows();
+        this->enforce_remote_temperature_sensor_timeout();
+        this->run_workflows();
+    }
 
     this->dsm->publish();
 }
@@ -747,9 +718,6 @@ void MitsubishiHeatPump::setup() {
     this->banner();
     ESP_LOGCONFIG(TAG, "Setting up UART...");
 
-    devicestate::ConnectionMetadata connectionMetadata;
-    connectionMetadata.hardwareSerial = this->get_hw_serial_();
-
     this->min_temp = ESPMHP_MIN_TEMPERATURE;
     if (this->visual_min_temperature_override_.has_value()) {
         this->min_temp = this->visual_min_temperature_override_.value();
@@ -775,9 +743,26 @@ void MitsubishiHeatPump::setup() {
         this->maxAdjustmentOver_
     );
 
+    IIODevice* io_device = new UARTIODevice(
+        this->get_hw_serial_()
+    );
+
+    auto timeoutCallback = [this](const std::string& name, uint32_t timeout_ms, std::function<void()> callback) {
+        this->set_timeout(name.c_str(), timeout_ms, std::move(callback));
+    };
+
+    CN105Connection* hpConnection = new CN105Connection(
+        io_device,
+        timeoutCallback,
+        this->get_update_interval()
+    );
+    CN105State* hpState = new CN105State();
+
     ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
     this->dsm = new devicestate::DeviceStateManager(
-        connectionMetadata,
+        io_device,
+        hpConnection,
+        hpState,
         this->min_temp,
         this->max_temp,
         this->internal_power_on,

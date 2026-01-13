@@ -10,19 +10,22 @@ namespace devicestate {
 
     CN105ControlFlow::CN105ControlFlow(
             CN105Connection* connection,
+            CN105State* hpState,
             RequestScheduler::TimeoutCallback timeoutCallback,
             RequestScheduler::TerminateCallback terminateCallback
         ): connection_{connection},
-           scheduler_(
+            scheduler_(
                 // send_callback: envoie un paquet via buildAndSendInfoPacket
                 [this](uint8_t code) {
                     ESP_LOGI(TAG, "scheduled code: %d", code);
                     this->buildAndSendInfoPacket(code);
                 },
                 timeoutCallback,
-                terminateCallback
-            ) {
-        
+                terminateCallback,
+                [this]() -> CN105State* { return this->hpState_; }
+            ),
+            hpProtocol{} {
+        this->hpState_ = hpState;
     }
 
     void CN105ControlFlow::buildAndSendRequestPacket(int packetType) {
@@ -42,32 +45,60 @@ namespace devicestate {
         this->buildAndSendInfoPacket(code);
     }
 
-    void CN105ControlFlow::loop(cycleManagement& loopCycle, CN105State& hpState) {
+    void CN105ControlFlow::buildAndSendInfoPacket(uint8_t code) {
+        uint8_t packet[PACKET_LEN] = {};
+        hpProtocol.createInfoPacket(packet, code);
+        this->connection_->writePacket(packet, PACKET_LEN);
+    }
+
+    void CN105ControlFlow::buildAndSendRequestsInfoPackets(cycleManagement& loopCycle) {
+        if (this->connection_->isConnected()) {
+            ESP_LOGV(LOG_UPD_INT_TAG, "triggering infopacket because of update interval tick");
+            ESP_LOGV("CONTROL_WANTED_SETTINGS", "hasChanged is %s", wantedSettings.hasChanged ? "true" : "false");
+            loopCycle.cycleStarted();
+            //this->nbCycles_++;
+            // Envoie la première requête activable (la liste est enregistrée une fois au constructeur)
+            this->scheduler_.send_next_after(0x00); // 0x00 -> start, pick first eligible
+        } else {
+            this->connection_->reconnectIfConnectionLost();
+        }
+    }
+
+    void CN105ControlFlow::loop(cycleManagement& loopCycle) {
         // Bootstrap connexion CN105 (UART + CONNECT) depuis loop()
-        //this->maybe_start_connection_();
+        this->connection_->ensureConnection();
 
         // Tant que la connexion n'a pas réussi, on ne lance AUCUN cycle/écriture (sinon ça court-circuite le délai).
         // On continue quand même à lire/processer l'input afin de détecter le 0x7A/0x7B (connection success).
-        //const bool can_talk_to_hp = this->isHeatpumpConnected_;
-        if (!this->connection_->processInput([&loopCycle, &hpState](uint8_t command) {
-            // let's say that the last complete cycle was over now
-            loopCycle.lastCompleteCycleMs = CUSTOM_MILLIS;
-            hpState.getCurrentSettings().resetSettings();      // each time we connect, we need to reset current setting to force a complete sync with ha component state and receievdSettings
-            hpState.getCurrentRunStates().resetSettings();
-        })) {                                            // if we don't get any input: no read op
-            //if (!can_talk_to_hp) {
-            //    return;
-            //}
-            if ((hpState.getWantedSettings().hasChanged) && (!loopCycle.isCycleRunning())) {
+        const bool can_talk_to_hp = this->connection_->isConnected();
+        if (!this->connection_->processInput([this, &loopCycle]() {
+                    // let's say that the last complete cycle was over now
+                    loopCycle.lastCompleteCycleMs = CUSTOM_MILLIS;
+                    this->hpState_->getCurrentSettings().resetSettings();      // each time we connect, we need to reset current setting to force a complete sync with ha component state and receievdSettings
+                    this->hpState_->getCurrentRunStates().resetSettings();
+                }, 
+                [this](const uint8_t* packet, const int dataLength) {
+                    const uint8_t code = packet[0];
+                    if (this->scheduler_.process_response(code)) {
+                        return;
+                    }
+                    this->hpProtocol.getDataFromResponsePacket(packet, dataLength, *this->hpState_);
+                })) {                                            // if we don't get any input: no read op
+
+            if (!can_talk_to_hp) {
+                return;
+            }
+
+            if ((this->hpState_->getWantedSettings().hasChanged) && (!loopCycle.isCycleRunning())) {
                 //this->checkPendingWantedSettings();
-            } else if ((hpState.getWantedRunStates().hasChanged) && (!loopCycle.isCycleRunning())) {
+            } else if ((this->hpState_->getWantedRunStates().hasChanged) && (!loopCycle.isCycleRunning())) {
                 //this->checkPendingWantedRunStates();
             } else {
                 if (loopCycle.isCycleRunning()) {                         // if we are  running an update cycle
                     loopCycle.checkTimeout();
                 } else { // we are not running a cycle
                     if (loopCycle.hasUpdateIntervalPassed()) {
-                        //this->buildAndSendRequestsInfoPackets();            // initiate an update cycle with this->cycleStarted();
+                        this->buildAndSendRequestsInfoPackets(loopCycle);            // initiate an update cycle with this->cycleStarted();
                     }
                 }
             }
