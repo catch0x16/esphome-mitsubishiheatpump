@@ -1,9 +1,10 @@
-#pragma once
-
 #include "cn105_connection.h"
 
 #include "esphome.h"
 #include "logging.h"
+
+#include "cn105_utils.h"
+#include "cn105_logging.h"
 
 using namespace devicestate;
 
@@ -11,9 +12,10 @@ namespace devicestate {
 
     static const char* TAG = "CN105Connection"; // Logging tag
 
-    CN105Connection::CN105Connection(IIODevice* io_device, TimeoutCallback timeoutCallback) :
+    CN105Connection::CN105Connection(IIODevice* io_device, TimeoutCallback timeoutCallback, int update_interval) :
         io_device_{io_device},
-        timeoutCallback_{timeoutCallback} {
+        timeoutCallback_{timeoutCallback},
+        update_interval_{update_interval} {
     }
 
     bool CN105Connection::isConnected() {
@@ -64,15 +66,13 @@ namespace devicestate {
 
     // SERIAL_8E1
     void CN105Connection::setupUART() {
-        log_info_uint32(TAG, "setupUART() with baudrate ", this->parent_->get_baud_rate());
-        ESP_LOGI(LOG_CONN_TAG, "setupUART(): baud=%d tx=%d rx=%d (UART port=%d)", this->parent_->get_baud_rate(), this->tx_pin_, this->rx_pin_, this->uart_port_);
         this->isHeatpumpConnected_ = false;
         this->isUARTConnected_ = false;
 
         if (io_device_->begin()) {
             ESP_LOGI(LOG_CONN_TAG, "UART configuré en SERIAL_8E1");
             this->isUARTConnected_ = true;
-            //this->initBytePointer();
+            this->initBytePointer();
         } else {
             ESP_LOGW(LOG_CONN_TAG, "UART n'est pas configuré en SERIAL_8E1");
         }
@@ -80,7 +80,6 @@ namespace devicestate {
 
     void CN105Connection::disconnectUART() {
         ESP_LOGD(TAG, "disconnectUART()");
-        this->uart_setup_switch = false;
         this->isUARTConnected_ = false;
         this->firstRun = true;
     }
@@ -104,11 +103,9 @@ namespace devicestate {
             memcpy(packet, CONNECT, CONNECT_LEN);
 
             // Choix du mode de handshake: standard (0x5A) ou installateur (0x5B)
-            packet[1] = this->installer_mode_effective_ ? 0x5B : 0x5A;
+            packet[1] = 0x5A;
             // CONNECT a un checksum pré-calculé dans la constante; si on modifie l'octet commande, on doit le recalculer.
-            packet[CONNECT_LEN - 1] = checkSum(packet, CONNECT_LEN - 1);
-
-            ESP_LOGI(LOG_CONN_TAG, "Envoi du paquet de connexion en mode %s (0x%02X)...", this->installer_mode_effective_ ? "Installateur" : "Standard", packet[1]);
+            packet[CONNECT_LEN - 1] = devicestate::checkSum(packet, CONNECT_LEN - 1);
 
             // Détails des octets en DEBUG sur le tag de connexion
             hpPacketDebug(packet, CONNECT_LEN, LOG_CONN_TAG);
@@ -204,9 +201,65 @@ namespace devicestate {
         }
     }
 
-    bool CN105Connection::parse(uint8_t inputData, uint8_t* storedInputData) {
+    void CN105Connection::updateSuccess() {
+        ESP_LOGD(LOG_ACK, "Last heatpump data update successful!");
+        // nothing can be done here because we have no mean to know wether it is an external temp ack
+        // or a wantedSettings update ack
+    }
+
+    void CN105Connection::processCommand(CommandCallback commandCallback) {
+        switch (this->command) {
+        case 0x61:  /* last update was successful */
+            hpPacketDebug(this->storedInputData, this->bytesRead + 1, LOG_ACK);
+            this->updateSuccess();
+            break;
+
+        case 0x62:  /* packet contains data (room °C, settings, timer, status, or functions...)*/
+            this->getDataFromResponsePacket();
+            break;
+        case 0x7a:  // Connection success (User / standard)
+        case 0x7b:  // Connection success (Installer / extended)
+            // Log en INFO sur le tag dédié, détails en DEBUG via hpPacketDebug
+            ESP_LOGI(LOG_CONN_TAG, "--> Heatpump did reply: connection success (%s, 0x%02X)! <--",
+                (this->command == 0x7b) ? "Installer" : "User",
+                this->command);
+            hpPacketDebug(this->storedInputData, this->bytesRead + 1, LOG_CONN_TAG);
+            this->isHeatpumpConnected_ = true;
+
+            commandCallback(this->command);
+            break;
+        default:
+            break;
+        }
+    }
+
+    void CN105Connection::processDataPacket(CommandCallback commandCallback) {
+        ESP_LOGV(TAG, "processing data packet...");
+
+        this->data = &storedInputData[5];
+
+        hpPacketDebug(this->storedInputData, this->bytesRead + 1, "READ");
+
+        // Pendant le handshake (tant que non connecté), logguer toute trame RX sous CN105_CONN en DEBUG
+        // afin de faciliter le diagnostic (0x7A/0x7B attendus, ou autre réponse inattendue).
+        if (!this->isHeatpumpConnected_) {
+            ESP_LOGD(LOG_CONN_TAG, "RX during handshake (cmd=0x%02X len=%d)", this->command, this->dataLength);
+            hpPacketDebug(storedInputData, this->bytesRead + 1, LOG_CONN_TAG);
+        }
+
+        if (this->checkSum()) {
+            // checkPoint of a heatpump response
+            this->lastResponseMs = CUSTOM_MILLIS;    //esphome::CUSTOM_MILLIS;
+
+            // processing the specific command
+            processCommand(commandCallback);
+        }
+    }
+
+    void CN105Connection::parse(uint8_t inputData, CommandCallback commandCallback) {
         ESP_LOGV("Decoder", "--> %02X [nb: %d]", inputData, this->bytesRead);
 
+        bool hasNext = false;
         if (!this->foundStart) {                // no packet yet
             if (inputData == HEADER[0]) {
                 this->foundStart = true;
@@ -219,7 +272,6 @@ namespace devicestate {
             if (this->bytesRead >= (MAX_DATA_BYTES - 1)) {
                 ESP_LOGW("Decoder", "buffer overflow preventive reset (bytesRead=%d)", this->bytesRead);
                 this->initBytePointer();
-                return false;
             }
             storedInputData[this->bytesRead] = inputData;
 
@@ -233,9 +285,8 @@ namespace devicestate {
                 }
 
                 if ((this->bytesRead) == this->dataLength + 5) {
-
+                    this->processDataPacket(commandCallback);
                     this->initBytePointer();
-                    return true;
                 } else {                                        // packet is still filling
                     this->bytesRead++;                          // more data to come
                 }
@@ -244,20 +295,18 @@ namespace devicestate {
                 // header is not complete yet
                 this->bytesRead++;
             }
-            return false;
         }
 
     }
 
-    bool CN105ControlFlow::readNextPacket(uint8_t* storedInputData) {
+    bool CN105Connection::processInput(CommandCallback commandCallback) {
         bool processed = false;
         while (this->io_device_->available()) {
             processed = true;
             uint8_t inputData;
             if (this->io_device_->read(&inputData)) {
-                parse(inputData, storedInputData);
+                parse(inputData, commandCallback);
             }
-
         }
         return processed;
     }

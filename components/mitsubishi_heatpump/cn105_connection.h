@@ -12,17 +12,22 @@ namespace devicestate {
     class CN105Connection {
         public:
             using TimeoutCallback = std::function<void(const std::string&, uint32_t, std::function<void()>)>;
+            using CommandCallback = std::function<void(uint8_t command)>;
 
-            CN105Connection(IIODevice* io_device, TimeoutCallback timeoutCallback);
+            CN105Connection(IIODevice* io_device, TimeoutCallback timeoutCallback, int update_interval_);
 
             bool isConnected();
             void writePacket(uint8_t* packet, int length, bool checkIsActive = true);
-            bool readNextPacket(uint8_t* packet);
+            bool processInput(CommandCallback commandCallback);
 
         private:
             IIODevice* io_device_;
+            int update_interval_;
 
             TimeoutCallback timeoutCallback_;
+
+            uint8_t storedInputData[MAX_DATA_BYTES]; // multi-byte data
+            uint8_t* data;
 
             bool foundStart = false;
             int bytesRead = 0;
@@ -48,13 +53,21 @@ namespace devicestate {
 
             void initBytePointer();
             bool checkSum();
+            void checkHeader(uint8_t inputData);
             void setupUART();
+            void disconnectUART();
+            void reconnectUART();
             //void force_low_level_uart_reinit();
             void sendFirstConnectionPacket();
 
+            bool isHeatpumpConnectionActive();
+
             void try_write_pending_packet();
 
-            int parse(uint8_t inputData, uint8_t* storedInputData);
+            void updateSuccess();
+            void processCommand(CommandCallback commandCallback);
+            void processDataPacket(CommandCallback commandCallback);
+            void parse(uint8_t inputData, CommandCallback commandCallback);
     };
 
 }

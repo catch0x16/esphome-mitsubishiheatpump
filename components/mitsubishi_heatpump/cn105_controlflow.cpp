@@ -42,17 +42,6 @@ namespace devicestate {
         this->buildAndSendInfoPacket(code);
     }
 
-    bool CN105ControlFlow::processInput(CN105State& hpState) {
-        uint8_t storedInputData[MAX_DATA_BYTES] = {}; // multi-byte data
-
-        bool processed = false;
-        while (this->connection_->readNextPacket(storedInputData)) {
-            processed = true;
-            // TODO: Parse the packet
-        }
-        return processed;
-    }
-
     void CN105ControlFlow::loop(cycleManagement& loopCycle, CN105State& hpState) {
         // Bootstrap connexion CN105 (UART + CONNECT) depuis loop()
         //this->maybe_start_connection_();
@@ -60,8 +49,12 @@ namespace devicestate {
         // Tant que la connexion n'a pas réussi, on ne lance AUCUN cycle/écriture (sinon ça court-circuite le délai).
         // On continue quand même à lire/processer l'input afin de détecter le 0x7A/0x7B (connection success).
         //const bool can_talk_to_hp = this->isHeatpumpConnected_;
-
-        if (!this->processInput(hpState)) {                                            // if we don't get any input: no read op
+        if (!this->connection_->processInput([&loopCycle, &hpState](uint8_t command) {
+            // let's say that the last complete cycle was over now
+            loopCycle.lastCompleteCycleMs = CUSTOM_MILLIS;
+            hpState.getCurrentSettings().resetSettings();      // each time we connect, we need to reset current setting to force a complete sync with ha component state and receievdSettings
+            hpState.getCurrentRunStates().resetSettings();
+        })) {                                            // if we don't get any input: no read op
             //if (!can_talk_to_hp) {
             //    return;
             //}

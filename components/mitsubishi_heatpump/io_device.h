@@ -5,7 +5,7 @@ namespace devicestate {
 
     class IIODevice {
     public:
-        virtual void begin() = 0;
+        virtual bool begin() = 0;
         virtual void write(uint8_t) = 0;
         virtual int available(void) = 0;
         virtual bool read(uint8_t*) = 0;

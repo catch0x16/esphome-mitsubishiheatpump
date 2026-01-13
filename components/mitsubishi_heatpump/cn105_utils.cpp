@@ -6,7 +6,7 @@ using namespace devicestate;
 
 namespace devicestate {
 
-    static const char* TAG = "CN105Protocol"; // Logging tag
+    static const char* TAG = "CN105Utils"; // Logging tag
 
     uint8_t checkSum(uint8_t bytes[], int len) {
         uint8_t sum = 0;
@@ -22,7 +22,7 @@ namespace devicestate {
                 return i;
             }
         }
-        ESP_LOGW("lookup", "%s caution value %d not found, returning -1", debugInfo, lookupValue);
+        ESP_LOGW(TAG, "%s caution value %d not found, returning -1", debugInfo, lookupValue);
         return -1;
     }
 
@@ -32,7 +32,7 @@ namespace devicestate {
                 return i;
             }
         }
-        ESP_LOGW("lookup", "%s caution value %s not found, returning -1", debugInfo, lookupValue);
+        ESP_LOGW(TAG, "%s caution value %s not found, returning -1", debugInfo, lookupValue);
         return -1;
     }
 
@@ -46,7 +46,7 @@ namespace devicestate {
         if (defaultValue != nullptr) {
             return defaultValue;
         } else {
-            ESP_LOGW("lookup", "%s caution: value %d not found, returning value at index 0", debugInfo, byteValue);
+            ESP_LOGW(TAG, "%s caution: value %d not found, returning value at index 0", debugInfo, byteValue);
             return valuesMap[0];
         }
 
@@ -58,7 +58,7 @@ namespace devicestate {
                 return valuesMap[i];
             }
         }
-        ESP_LOGW("lookup", "%s caution: value %d not found, returning value at index 0", debugInfo, byteValue);
+        ESP_LOGW(TAG, "%s caution: value %d not found, returning value at index 0", debugInfo, byteValue);
         return valuesMap[0];
     }
 
