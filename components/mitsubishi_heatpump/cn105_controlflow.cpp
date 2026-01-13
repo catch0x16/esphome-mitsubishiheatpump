@@ -9,10 +9,10 @@ namespace devicestate {
     static const char* TAG = "CN105ControlFlow"; // Logging tag
 
     CN105ControlFlow::CN105ControlFlow(
-            IIODevice* io_device,
+            CN105Connection* connection,
             RequestScheduler::TimeoutCallback timeoutCallback,
             RequestScheduler::TerminateCallback terminateCallback
-        ): io_device_{io_device},
+        ): connection_{connection},
            scheduler_(
                 // send_callback: envoie un paquet via buildAndSendInfoPacket
                 [this](uint8_t code) {
@@ -42,84 +42,43 @@ namespace devicestate {
         this->buildAndSendInfoPacket(code);
     }
 
-    /**
-     * Seek the byte pointer to the beginning of the array
-     * Initializes few variables
-    */
-    void CN105ControlFlow::initBytePointer() {
-        this->foundStart = false;
-        this->bytesRead = 0;
-        this->dataLength = -1;
-        this->command = 0;
-    }
+    bool CN105ControlFlow::processInput(CN105State& hpState) {
+        uint8_t storedInputData[MAX_DATA_BYTES] = {}; // multi-byte data
 
-    void CN105ControlFlow::checkHeader(uint8_t inputData) {
-        if (this->bytesRead == 4) {
-            if (storedInputData[2] == HEADER[2] && storedInputData[3] == HEADER[3]) {
-                ESP_LOGV("Header", "header matches HEADER");
-                ESP_LOGV("Header", "[%02X] (%02X) %02X %02X [%02X]<-- header", storedInputData[0], storedInputData[1], storedInputData[2], storedInputData[3], storedInputData[4]);
-                ESP_LOGD("Header", "command: (%02X) data length: [%02X]<-- header", storedInputData[1], storedInputData[4]);
-                this->command = storedInputData[1];
-            }
-            this->dataLength = storedInputData[4];
-        }
-    }
-
-    void CN105ControlFlow::parse(uint8_t inputData) {
-        ESP_LOGV("Decoder", "--> %02X [nb: %d]", inputData, this->bytesRead);
-
-        if (!this->foundStart) {                // no packet yet
-            if (inputData == HEADER[0]) {
-                this->foundStart = true;
-                this->bytesRead = 0;
-                storedInputData[this->bytesRead++] = inputData;
-            } else {
-                // unknown bytes
-            }
-        } else {                                // we are getting a packet
-            if (this->bytesRead >= (MAX_DATA_BYTES - 1)) {
-                ESP_LOGW("Decoder", "buffer overflow preventive reset (bytesRead=%d)", this->bytesRead);
-                this->initBytePointer();
-                return;
-            }
-            storedInputData[this->bytesRead] = inputData;
-
-            checkHeader(inputData);
-
-            if (this->dataLength != -1) {       // is header complete ?
-                if ((this->dataLength + 6) > MAX_DATA_BYTES) {
-                    ESP_LOGW("Decoder", "declared data length %d too large, resetting parser", this->dataLength);
-                    this->initBytePointer();
-                    return;
-                }
-
-                if ((this->bytesRead) == this->dataLength + 5) {
-
-                    //this->processDataPacket();
-                    this->initBytePointer();
-                } else {                                        // packet is still filling
-                    this->bytesRead++;                          // more data to come
-                }
-            } else {
-                ESP_LOGV("Decoder", "data length toujours pas connu");
-                // header is not complete yet
-                this->bytesRead++;
-            }
-        }
-
-    }
-
-    bool CN105ControlFlow::processInput() {
         bool processed = false;
-        while (this->io_device_->available()) {
+        while (this->connection_->readNextPacket(storedInputData)) {
             processed = true;
-            uint8_t inputData;
-            if (this->io_device_->read(&inputData)) {
-                parse(inputData);
-            }
-
+            // TODO: Parse the packet
         }
         return processed;
+    }
+
+    void CN105ControlFlow::loop(cycleManagement& loopCycle, CN105State& hpState) {
+        // Bootstrap connexion CN105 (UART + CONNECT) depuis loop()
+        //this->maybe_start_connection_();
+
+        // Tant que la connexion n'a pas réussi, on ne lance AUCUN cycle/écriture (sinon ça court-circuite le délai).
+        // On continue quand même à lire/processer l'input afin de détecter le 0x7A/0x7B (connection success).
+        //const bool can_talk_to_hp = this->isHeatpumpConnected_;
+
+        if (!this->processInput(hpState)) {                                            // if we don't get any input: no read op
+            //if (!can_talk_to_hp) {
+            //    return;
+            //}
+            if ((hpState.getWantedSettings().hasChanged) && (!loopCycle.isCycleRunning())) {
+                //this->checkPendingWantedSettings();
+            } else if ((hpState.getWantedRunStates().hasChanged) && (!loopCycle.isCycleRunning())) {
+                //this->checkPendingWantedRunStates();
+            } else {
+                if (loopCycle.isCycleRunning()) {                         // if we are  running an update cycle
+                    loopCycle.checkTimeout();
+                } else { // we are not running a cycle
+                    if (loopCycle.hasUpdateIntervalPassed()) {
+                        //this->buildAndSendRequestsInfoPackets();            // initiate an update cycle with this->cycleStarted();
+                    }
+                }
+            }
+        }
     }
 
 }
