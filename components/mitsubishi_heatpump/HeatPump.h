@@ -32,6 +32,7 @@
 
 #include "info_request.h"
 #include "request_scheduler.h"
+#include "cycle_management.h"
 
 #include "io_device.h"
 

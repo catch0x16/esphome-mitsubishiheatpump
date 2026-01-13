@@ -129,7 +129,7 @@ void MitsubishiHeatPump::loop() {
 
 void MitsubishiHeatPump::update() {
     // This will be called every "update_interval" milliseconds.
-    this->dsm->update();
+    this->dsm->update(loopCycle);
     if (!this->dsm->isInitialized()) {
         ESP_LOGW(TAG, "Waiting for HeatPump to read the settings the first time.");
         return;

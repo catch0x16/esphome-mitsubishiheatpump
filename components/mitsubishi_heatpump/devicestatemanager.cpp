@@ -30,7 +30,7 @@ namespace devicestate {
       esphome::sensor::Sensor* device_status_kwh,
       esphome::sensor::Sensor* device_status_runtime_hours,
       esphome::sensor::Sensor* pid_set_point_correction
-    ) {
+    ): hpState{} {
         this->connectionMetadata = connectionMetadata;
 
         this->minTemp = minTemp;
@@ -172,7 +172,7 @@ namespace devicestate {
         return this->deviceState;
     }
 
-    void DeviceStateManager::update() {
+    void DeviceStateManager::update(cycleManagement& loopCycle) {
         //this->dump_config();
         this->hp->sync();
     #ifndef USE_CALLBACKS
@@ -185,7 +185,6 @@ namespace devicestate {
             return;
         }
 
-        DeviceState deviceState = this->getDeviceState();
         if (!this->hp->isConnected()) {
             this->disconnected += 1;
             ESP_LOGW(TAG, "Device not connected: %d", this->disconnected);

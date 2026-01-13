@@ -5,6 +5,9 @@
 
 #include "HeatPump.h"
 #include "cn105_controlflow.h"
+#include "cn105_state.h"
+
+#include "cycle_management.h"
 
 #include "esphome.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
@@ -25,6 +28,7 @@ namespace devicestate {
   class DeviceStateManager : public IDeviceStateManager {
     private:
       ConnectionMetadata connectionMetadata;
+      CN105State hpState;
 
       float minTemp;
       float maxTemp;
@@ -98,7 +102,7 @@ namespace devicestate {
       bool isInitialized();
       bool initialize();
 
-      void update();
+      void update(cycleManagement& loopCycle);
 
       void setCool();
       void setHeat();
