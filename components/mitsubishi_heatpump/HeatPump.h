@@ -63,8 +63,6 @@ class HeatPump
     // initialise to all off, then it will update shortly after connect;
     heatpumpStatus currentStatus{ 0, 0, false, {TIMER_MODE_MAP[0], 0, 0, 0, 0}, 0, 0, 0, 0 };
 
-    heatpumpFunctions functions;
-
     unsigned long lastSend;
     bool waitForRead;
     int infoMode;
@@ -125,7 +123,6 @@ class HeatPump
     // functions
     // NOTE: These methods have been tested with a PVA (P-series air handler) unit and has not been tested with anything else. Use at your own risk.
     heatpumpFunctions getFunctions();
-    bool setFunctions(heatpumpFunctions const& functions);
 
     // callbacks
     void setOnConnectCallback(ON_CONNECT_CALLBACK_SIGNATURE);

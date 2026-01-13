@@ -58,6 +58,10 @@ namespace devicestate {
         return currentStatus;
     }
 
+    heatpumpFunctions CN105State::getFunctions() {
+        return functions;
+    }
+
     wantedHeatpumpSettings CN105State::getWantedSettings() {
         return wantedSettings;
     }

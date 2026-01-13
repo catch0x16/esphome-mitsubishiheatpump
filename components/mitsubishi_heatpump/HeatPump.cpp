@@ -37,7 +37,6 @@ HeatPump::HeatPump(devicestate::IIODevice* io_device) :
   waitForRead = false;
   autoUpdate = true;
   externalUpdate = true;
-  functions = heatpumpFunctions();
 }
 
 // Public Methods //////////////////////////////////////////////////////////////
@@ -324,7 +323,7 @@ int HeatPump::readPacket() {
             case 0x02: { // setting information
               heatpumpSettings oldSettings = hpState.getCurrentSettings();
 
-              hpProtocol.parseSettings(data, hpState);
+              hpProtocol.parseSettings0x02(data, hpState);
               
               if(settingsChangedCallback && oldSettings != hpState.getCurrentSettings()) {
                 settingsChangedCallback();
@@ -341,30 +340,7 @@ int HeatPump::readPacket() {
             }
 
             case 0x03: { //Room temperature reading
-              //ESP_LOGD("Decoder", "[0x03 room temperature]");
-              //this->last_received_packet_sensor->publish_state("0x62-> 0x03: Data -> Room temperature");
-              //                 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
-              // FC 62 01 30 10 03 00 00 0E 00 94 B0 B0 FE 42 00 01 0A 64 00 00 A9
-              //                         RT    OT RT SP ?? ?? ?? RM RM RM
-              // FC 62 01 30 10 03 00 00 0B 00 94 AB 00 00 00 00 00 00 00 00 00 10 
-              // RT = room temperature (in old format and in new format)
-              // OT = outside air temperature
-              // SP = room setpoint temperature?
-              // RM = indoor unit operating time in minutes
-
-              heatpumpStatus receivedStatus;
-              if(data[6] != 0x00) {
-                int temp = data[6];
-                temp -= 128;
-                receivedStatus.roomTemperature = (float)temp / 2;
-              } else {
-                receivedStatus.roomTemperature = lookupByteMapValue(ROOM_TEMP_MAP, ROOM_TEMP, 32, data[3]);
-              }
-
-              receivedStatus.runtimeHours = float((data[11] << 16) | (data[12] << 8) | data[13]) / 60;
-
-              hpState.setRoomTemperature(receivedStatus.roomTemperature);
-              hpState.setRuntimeHours(receivedStatus.runtimeHours);
+              hpProtocol.parseStatus0x03(data, hpState);
               if((statusChangedCallback)) {
                   statusChangedCallback(hpState.getCurrentStatus());
               }
@@ -377,49 +353,20 @@ int HeatPump::readPacket() {
             }
 
             case 0x05: { // timer packet
-              heatpumpTimers receivedTimers;
-              receivedTimers.mode                = lookupByteMapValue(TIMER_MODE_MAP, TIMER_MODE, 4, data[3]);
-              receivedTimers.onMinutesSet        = data[4] * TIMER_INCREMENT_MINUTES;
-              receivedTimers.onMinutesRemaining  = data[6] * TIMER_INCREMENT_MINUTES;
-              receivedTimers.offMinutesSet       = data[5] * TIMER_INCREMENT_MINUTES;
-              receivedTimers.offMinutesRemaining = data[7] * TIMER_INCREMENT_MINUTES;
+              heatpumpTimers oldTimers = hpState.getTimers();
+
+              hpProtocol.parseTimers0x05(data, hpState);
 
               // callback for status change
-              if(statusChangedCallback && hpState.getTimers() != receivedTimers) {
-                hpState.setTimers(receivedTimers);
+              if(statusChangedCallback && oldTimers != hpState.getTimers()) {
                 statusChangedCallback(hpState.getCurrentStatus());
-              } else {
-                hpState.setTimers(receivedTimers);
               }
 
               return RCVD_PKT_TIMER;
             }
 
             case 0x06: { // status
-              //FC 62 01 30 10 06 00 00 1A 01 00 00 00 00 00 00 00 00 00 00 00 3C
-              //MSZ-RW25VGHZ-SC1 / MUZ-RW25VGHZ-SC1
-              //FC 62 01 30 10 06 00 00 00 01 00 08 05 50 00 00 42 00 00 00 00 B7
-              //                           OP IP IP EU EU       ??
-              //FC 62 01 30 10 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 57
-              // OP = operating status (1 = compressor running, 0 = standby)
-              // IP = Current input power in Watts (16-bit decimal)
-              // EU = energy usage
-              //      (used energy in kWh = value/10)
-              //      TODO: Currently the maximum size of the counter is not known and
-              //            if the counter extends to other bytes.
-              // ?? = unknown bytes that appear to have a fixed/constant value
-
-              heatpumpStatus receivedStatus;
-              receivedStatus.operating = data[4];
-              receivedStatus.compressorFrequency = data[3];
-              receivedStatus.inputPower = (data[5] << 8) | data[6];
-              receivedStatus.kWh = float((data[7] << 8) | data[8]) / 10.0;
-
-              hpState.setOperating(receivedStatus.operating);
-              hpState.setCompressorFrequency(receivedStatus.compressorFrequency);
-              hpState.setInputPower(receivedStatus.inputPower);
-              hpState.setKWh(receivedStatus.kWh);
-
+              hpProtocol.parseStatus0x06(data, hpState);
               // callback for status change -- not triggered for compressor frequency at the moment
               if(statusChangedCallback) {
                 statusChangedCallback(hpState.getCurrentStatus());
@@ -436,15 +383,16 @@ int HeatPump::readPacket() {
               break;
             }
             
-            case 0x20:
+            case 0x20: {
+              if (dataLength == 0x10) {
+                hpProtocol.parseFunctions0x20(data, hpState);
+                return RCVD_PKT_FUNCTIONS;
+              }
+              break;
+            }
             case 0x22: {
               if (dataLength == 0x10) {
-                if (data[0] == 0x20) {
-                  functions.setData1(&data[1]);
-                } else {
-                  functions.setData2(&data[1]);
-                }
-                  
+                hpProtocol.parseFunctions0x22(data, hpState);
                 return RCVD_PKT_FUNCTIONS;
               }
               break;
@@ -472,7 +420,7 @@ void HeatPump::readAllPackets() {
 }
 
 heatpumpFunctions HeatPump::getFunctions() {
-  functions.clear();
+  hpState.getFunctions().clear();
   
   byte packet1[PACKET_LEN] = {};
   byte packet2[PACKET_LEN] = {};
@@ -495,51 +443,10 @@ heatpumpFunctions HeatPump::getFunctions() {
 
   // retry reading a few times in case responses were related
   // to other requests
-  for (int i = 0; i < 5 && !functions.isValid(); ++i) {
+  for (int i = 0; i < 5 && !hpState.getFunctions().isValid(); ++i) {
     CUSTOM_DELAY(100);
     readPacket();
   }
 
-  return functions;
-}
-
-bool HeatPump::setFunctions(heatpumpFunctions const& functions) {
-  if (!functions.isValid()) {
-    return false;
-  }
-
-  byte packet1[PACKET_LEN] = {};
-  byte packet2[PACKET_LEN] = {};
-
-  hpProtocol.prepareSetPacket(packet1, PACKET_LEN);
-  packet1[5] = FUNCTIONS_SET_PART1;
-  
-  hpProtocol.prepareSetPacket(packet2, PACKET_LEN);
-  packet2[5] = FUNCTIONS_SET_PART2;
-  
-  functions.getData1(&packet1[6]);
-  functions.getData2(&packet2[6]);
-
-  // sanity check, we expect data byte 15 (index 20) to be 0
-  if (packet1[20] != 0 || packet2[20] != 0)
-    return false;
-    
-  // make sure all the other data bytes are set
-  for (int i = 6; i < 20; ++i) {
-    if (packet1[i] == 0 || packet2[i] == 0)
-      return false;
-  }
-
-  packet1[21] = checkSum(packet1, 21);
-  packet2[21] = checkSum(packet2, 21);
-
-  while(!canSend(false)) { CUSTOM_DELAY(10); }
-  writePacket(packet1, PACKET_LEN);
-  readPacket();
-
-  while(!canSend(false)) { CUSTOM_DELAY(10); }
-  writePacket(packet2, PACKET_LEN);
-  readPacket();
-
-  return true;
+  return hpState.getFunctions();
 }

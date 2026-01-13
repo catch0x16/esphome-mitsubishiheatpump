@@ -38,6 +38,8 @@ namespace devicestate {
 
             heatpumpStatus getCurrentStatus();
 
+            heatpumpFunctions getFunctions();
+
             heatpumpRunStates getCurrentRunStates();
             wantedHeatpumpRunStates getWantedRunStates();
 

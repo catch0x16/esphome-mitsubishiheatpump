@@ -108,7 +108,7 @@ namespace devicestate {
 
     // Read Protocol
 
-    void CN105Protocol::parseSettings(uint8_t* packet, CN105State &hpState) {
+    void CN105Protocol::parseSettings0x02(uint8_t* packet, CN105State &hpState) {
         heatpumpSettings receivedSettings;
               
         receivedSettings.power = lookupByteMapValue(POWER_MAP, POWER, 2, packet[3]);
@@ -133,6 +133,77 @@ namespace devicestate {
         hpState.setCurrentSettings(receivedSettings);
     }
 
+    void CN105Protocol::parseStatus0x03(uint8_t* packet, CN105State& hpState) {
+        //ESP_LOGD("Decoder", "[0x03 room temperature]");
+        //this->last_received_packet_sensor->publish_state("0x62-> 0x03: Data -> Room temperature");
+        //                 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+        // FC 62 01 30 10 03 00 00 0E 00 94 B0 B0 FE 42 00 01 0A 64 00 00 A9
+        //                         RT    OT RT SP ?? ?? ?? RM RM RM
+        // FC 62 01 30 10 03 00 00 0B 00 94 AB 00 00 00 00 00 00 00 00 00 10 
+        // RT = room temperature (in old format and in new format)
+        // OT = outside air temperature
+        // SP = room setpoint temperature?
+        // RM = indoor unit operating time in minutes
+
+        heatpumpStatus receivedStatus;
+        if(packet[6] != 0x00) {
+            int temp = packet[6];
+            temp -= 128;
+            receivedStatus.roomTemperature = (float)temp / 2;
+        } else {
+            receivedStatus.roomTemperature = lookupByteMapValue(ROOM_TEMP_MAP, ROOM_TEMP, 32, packet[3]);
+        }
+
+        receivedStatus.runtimeHours = float((packet[11] << 16) | (packet[12] << 8) | packet[13]) / 60;
+
+        hpState.setRoomTemperature(receivedStatus.roomTemperature);
+        hpState.setRuntimeHours(receivedStatus.runtimeHours);
+    }
+
+    void CN105Protocol::parseTimers0x05(uint8_t* packet, CN105State& hpState) {
+        heatpumpTimers receivedTimers;
+        receivedTimers.mode                = lookupByteMapValue(TIMER_MODE_MAP, TIMER_MODE, 4, packet[3]);
+        receivedTimers.onMinutesSet        = packet[4] * TIMER_INCREMENT_MINUTES;
+        receivedTimers.onMinutesRemaining  = packet[6] * TIMER_INCREMENT_MINUTES;
+        receivedTimers.offMinutesSet       = packet[5] * TIMER_INCREMENT_MINUTES;
+        receivedTimers.offMinutesRemaining = packet[7] * TIMER_INCREMENT_MINUTES;
+
+        hpState.setTimers(receivedTimers);
+    }
+
+    void CN105Protocol::parseStatus0x06(uint8_t* packet, CN105State& hpState) {
+        //FC 62 01 30 10 06 00 00 1A 01 00 00 00 00 00 00 00 00 00 00 00 3C
+        //MSZ-RW25VGHZ-SC1 / MUZ-RW25VGHZ-SC1
+        //FC 62 01 30 10 06 00 00 00 01 00 08 05 50 00 00 42 00 00 00 00 B7
+        //                           OP IP IP EU EU       ??
+        //FC 62 01 30 10 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 57
+        // OP = operating status (1 = compressor running, 0 = standby)
+        // IP = Current input power in Watts (16-bit decimal)
+        // EU = energy usage
+        //      (used energy in kWh = value/10)
+        //      TODO: Currently the maximum size of the counter is not known and
+        //            if the counter extends to other bytes.
+        // ?? = unknown bytes that appear to have a fixed/constant value
+
+        heatpumpStatus receivedStatus;
+        receivedStatus.operating = packet[4];
+        receivedStatus.compressorFrequency = packet[3];
+        receivedStatus.inputPower = (packet[5] << 8) | packet[6];
+        receivedStatus.kWh = float((packet[7] << 8) | packet[8]) / 10.0;
+
+        hpState.setOperating(receivedStatus.operating);
+        hpState.setCompressorFrequency(receivedStatus.compressorFrequency);
+        hpState.setInputPower(receivedStatus.inputPower);
+        hpState.setKWh(receivedStatus.kWh);
+    }
+    
+    void CN105Protocol::parseFunctions0x20(uint8_t* packet, CN105State& hpState) {
+        hpState.getFunctions().setData1(&packet[1]);
+    }
+
+    void CN105Protocol::parseFunctions0x22(uint8_t* packet, CN105State& hpState) {
+        hpState.getFunctions().setData2(&packet[1]);
+    }
     // Read Protocol
 
 }

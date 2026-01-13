@@ -20,7 +20,12 @@ namespace devicestate {
             // Write Protocol
 
             // Read Protocol
-            void parseSettings(uint8_t* packet, CN105State& hpState);
+            void parseSettings0x02(uint8_t* packet, CN105State& hpState);
+            void parseStatus0x03(uint8_t* packet, CN105State& hpState);
+            void parseTimers0x05(uint8_t* packet, CN105State& hpState);
+            void parseStatus0x06(uint8_t* packet, CN105State& hpState);
+            void parseFunctions0x20(uint8_t* packet, CN105State& hpState);
+            void parseFunctions0x22(uint8_t* packet, CN105State& hpState);
             // Read Protocol
 
     };
