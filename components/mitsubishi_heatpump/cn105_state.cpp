@@ -54,6 +54,10 @@ namespace devicestate {
         this->currentSettings = currentSettings;
     }
 
+    heatpumpStatus CN105State::getCurrentStatus() {
+        return currentStatus;
+    }
+
     wantedHeatpumpSettings CN105State::getWantedSettings() {
         return wantedSettings;
     }
@@ -223,6 +227,38 @@ namespace devicestate {
             temperature = setting < 10 ? 10 : (setting > 31 ? 31 : setting);
         }
         wantedSettings.temperature = temperature;
+    }
+
+    void CN105State::setRoomTemperature(float value) {
+        currentStatus.roomTemperature = value;
+    }
+
+    void CN105State::setRuntimeHours(float value) {
+        currentStatus.runtimeHours = value;
+    }
+
+    heatpumpTimers CN105State::getTimers() {
+        return currentStatus.timers;
+    }
+
+    void CN105State::setTimers(heatpumpTimers value) {
+        currentStatus.timers = value;
+    }
+
+    void CN105State::setOperating(bool value) {
+        currentStatus.operating = value;
+    }
+
+    void CN105State::setCompressorFrequency(float value) {
+        currentStatus.compressorFrequency = value;
+    }
+
+    void CN105State::setInputPower(float value) {
+        currentStatus.inputPower = value;
+    }
+
+    void CN105State::setKWh(float value) {
+        currentStatus.kWh = value;
     }
 
 }

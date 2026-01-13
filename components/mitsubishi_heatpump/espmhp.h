@@ -29,7 +29,6 @@ using namespace devicestate;
 
 #include "HeatPump.h"
 #include "cycle_management.h"
-#include "request_scheduler.h"
 #include "logging.h"
 
 #ifndef ESPMHP_H
@@ -241,8 +240,7 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         cycleManagement loopCycle{};
         uint32_t update_interval_;
 
-         RequestScheduler scheduler_;
-         void terminateCycle();
+        void terminateCycle();
 
         /// The current temperature of the climate device, as reported from the integration.
         float remote_temperature{NAN};

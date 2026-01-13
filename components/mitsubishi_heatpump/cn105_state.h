@@ -13,6 +13,9 @@ namespace devicestate {
             heatpumpSettings currentSettings{};
             wantedHeatpumpSettings wantedSettings{};
 
+            // initialise to all off, then it will update shortly after connect;
+            heatpumpStatus currentStatus{ 0, 0, false, {TIMER_MODE_MAP[0], 0, 0, 0, 0}, 0, 0, 0, 0 };
+
             heatpumpFunctions functions;
 
             heatpumpRunStates currentRunStates{};
@@ -31,9 +34,11 @@ namespace devicestate {
 
             heatpumpSettings getCurrentSettings();
             void setCurrentSettings(heatpumpSettings currentSettings);
-            heatpumpRunStates getCurrentRunStates();
-
             wantedHeatpumpSettings getWantedSettings();
+
+            heatpumpStatus getCurrentStatus();
+
+            heatpumpRunStates getCurrentRunStates();
             wantedHeatpumpRunStates getWantedRunStates();
 
             bool isUpdated();
@@ -66,6 +71,17 @@ namespace devicestate {
             void setAirflowControlSetting(const char* setting);
             void setFanSpeed(const char* setting);
             void setTemperatureSetting(float setting);
+
+            void setRoomTemperature(float value);
+            void setRuntimeHours(float value);
+
+            heatpumpTimers getTimers();
+            void setTimers(heatpumpTimers value);
+
+            void setOperating(bool value);
+            void setCompressorFrequency(float value);
+            void setInputPower(float value);
+            void setKWh(float value);
     };
 
 }

@@ -17,7 +17,6 @@ namespace devicestate {
 
     DeviceStateManager::DeviceStateManager(
       ConnectionMetadata connectionMetadata,
-      RequestScheduler scheduler,
       const float minTemp,
       const float maxTemp,
       esphome::binary_sensor::BinarySensor* internal_power_on,
@@ -31,7 +30,7 @@ namespace devicestate {
       esphome::sensor::Sensor* device_status_kwh,
       esphome::sensor::Sensor* device_status_runtime_hours,
       esphome::sensor::Sensor* pid_set_point_correction
-    ) : scheduler{scheduler} {
+    ) {
         this->connectionMetadata = connectionMetadata;
 
         this->minTemp = minTemp;
@@ -56,7 +55,7 @@ namespace devicestate {
         IIODevice* io_device = new UARTIODevice(
             connectionMetadata.hardwareSerial
         );
-        this->hp = new HeatPump(io_device, scheduler);
+        this->hp = new HeatPump(io_device);
 
         #ifdef USE_CALLBACKS
             std::function<void()> settingsChanged = [this]() {

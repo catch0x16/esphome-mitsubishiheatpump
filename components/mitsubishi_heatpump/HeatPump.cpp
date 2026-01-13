@@ -24,9 +24,8 @@ static const char* TAG = "HeatPump"; // Logging tag
 
 // Constructor /////////////////////////////////////////////////////////////////
 
-HeatPump::HeatPump(devicestate::IIODevice* io_device, RequestScheduler scheduler) :
+HeatPump::HeatPump(devicestate::IIODevice* io_device) :
     io_device_{io_device},
-    scheduler{scheduler},
     hpState{},
     hpProtocol{} {
 
@@ -35,11 +34,9 @@ HeatPump::HeatPump(devicestate::IIODevice* io_device, RequestScheduler scheduler
   infoMode = 0;
   lastRecv = CUSTOM_MILLIS - (PACKET_SENT_INTERVAL_MS * 10);
   firstRun = true;
-  //tempMode = false;
   waitForRead = false;
   autoUpdate = true;
   externalUpdate = true;
-  //wideVaneAdj = false;
   functions = heatpumpFunctions();
 }
 
@@ -78,25 +75,6 @@ uint8_t HeatPump::translatePacket(int packetType) {
     }
     return code;
 }
-
-/*
-void HeatPump::buildAndSendRequestPacket(int packetType) {
-    // Legacy path kept temporarily if some callsites still pass packetType indices.
-    // Map legacy indices to real codes and delegate to buildAndSendInfoPacket.
-    uint8_t code = 0x02; // default to settings
-    switch (packetType) {
-    case 0: code = 0x02; break; // RQST_PKT_SETTINGS
-    case 1: code = 0x03; break; // RQST_PKT_ROOM_TEMP
-    case 2: code = 0x04; break; // RQST_PKT_UNKNOWN
-    case 3: code = 0x05; break; // RQST_PKT_TIMERS
-    case 4: code = 0x06; break; // RQST_PKT_STATUS
-    case 5: code = 0x09; break; // RQST_PKT_STANDBY
-    case 6: code = 0x42; break; // RQST_PKT_HVAC_OPTIONS
-    default: code = 0x02; break;
-    }
-    this->buildAndSendInfoPacket(code);
-}
-*/
 
 void HeatPump::buildAndSendInfoPacket(uint8_t code) {
     uint8_t packet[PACKET_LEN] = {};
@@ -344,30 +322,12 @@ int HeatPump::readPacket() {
         if(header[1] == 0x62) {
           switch(data[0]) {
             case 0x02: { // setting information
-              heatpumpSettings receivedSettings;
-              receivedSettings.power       = lookupByteMapValue(POWER_MAP, POWER, 2, data[3]);
-              receivedSettings.iSee = data[4] > 0x08 ? true : false;
-              receivedSettings.mode = lookupByteMapValue(MODE_MAP, MODE, 5, receivedSettings.iSee  ? (data[4] - 0x08) : data[4]);
+              heatpumpSettings oldSettings = hpState.getCurrentSettings();
 
-              if(data[11] != 0x00) {
-                int temp = data[11];
-                temp -= 128;
-                receivedSettings.temperature = (float)temp / 2;
-                hpState.setTempMode(true);
-              } else {
-                receivedSettings.temperature = lookupByteMapValue(TEMP_MAP, TEMP, 16, data[5]);
-              }
-
-              receivedSettings.fan         = lookupByteMapValue(FAN_MAP, FAN, 6, data[6]);
-              receivedSettings.vane        = lookupByteMapValue(VANE_MAP, VANE, 7, data[7]);
-              receivedSettings.wideVane    = lookupByteMapValue(WIDEVANE_MAP, WIDEVANE, 7, data[10] & 0x0F);
-              hpState.setWideVaneAdj((data[10] & 0xF0) == 0x80 ? true : false);
+              hpProtocol.parseSettings(data, hpState);
               
-              if(settingsChangedCallback && hpState.getCurrentSettings() != receivedSettings) {
-                hpState.setCurrentSettings(receivedSettings);
+              if(settingsChangedCallback && oldSettings != hpState.getCurrentSettings()) {
                 settingsChangedCallback();
-              } else {
-                hpState.setCurrentSettings(receivedSettings);
               }
 
               // if this is the first time we have synced with the heatpump, set wantedSettings to receivedSettings
@@ -403,10 +363,10 @@ int HeatPump::readPacket() {
 
               receivedStatus.runtimeHours = float((data[11] << 16) | (data[12] << 8) | data[13]) / 60;
 
-              currentStatus.roomTemperature = receivedStatus.roomTemperature;
-              currentStatus.runtimeHours = receivedStatus.runtimeHours;
+              hpState.setRoomTemperature(receivedStatus.roomTemperature);
+              hpState.setRuntimeHours(receivedStatus.runtimeHours);
               if((statusChangedCallback)) {
-                  statusChangedCallback(currentStatus);
+                  statusChangedCallback(hpState.getCurrentStatus());
               }
 
               return RCVD_PKT_ROOM_TEMP;
@@ -425,11 +385,11 @@ int HeatPump::readPacket() {
               receivedTimers.offMinutesRemaining = data[7] * TIMER_INCREMENT_MINUTES;
 
               // callback for status change
-              if(statusChangedCallback && currentStatus.timers != receivedTimers) {
-                currentStatus.timers = receivedTimers;
-                statusChangedCallback(currentStatus);
+              if(statusChangedCallback && hpState.getTimers() != receivedTimers) {
+                hpState.setTimers(receivedTimers);
+                statusChangedCallback(hpState.getCurrentStatus());
               } else {
-                currentStatus.timers = receivedTimers;
+                hpState.setTimers(receivedTimers);
               }
 
               return RCVD_PKT_TIMER;
@@ -455,13 +415,14 @@ int HeatPump::readPacket() {
               receivedStatus.inputPower = (data[5] << 8) | data[6];
               receivedStatus.kWh = float((data[7] << 8) | data[8]) / 10.0;
 
-              currentStatus.operating = receivedStatus.operating;
-              currentStatus.compressorFrequency = receivedStatus.compressorFrequency;
-              currentStatus.inputPower = receivedStatus.inputPower;
-              currentStatus.kWh = receivedStatus.kWh;
+              hpState.setOperating(receivedStatus.operating);
+              hpState.setCompressorFrequency(receivedStatus.compressorFrequency);
+              hpState.setInputPower(receivedStatus.inputPower);
+              hpState.setKWh(receivedStatus.kWh);
+
               // callback for status change -- not triggered for compressor frequency at the moment
               if(statusChangedCallback) {
-                statusChangedCallback(currentStatus);
+                statusChangedCallback(hpState.getCurrentStatus());
               }
 
               return RCVD_PKT_STATUS;
@@ -516,11 +477,11 @@ heatpumpFunctions HeatPump::getFunctions() {
   byte packet1[PACKET_LEN] = {};
   byte packet2[PACKET_LEN] = {};
 
-  prepareInfoPacket(packet1, PACKET_LEN);
+  hpProtocol.prepareInfoPacket(packet1, PACKET_LEN);
   packet1[5] = FUNCTIONS_GET_PART1;
   packet1[21] = checkSum(packet1, 21);
 
-  prepareInfoPacket(packet2, PACKET_LEN);
+  hpProtocol.prepareInfoPacket(packet2, PACKET_LEN);
   packet2[5] = FUNCTIONS_GET_PART2;
   packet2[21] = checkSum(packet2, 21);
   

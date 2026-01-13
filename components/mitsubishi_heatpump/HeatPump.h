@@ -50,7 +50,6 @@ class HeatPump
 {
   private:
     CN105Protocol hpProtocol;
-    RequestScheduler scheduler;
 
     static const int PACKET_SENT_INTERVAL_MS = 1000;
     static const int PACKET_INFO_INTERVAL_MS = 2000;
@@ -87,7 +86,6 @@ class HeatPump
     int readPacket();
     void readAllPackets();
     void writePacket(byte *packet, int length);
-    void prepareInfoPacket(byte* packet, int length);
 
     // callbacks
     ON_CONNECT_CALLBACK_SIGNATURE {nullptr};
@@ -99,7 +97,7 @@ class HeatPump
     devicestate::IIODevice* io_device_;
 
     // general
-    HeatPump(devicestate::IIODevice* io_device, RequestScheduler scheduler);
+    HeatPump(devicestate::IIODevice* io_device);
 
     bool connect();
     bool update();

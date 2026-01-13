@@ -39,6 +39,14 @@ namespace devicestate {
         packet[21] = chkSum;
     }
 
+    void CN105Protocol::prepareInfoPacket(byte* packet, int length) {
+        memset(packet, 0, length * sizeof(byte));
+        
+        for (int i = 0; i < INFOHEADER_LEN && i < length; i++) {
+            packet[i] = INFOHEADER[i];
+        }  
+    }
+
     void CN105Protocol::createPacket(uint8_t* packet, CN105State& hpState) {
         prepareSetPacket(packet, PACKET_LEN);
 
@@ -97,5 +105,34 @@ namespace devicestate {
     }
 
     // Write Protocol
+
+    // Read Protocol
+
+    void CN105Protocol::parseSettings(uint8_t* packet, CN105State &hpState) {
+        heatpumpSettings receivedSettings;
+              
+        receivedSettings.power = lookupByteMapValue(POWER_MAP, POWER, 2, packet[3]);
+        receivedSettings.iSee = packet[4] > 0x08 ? true : false;
+        receivedSettings.mode = lookupByteMapValue(MODE_MAP, MODE, 5, receivedSettings.iSee  ? (packet[4] - 0x08) : packet[4]);
+
+        if(packet[11] != 0x00) {
+            int temp = packet[11];
+            temp -= 128;
+            receivedSettings.temperature = (float)temp / 2;
+            hpState.setTempMode(true);
+        } else {
+            receivedSettings.temperature = lookupByteMapValue(TEMP_MAP, TEMP, 16, packet[5]);
+        }
+
+        receivedSettings.fan         = lookupByteMapValue(FAN_MAP, FAN, 6, packet[6]);
+        receivedSettings.vane        = lookupByteMapValue(VANE_MAP, VANE, 7, packet[7]);
+        receivedSettings.wideVane    = lookupByteMapValue(WIDEVANE_MAP, WIDEVANE, 7, packet[10] & 0x0F);
+
+        hpState.setWideVaneAdj((packet[10] & 0xF0) == 0x80 ? true : false);
+
+        hpState.setCurrentSettings(receivedSettings);
+    }
+
+    // Read Protocol
 
 }

@@ -44,24 +44,7 @@ static const char* TAG = "MitsubishiHeatPump"; // Logging tag
 MitsubishiHeatPump::MitsubishiHeatPump(
         uart::UARTComponent* hw_serial,
         uint32_t poll_interval
-) : hw_serial_{hw_serial},
-    scheduler_(
-            // send_callback: envoie un paquet via buildAndSendInfoPacket
-            [this](uint8_t code) {
-                ESP_LOGI(TAG, "scheduled code: %d", code);
-                this->dsm->hp->buildAndSendInfoPacket(code);
-            },
-            // timeout_callback: utilise set_timeout de Component
-            [this](const std::string& name, uint32_t timeout_ms, std::function<void()> callback) {
-                ESP_LOGI(TAG, "timeout set: %s for %d ms", name.c_str(), timeout_ms);
-                //this->set_timeout(name.c_str(), timeout_ms, std::move(callback));
-            },
-            // terminate_callback: termine le cycle
-            [this]() {
-                ESP_LOGI(TAG, "terminate cycle");
-                this->terminateCycle();
-            }
-        ) {
+) : hw_serial_{hw_serial} {
 
     this->traits_.add_feature_flags(
         climate::CLIMATE_SUPPORTS_ACTION |
@@ -97,14 +80,6 @@ void MitsubishiHeatPump::terminateCycle() {
     //}
 
     this->loopCycle.cycleEnded();
-
-    //if (this->hp_uptime_connection_sensor_ != nullptr) {
-        // if the uptime connection sensor is configured
-        // we trigger  manual update at the end of a cycle.
-    //    this->hp_uptime_connection_sensor_->update();
-    //}
-
-    //this->nbCompleteCycles_++;
 }
 
 void MitsubishiHeatPump::banner() {
@@ -145,8 +120,7 @@ void MitsubishiHeatPump::loop() {
             // /this->buildAndSendRequestsInfoPackets();            // initiate an update cycle with this->cycleStarted();
             this->loopCycle.cycleStarted();
             this->update();
-            
-            this->scheduler_.send_next_after(0x00); // This will call terminate cycle when complete
+            this->loopCycle.cycleEnded();
         }
     }
     //}
@@ -803,7 +777,6 @@ void MitsubishiHeatPump::setup() {
     ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
     this->dsm = new devicestate::DeviceStateManager(
         connectionMetadata,
-        scheduler_,
         this->min_temp,
         this->max_temp,
         this->internal_power_on,
