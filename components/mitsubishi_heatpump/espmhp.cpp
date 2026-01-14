@@ -22,6 +22,10 @@
 using namespace esphome;
 
 #include "devicestatemanager.h"
+#include "cn105_connection.h"
+#include "cn105_state.h"
+#include "io_device.h"
+#include "uart_io_device.h"
 using namespace devicestate;
 
 #include "hysterisis_workflowstep.h"
@@ -31,11 +35,6 @@ using namespace workflow::hysterisis;
 using namespace workflow::pid;
 
 #include "floats.h"
-
-#include "cn105_connection.h"
-#include "cn105_state.h"
-#include "io_device.h"
-#include "uart_io_device.h"
 
 static const char* TAG = "MitsubishiHeatPump"; // Logging tag
 
@@ -93,10 +92,12 @@ void MitsubishiHeatPump::banner() {
 }
 
 /**
- * @brief Executes the main loop for the CN105Climate component.
+ * @brief Executes the main loop for the MitsubishiHeatPump component.
  * This function is called repeatedly in the main program loop.
  */
 void MitsubishiHeatPump::loop() {
+    this->hpControlFlow_->loop(loopCycle);
+    /*
     // This will be called every "update_interval" milliseconds.
     this->dsm->update(loopCycle);
     if (!this->dsm->isInitialized()) {
@@ -112,6 +113,7 @@ void MitsubishiHeatPump::loop() {
     }
 
     this->dsm->publish();
+    */
 }
 
 void MitsubishiHeatPump::set_baud_rate(int baud) {
@@ -751,17 +753,33 @@ void MitsubishiHeatPump::setup() {
         this->set_timeout(name.c_str(), timeout_ms, std::move(callback));
     };
 
+    auto retryCallback = [this](const std::string& name, uint32_t initial_wait_time, uint8_t max_attempts, std::function<esphome::RetryResult(uint8_t)> callback) {
+        this->set_retry(name.c_str(), initial_wait_time, max_attempts, std::move(callback), 1.2f);
+    };
+
+    auto terminateCallback = [this]() {
+        this->terminateCycle();
+    };
+
     CN105Connection* hpConnection = new CN105Connection(
         io_device,
         timeoutCallback,
         this->get_update_interval()
     );
     CN105State* hpState = new CN105State();
+    this->hpControlFlow_ = new CN105ControlFlow(
+        hpConnection,
+        hpState,
+        timeoutCallback,
+        nullptr,
+        nullptr
+    );
+
+    this->hpControlFlow_->registerInfoRequests();
 
     ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
     this->dsm = new devicestate::DeviceStateManager(
         io_device,
-        hpConnection,
         hpState,
         this->min_temp,
         this->max_temp,
@@ -779,7 +797,7 @@ void MitsubishiHeatPump::setup() {
     );
 
     ESP_LOGCONFIG(TAG, "Calling dsm->initialize()");
-    this->dsm->initialize();
+    //this->dsm->initialize();
 
     // create various setpoint persistence:
     cool_storage = global_preferences->make_preference<uint8_t>(this->get_object_id_hash() + 1);

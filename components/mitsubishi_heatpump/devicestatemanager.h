@@ -4,7 +4,6 @@
 #include "devicestate_types.h"
 
 #include "HeatPump.h"
-#include "cn105_controlflow.h"
 #include "cn105_state.h"
 
 #include "cycle_management.h"
@@ -15,7 +14,6 @@
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/sensor/sensor.h"
 
-
 #ifndef DEVICESTATE_H
 #define DEVICESTATE_H
 
@@ -25,9 +23,7 @@ namespace devicestate {
 
   class DeviceStateManager : public IDeviceStateManager {
     private:
-      CN105Connection* hpConnection;
       CN105State* hpState;
-      CN105ControlFlow* hpControlFlow;
 
       float minTemp;
       float maxTemp;
@@ -77,7 +73,6 @@ namespace devicestate {
     public:
       DeviceStateManager(
         IIODevice* io_device,
-        CN105Connection* hpConnection,
         CN105State* hpState,
         const float minTemp,
         const float maxTemp,

@@ -1,6 +1,9 @@
 #include "cn105_connection.h"
 
 #include "esphome.h"
+#ifdef USE_WIFI
+#include "esphome/components/wifi/wifi_component.h"
+#endif
 #include "logging.h"
 
 #include "cn105_utils.h"
@@ -12,7 +15,10 @@ namespace devicestate {
 
     static const char* TAG = "CN105Connection"; // Logging tag
 
-    CN105Connection::CN105Connection(IIODevice* io_device, TimeoutCallback timeoutCallback, int update_interval) :
+    CN105Connection::CN105Connection(
+            IIODevice* io_device,
+            TimeoutCallback timeoutCallback,
+            int update_interval) :
         io_device_{io_device},
         timeoutCallback_{timeoutCallback},
         update_interval_{update_interval} {
@@ -30,15 +36,15 @@ namespace devicestate {
             this->conn_timeout_armed_ = true;
             timeoutCallback_("cn105_bootstrap_timeout", 120000, [this]() {
                 if (this->conn_bootstrap_started_) return;
-                ESP_LOGW(LOG_CONN_TAG, "Bootstrap connexion: timeout 120s, démarrage CN105 malgré tout");
-                this->conn_bootstrap_started_ = true;
-                this->setupUART();
-                this->sendFirstConnectionPacket();
+                    ESP_LOGW(LOG_CONN_TAG, "Bootstrap connexion: timeout 120s, démarrage CN105 malgré tout");
+                    this->conn_bootstrap_started_ = true;
+                    this->setupUART();
+                    this->sendFirstConnectionPacket();
                 });
         }
 
     #ifdef USE_WIFI
-        if (wifi::global_wifi_component != nullptr && !wifi::global_wifi_component->is_connected()) {
+        if (esphome::wifi::global_wifi_component != nullptr && !esphome::wifi::global_wifi_component->is_connected()) {
             if (!this->conn_wait_logged_) {
                 this->conn_wait_logged_ = true;
                 ESP_LOGI(LOG_CONN_TAG, "Bootstrap connexion: attente WiFi avant init UART/CONNECT");
@@ -64,6 +70,20 @@ namespace devicestate {
         this->sendFirstConnectionPacket();
     }
 
+    bool CN105Connection::ensureActiveConnection() {
+        if (this->isConnectionActive() && this->isConnected()) {
+            if (CUSTOM_MILLIS - this->lastSend > 300) {        // we don't want to send too many packets
+                //this->cycleEnded();   // only if we let the cycle be interrupted to send wented settings
+                return true;
+            } else {
+                ESP_LOGD(TAG, "will send later because we've sent one too recently...");
+            }
+        } else {
+            this->reconnectIfConnectionLost();
+        }
+        return false;
+    }
+
     void CN105Connection::reconnectIfConnectionLost() {
         long reconnectTimeMs = CUSTOM_MILLIS - this->lastReconnectTimeMs;
 
@@ -71,7 +91,7 @@ namespace devicestate {
             return;
         }
 
-        if (!this->isHeatpumpConnectionActive()) {
+        if (!this->isConnectionActive()) {
             long connectTimeMs = CUSTOM_MILLIS - this->lastConnectRqTimeMs;
             if (connectTimeMs > this->update_interval_) {
                 long lrTimeMs = CUSTOM_MILLIS - this->lastResponseMs;
@@ -94,7 +114,7 @@ namespace devicestate {
     }
 
     bool CN105Connection::checkSum() {
-        // TODO: use the CN105Climate::checkSum(byte bytes[], int len) function
+        // TODO: use the CN105Connection::checkSum(byte bytes[], int len) function
 
         uint8_t packetCheckSum = storedInputData[this->bytesRead];
         uint8_t processedCS = 0;
@@ -192,7 +212,7 @@ namespace devicestate {
         }
     }
 
-    bool CN105Connection::isHeatpumpConnectionActive() {
+    bool CN105Connection::isConnectionActive() {
         long lrTimeMs = CUSTOM_MILLIS - this->lastResponseMs;
 
         // if (lrTimeMs > MAX_DELAY_RESPONSE_FACTOR * this->update_interval_) {
@@ -217,7 +237,7 @@ namespace devicestate {
 
     void CN105Connection::writePacket(uint8_t* packet, int length, bool checkIsActive) {
         if ((this->isUARTConnected_) &&
-            (this->isHeatpumpConnectionActive() || (!checkIsActive))) {
+            (this->isConnectionActive() || (!checkIsActive))) {
 
             ESP_LOGD(TAG, "writing packet...");
             hpPacketDebug(packet, length, "WRITE");

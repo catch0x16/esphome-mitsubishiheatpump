@@ -14,7 +14,6 @@ namespace devicestate {
 
     DeviceStateManager::DeviceStateManager(
       IIODevice* io_device,
-      CN105Connection* hpConnection,
       CN105State* hpState,
       const float minTemp,
       const float maxTemp,
@@ -30,14 +29,7 @@ namespace devicestate {
       esphome::sensor::Sensor* device_status_runtime_hours,
       esphome::sensor::Sensor* pid_set_point_correction
     ) {
-        this->hpConnection = hpConnection;
         this->hpState = hpState;
-        this->hpControlFlow = new CN105ControlFlow(
-            hpConnection,
-            hpState,
-            nullptr,
-            nullptr
-        );
 
         this->minTemp = minTemp;
         this->maxTemp = maxTemp;

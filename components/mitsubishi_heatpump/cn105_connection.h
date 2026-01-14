@@ -1,7 +1,9 @@
 #pragma once
 
-#include "cn105_types.h"
 #include <functional>
+
+#include "cn105_types.h"
+#include "cn105_state.h"
 
 #include "io_device.h"
 
@@ -15,14 +17,19 @@ namespace devicestate {
             using ConnectedCallback = std::function<void()>;
             using PacketCallback = std::function<void(const uint8_t* packet, const int dataLength)>;
 
-            CN105Connection(IIODevice* io_device, TimeoutCallback timeoutCallback, int update_interval_);
+            CN105Connection(
+                IIODevice* io_device,
+                TimeoutCallback timeoutCallback,
+                int update_interval_);
 
             bool isConnected();
 
             void ensureConnection();
+            bool ensureActiveConnection();
             void reconnectIfConnectionLost();
 
             void writePacket(uint8_t* packet, int length, bool checkIsActive = true);
+
             bool processInput(ConnectedCallback connectedCallback, PacketCallback packetCallback);
 
         private:
@@ -60,6 +67,8 @@ namespace devicestate {
             unsigned long lastReconnectTimeMs;
             unsigned long lastResponseMs;
 
+            bool isConnectionActive();
+
             void initBytePointer();
             bool checkSum();
             void checkHeader(uint8_t inputData);
@@ -68,8 +77,6 @@ namespace devicestate {
             void reconnectUART();
             //void force_low_level_uart_reinit();
             void sendFirstConnectionPacket();
-
-            bool isHeatpumpConnectionActive();
 
             void try_write_pending_packet();
 

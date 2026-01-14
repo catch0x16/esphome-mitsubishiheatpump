@@ -2,10 +2,34 @@
   "configurations": [
     {
       "name": "ESPHome ESP-IDF",
-      "compileCommands": "${workspaceFolder}/.esphome/build/test-device/.pioenvs/test-device/compile_commands.json",
       "includePath": [
-        "${workspaceFolder}/**",
-        "${workspaceFolder}/.esphome/build/test-device/src"
+        "${workspaceFolder}/components/mitsubishi_heatpump",
+        "${workspaceFolder}/.esphome/build/test-device/src",
+        "${workspaceFolder}/.esphome/build/test-device/src/esphome/components/mitsubishi_heatpump",
+        "${workspaceFolder}/.esphome/build/test-device/.pioenvs/test-device/config",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/*/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/freertos/config/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/freertos/config/xtensa/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/freertos/esp_additions/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/esp_common/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/esp_hw_support/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/esp_hw_support/include/soc",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/esp_hw_support/include/soc/esp32",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/newlib/platform_include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/xtensa/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/xtensa/esp32/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/soc/esp32/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/soc/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/esp_rom/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/esp_rom/esp32/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/log/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/hal/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/hal/esp32/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/hal/platform_port/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/driver/include",
+        "${env:HOME}/.platformio/packages/framework-espidf/components/esp_system/include"
       ],
       "defines": [
         "ESP32",
@@ -13,7 +37,8 @@
         "USE_ESP_IDF",
         "USE_ESP32",
         "USE_ESP32_FRAMEWORK_ESP_IDF",
-        "ESPHOME_LOG_LEVEL=ESPHOME_LOG_LEVEL_DEBUG"
+        "ESPHOME_LOG_LEVEL=ESPHOME_LOG_LEVEL_DEBUG",
+        "CONFIG_IDF_TARGET_ESP32=1"
       ],
       "cStandard": "c17",
       "cppStandard": "c++20",

@@ -63,6 +63,7 @@ namespace devicestate {
             float getTemperatureSetting();
             bool getAirPurifierRunState();
             bool getNightModeRunState();
+            
             bool getCirculatorRunState();
 
             void setModeSetting(const char* setting);

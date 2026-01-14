@@ -1,41 +1,69 @@
 #pragma once
 
+#ifdef USE_ESP32
+#include <mutex>
+#endif
+
 #include "io_device.h"
 
 #include "cn105_types.h"
 #include "cn105_state.h"
 #include "cn105_connection.h"
 #include "cn105_protocol.h"
+#include "info_request.h"
 
 #include "cycle_management.h"
 #include "request_scheduler.h"
 
-using namespace devicestate;
+#include "esphome.h"
 
 namespace devicestate {
 
     class CN105ControlFlow {
+        public:
+            using RetryCallback = std::function<void(const std::string&, uint32_t, uint8_t, std::function<esphome::RetryResult(uint8_t)>)>;
+
+            CN105ControlFlow(
+                CN105Connection* connection,
+                CN105State* hpState,
+                RequestScheduler::TimeoutCallback timeoutCallback,
+                RequestScheduler::TerminateCallback terminateCallback,
+                RetryCallback retryCallback
+            );
+
+            void set_debounce_delay(uint32_t delay);
+
+            void loop(cycleManagement& loopCycle);
+            void registerInfoRequests();
+
         private:
             CN105Connection* connection_;
             CN105State* hpState_;
             RequestScheduler scheduler_;
             CN105Protocol hpProtocol;
 
+            RetryCallback retryCallback_;
+
+            uint32_t debounce_delay_;
+
+#ifdef USE_ESP32
+            std::mutex wantedSettingsMutex;
+#else
+            void emulateMutex(const char* retryName, std::function<void()>&& f);
+            volatile bool wantedSettingsMutex = false;
+#endif
+
             bool processInput(CN105State& hpState);
             void buildAndSendInfoPacket(uint8_t code);
             void buildAndSendRequestsInfoPackets(cycleManagement& loopCycle);
             void buildAndSendRequestPacket(int packetType);
-            
 
-        public:
-            CN105ControlFlow(
-                CN105Connection* connection,
-                CN105State* hpState,
-                RequestScheduler::TimeoutCallback timeoutCallback,
-                RequestScheduler::TerminateCallback terminateCallback
-            );
+            void sendWantedSettingsDelegate();
+            bool sendWantedSettings();
+            void checkPendingWantedSettings(cycleManagement& loopCycle);
 
-            void loop(cycleManagement& loopCycle);
+            bool sendWantedRunStates();
+            void checkPendingWantedRunStates(cycleManagement& loopCycle);
     };
 
 }

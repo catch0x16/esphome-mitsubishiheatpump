@@ -15,6 +15,17 @@
  * - ESPHome 1.19.1 or greater
  */
 
+#ifndef ESPMHP_H
+#define ESPMHP_H
+
+#include <chrono>
+
+#include "HeatPump.h"
+#include "cycle_management.h"
+#include "logging.h"
+
+#include "devicestatemanager.h"
+
 #include "esphome.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/select/select.h"
@@ -22,19 +33,12 @@
 #include "esphome/core/preferences.h"
 #include "esphome/components/uart/uart.h"
 
-#include <chrono>
+// Forward declaration to break circular dependency
+namespace devicestate {
+    class CN105ControlFlow;
+}
 
-#include "devicestatemanager.h"
-using namespace devicestate;
-
-#include "HeatPump.h"
-#include "cycle_management.h"
-#include "logging.h"
-
-#ifndef ESPMHP_H
-#define ESPMHP_H
-
-static const char* ESPMHP_VERSION = "2.5.0";
+static const char* ESPMHP_VERSION = "4.5.0";
 
 /* If polling interval is greater than 9 seconds, the HeatPump
 library reconnects, but doesn't then follow up with our data request.*/
@@ -60,6 +64,10 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
             esphome::uart::UARTComponent* hw_serial,
             uint32_t poll_interval=ESPMHP_POLL_INTERVAL_DEFAULT
         );
+
+        float get_setup_priority() const override {
+            return esphome::setup_priority::AFTER_WIFI;  // Configurez ce composant après le WiFi
+        }
 
         esphome::binary_sensor::BinarySensor* internal_power_on;
         esphome::binary_sensor::BinarySensor* device_state_connected;
@@ -239,6 +247,8 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
     private:
         cycleManagement loopCycle{};
         uint32_t update_interval_;
+
+        devicestate::CN105ControlFlow* hpControlFlow_{nullptr};
 
         void terminateCycle();
 

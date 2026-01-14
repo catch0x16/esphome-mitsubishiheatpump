@@ -2,8 +2,6 @@
 
 #include "esphome.h"
 
-using namespace devicestate;
-
 namespace devicestate {
 
     static const char* TAG = "CN105ControlFlow"; // Logging tag
@@ -12,8 +10,10 @@ namespace devicestate {
             CN105Connection* connection,
             CN105State* hpState,
             RequestScheduler::TimeoutCallback timeoutCallback,
-            RequestScheduler::TerminateCallback terminateCallback
+            RequestScheduler::TerminateCallback terminateCallback,
+            RetryCallback retryCallback
         ): connection_{connection},
+            retryCallback_{retryCallback},
             scheduler_(
                 // send_callback: envoie un paquet via buildAndSendInfoPacket
                 [this](uint8_t code) {
@@ -26,6 +26,147 @@ namespace devicestate {
             ),
             hpProtocol{} {
         this->hpState_ = hpState;
+    }
+
+    void CN105ControlFlow::set_debounce_delay(uint32_t delay) {
+        this->debounce_delay_ = delay;
+        //ESP_LOGI(LOG_ACTION_EVT_TAG, "set_debounce_delay is set to %lu", delay);
+        log_info_uint32(LOG_ACTION_EVT_TAG, "set_debounce_delay is set to ", delay);
+    }
+
+#ifndef USE_ESP32
+    /**
+     * This methode emulates the esp32 lock_guard feature with a boolean variable
+     *
+    */
+    void CN105ControlFlow::emulateMutex(const char* retryName, std::function<void()>&& f) {
+        retryCallback_(retryName, 100, 10, [this, f, retryName](uint8_t retry_count) {
+            if (this->wantedSettingsMutex) {
+                if (retry_count < 1) {
+                    ESP_LOGW(retryName, "10 retry calls failed because mutex was locked, forcing unlock...");
+                    this->wantedSettingsMutex = true;
+                    f();
+                    this->wantedSettingsMutex = false;
+                    return esphome::RetryResult::DONE;
+                }
+                ESP_LOGI(retryName, "wantedSettingsMutex is already locked, defferring...");
+                return esphome::RetryResult::RETRY;
+            } else {
+                this->wantedSettingsMutex = true;
+                ESP_LOGD(retryName, "emulateMutex normal behaviour, locking...");
+                f();
+                ESP_LOGD(retryName, "emulateMutex unlocking...");
+                this->wantedSettingsMutex = false;
+                return esphome::RetryResult::DONE;
+            }
+            });
+    }
+#endif
+
+    void CN105ControlFlow::sendWantedSettingsDelegate() {
+        this->hpState_->getWantedSettings().sent();
+        ESP_LOGI(TAG, "sending wantedSettings..");
+        //this->debugSettings("wantedSettings", wantedSettings);
+        // and then we send the update packet
+        uint8_t packet[PACKET_LEN] = {};
+        hpProtocol.createPacket(packet, *this->hpState_);
+        this->connection_->writePacket(packet, PACKET_LEN);
+        hpPacketDebug(packet, 22, "WRITE_SETTINGS");
+
+        //this->publishWantedSettingsStateToHA();
+
+        // as soon as the packet is sent, we reset the settings
+        this->hpState_->getWantedSettings().resetSettings();
+    }
+
+    bool CN105ControlFlow::sendWantedSettings() {
+        if (this->connection_->ensureActiveConnection()) {
+#ifdef USE_ESP32
+                std::lock_guard<std::mutex> guard(wantedSettingsMutex);
+                this->sendWantedSettingsDelegate();
+#else
+                this->emulateMutex("WRITE_SETTINGS", std::bind(&CN105ControlFlow::sendWantedSettingsDelegate, this));
+#endif
+            return true;
+        }
+        return false;
+    }
+
+    void CN105ControlFlow::checkPendingWantedSettings(cycleManagement& loopCycle) {
+        long now = CUSTOM_MILLIS;
+        if (!(this->hpState_->getWantedSettings().hasChanged) || (now - this->hpState_->getWantedSettings().lastChange < this->debounce_delay_)) {
+            return;
+        }
+
+        ESP_LOGI(LOG_ACTION_EVT_TAG, "checkPendingWantedSettings - wanted settings have changed, sending them to the heatpump...");
+
+        if (this->sendWantedSettings()) {
+            // as we've just sent a packet to the heatpump, we let it time for process
+            // this might not be necessary but, we give it a try because of issue #32
+            // https://github.com/echavet/MitsubishiCN105ESPHome/issues/32
+            loopCycle.deferCycle();
+        }
+    }
+
+    bool CN105ControlFlow::sendWantedRunStates() {
+        /*
+        uint8_t packet[PACKET_LEN] = {};
+
+        hpProtocol.prepareSetPacket(packet, PACKET_LEN);
+
+        packet[5] = 0x08;
+        if (hpState.getWantedRunStates().airflow_control != nullptr) {
+            ESP_LOGD(TAG, "airflow control -> %s", getAirflowControlSetting());
+            packet[11] = AIRFLOW_CONTROL[lookupByteMapIndex(AIRFLOW_CONTROL_MAP, 3, getAirflowControlSetting(), "run state (write)")];
+            packet[6] += RUN_STATE_PACKET_1[4];
+        }
+        if (hpState.getWantedRunStates().air_purifier > -1) {
+            if (getAirPurifierRunState() != currentRunStates.air_purifier) {
+                ESP_LOGI(TAG, "air purifier switch state -> %s", getAirPurifierRunState() ? "ON" : "OFF");
+                packet[17] = getAirPurifierRunState() ? 0x01 : 0x00;
+                packet[7] += RUN_STATE_PACKET_2[1];
+            }
+        }
+        if (hpState.getWantedRunStates().night_mode > -1) {
+            if (getNightModeRunState() != currentRunStates.night_mode) {
+                ESP_LOGI(TAG, "night mode switch state -> %s", this->getNightModeRunState() ? "ON" : "OFF");
+                packet[18] = getNightModeRunState() ? 0x01 : 0x00;
+                packet[7] += RUN_STATE_PACKET_2[2];
+            }
+        }
+        if (hpState.getCirculatorRunState().circulator > -1) {
+            if (hpState.getCirculatorRunState() != currentRunStates.circulator) {
+                ESP_LOGI(TAG, "circulator switch state -> %s", getCirculatorRunState() ? "ON" : "OFF");
+                packet[19] = hpState.getCirculatorRunState() ? 0x01 : 0x00;
+                packet[7] += RUN_STATE_PACKET_2[3];
+            }
+        }
+
+        // Add the checksum
+        uint8_t chkSum = checkSum(packet, 21);
+        packet[21] = chkSum;
+        ESP_LOGD(LOG_SET_RUN_STATE, "Sending set run state package (0x08)");
+        writePacket(packet, PACKET_LEN);
+
+        //this->publishWantedRunStatesStateToHA();
+
+        this->wantedRunStates.resetSettings();
+        */
+        return false;
+    }
+
+    void CN105ControlFlow::checkPendingWantedRunStates(cycleManagement& loopCycle) {
+        long now = CUSTOM_MILLIS;
+        if (!(this->hpState_->getWantedRunStates().hasChanged) || (now - this->hpState_->getWantedRunStates().lastChange < this->debounce_delay_)) {
+            return;
+        }
+        ESP_LOGI(LOG_ACTION_EVT_TAG, "checkPendingWantedRunStates - wanted run states have changed, sending them to the heatpump...");
+        if (this->sendWantedRunStates()) {
+            // as we've just sent a packet to the heatpump, we let it time for process
+            // this might not be necessary but, we give it a try because of issue #32
+            // https://github.com/echavet/MitsubishiCN105ESPHome/issues/32
+            loopCycle.deferCycle();
+        }
     }
 
     void CN105ControlFlow::buildAndSendRequestPacket(int packetType) {
@@ -90,9 +231,9 @@ namespace devicestate {
             }
 
             if ((this->hpState_->getWantedSettings().hasChanged) && (!loopCycle.isCycleRunning())) {
-                //this->checkPendingWantedSettings();
+                this->checkPendingWantedSettings(loopCycle);
             } else if ((this->hpState_->getWantedRunStates().hasChanged) && (!loopCycle.isCycleRunning())) {
-                //this->checkPendingWantedRunStates();
+                this->checkPendingWantedRunStates(loopCycle);
             } else {
                 if (loopCycle.isCycleRunning()) {                         // if we are  running an update cycle
                     loopCycle.checkTimeout();
@@ -103,6 +244,67 @@ namespace devicestate {
                 }
             }
         }
+    }
+
+    void CN105ControlFlow::registerInfoRequests() {
+        scheduler_.clear_requests();
+
+        // 0x02 Settings
+        InfoRequest r_settings("settings", "Settings", 0x02, 3, 0);
+        r_settings.onResponse = [this](CN105State& self) {
+            //(void)self; this->getSettingsFromResponsePacket();
+            ESP_LOGW(TAG, "settings");
+        };
+        scheduler_.register_request(r_settings);
+
+        // 0x03 Room temperature
+        InfoRequest r_room("room_temp", "Room temperature", 0x03, 3, 0);
+        r_room.onResponse = [this](CN105State& self) {
+            //(void)self; this->getRoomTemperatureFromResponsePacket()
+            ESP_LOGW(TAG, "room_temp");
+         };
+        scheduler_.register_request(r_room);
+
+        // 0x06 Status
+        InfoRequest r_status("status", "Status", 0x06, 3, 0);
+        r_status.onResponse = [this](CN105State& self) {
+            //(void)self; this->getOperatingAndCompressorFreqFromResponsePacket();
+            ESP_LOGW(TAG, "status");
+        };
+        scheduler_.register_request(r_status);
+
+        // 0x09 Standby/Power
+        InfoRequest r_power("standby", "Power/Standby", 0x09, 3, 500);
+        r_power.onResponse = [this](CN105State& self) {
+            //(void)self; this->getPowerFromResponsePacket();
+            ESP_LOGW(TAG, "standby");
+        };
+        scheduler_.register_request(r_power);
+
+        // 0x42 HVAC options
+        InfoRequest r_hvac_opts("hvac_options", "HVAC options", 0x42, 3, 500);
+        r_hvac_opts.canSend = [this](const CN105State& self) {
+            (void)self;
+            //return (this->air_purifier_switch_ != nullptr || this->night_mode_switch_ != nullptr || this->circulator_switch_ != nullptr);
+            return false;
+            };
+        r_hvac_opts.onResponse = [this](CN105State& self) {
+            //(void)self; this->getHVACOptionsFromResponsePacket();
+            ESP_LOGW(TAG, "hvac_options");
+        };
+        scheduler_.register_request(r_hvac_opts);
+
+        // Placeholders
+        InfoRequest r_unknown("unknown", "Unknown", 0x04, 1, 0);
+        r_unknown.disabled = true;
+        scheduler_.register_request(r_unknown);
+
+        InfoRequest r_timers("timers", "Timers", 0x05, 1, 0);
+        r_timers.disabled = true;
+        scheduler_.register_request(r_timers);
+
+        // Appel vers la nouvelle méthode dédiée
+        //this->registerHardwareSettingsRequests();
     }
 
 }

@@ -179,6 +179,10 @@ namespace devicestate {
             hasBeenSent = false;
         }
 
+        void sent() {
+            hasBeenSent = true;
+        }
+
         wantedHeatpumpSettings& operator=(const wantedHeatpumpSettings& other) {
             if (this != &other) {
                 heatpumpSettings::operator=(other);
