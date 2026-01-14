@@ -24,24 +24,29 @@ namespace devicestate {
             bool wideVaneAdj;
             bool tempMode;
 
+            void onSettingsChanged();
+
+            bool hasChanged(const char* before, const char* now, const char* field, bool checkNotNull = false);
+
         public:
             CN105State();
 
-            CN105State(
-                heatpumpSettings currentSettings, wantedHeatpumpSettings wantedSettings,
-                heatpumpRunStates currentRunStates, wantedHeatpumpRunStates wantedRunStates,
-                bool wideVaneAdj, bool tempMode);
-
-            heatpumpSettings getCurrentSettings();
+            heatpumpSettings& getCurrentSettings();
             void setCurrentSettings(heatpumpSettings currentSettings);
-            wantedHeatpumpSettings getWantedSettings();
+            void updateCurrentSettings(heatpumpSettings& currentSettings);
+            void resetCurrentSettings();
 
-            heatpumpStatus getCurrentStatus();
+            wantedHeatpumpSettings& getWantedSettings();
+            void resetWantedSettings();
 
-            heatpumpFunctions getFunctions();
+            heatpumpStatus& getCurrentStatus();
+            void updateCurrentStatus(heatpumpStatus& currentStatus);
 
-            heatpumpRunStates getCurrentRunStates();
-            wantedHeatpumpRunStates getWantedRunStates();
+            heatpumpFunctions& getFunctions();
+
+            heatpumpRunStates& getCurrentRunStates();
+            wantedHeatpumpRunStates& getWantedRunStates();
+            void resetCurrentRunStates();
 
             bool isUpdated();
 
@@ -73,7 +78,7 @@ namespace devicestate {
             void setWideVaneSetting(const char* setting);
             void setAirflowControlSetting(const char* setting);
             void setFanSpeed(const char* setting);
-            void setTemperatureSetting(float setting);
+            void setTemperature(float setting);
 
             void setRoomTemperature(float value);
             void setRuntimeHours(float value);

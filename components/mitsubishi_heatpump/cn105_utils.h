@@ -14,4 +14,6 @@ namespace devicestate {
     int lookupByteMapIndex(const char* valuesMap[], int len, const char* lookupValue, const char* debugInfo = "");
     int lookupByteMapIndex(const int valuesMap[], int len, int lookupValue, const char* debugInfo = "");
 
+    const char* getIfNotNull(const char* what, const char* defaultValue);
+
 }

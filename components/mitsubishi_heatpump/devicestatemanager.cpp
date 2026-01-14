@@ -46,31 +46,11 @@ namespace devicestate {
         this->device_status_runtime_hours = device_status_runtime_hours;
         this->pid_set_point_correction = pid_set_point_correction;
 
-        this->disconnected = 0;
-
         ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
-
-        this->hp = new HeatPump(io_device);
-
-        #ifdef USE_CALLBACKS
-            std::function<void()> settingsChanged = [this]() {
-                this->hpSettingsChanged();
-            };
-
-            hp->setSettingsChangedCallback(settingsChanged);
-
-            std::function<void(heatpumpStatus)> statusChanged = [this](heatpumpStatus currentStatus) {
-                this->hpStatusChanged(currentStatus);
-            };
-
-            hp->setStatusChangedCallback(statusChanged);
-
-            hp->setPacketCallback(this->log_packet);
-        #endif
     }
 
     void DeviceStateManager::hpSettingsChanged() {
-        heatpumpSettings currentSettings = hp->getSettings();
+        heatpumpSettings currentSettings = this->hpState->getCurrentSettings();
         ESP_LOGI(TAG, "Heatpump Settings Changed:");
         this->log_heatpump_settings(currentSettings);
 
@@ -128,8 +108,7 @@ namespace devicestate {
         ESP_LOGW(TAG, "Callback hpStatusChanged completed");
     }
 
-    void DeviceStateManager::log_packet(byte* packet, unsigned int length, char* packetDirection) {
-        //String packetHex;
+    void DeviceStateManager::log_packet(uint8_t* packet, unsigned int length, char* packetDirection) {
         std::string packetHex;
         packetHex.reserve(length * 3 + 1); // "FF " par octet
         char textBuf[15];
@@ -145,20 +124,6 @@ namespace devicestate {
         return this->settingsInitialized && this->statusInitialized;
     }
 
-    bool DeviceStateManager::connect() {
-        if (this->hp->connect()) {
-            ESP_LOGW(TAG, "Connect succeeded");
-            this->hp->sync();
-            return true;
-        }
-        ESP_LOGW(TAG, "Connect failed");
-        return false;
-    }
-
-    bool DeviceStateManager::initialize() {
-        return this->connect();
-    }
-
     DeviceStatus DeviceStateManager::getDeviceStatus() {
         return this->deviceStatus;
     }
@@ -167,29 +132,10 @@ namespace devicestate {
         return this->deviceState;
     }
 
-    void DeviceStateManager::update(cycleManagement& loopCycle) {
-        //this->dump_config();
-        this->hp->sync();
-    #ifndef USE_CALLBACKS
+    void DeviceStateManager::update() {
         this->hpSettingsChanged();
-        heatpumpStatus currentStatus = hp->getStatus();
+        heatpumpStatus currentStatus = this->hpState->getCurrentStatus();
         this->hpStatusChanged(currentStatus);
-    #endif
-
-        if (!this->isInitialized()) {
-            return;
-        }
-
-        if (!this->hp->isConnected()) {
-            this->disconnected += 1;
-            ESP_LOGW(TAG, "Device not connected: %d", this->disconnected);
-            if (this->disconnected >= 500) {
-                this->connect();
-                this->disconnected = 0;
-            }
-        } else {
-            this->disconnected = 0;
-        }
     }
 
     bool DeviceStateManager::isInternalPowerOn() {
@@ -219,13 +165,13 @@ namespace devicestate {
     void DeviceStateManager::turnOn(DeviceMode mode) {
         const char* deviceMode = deviceModeToString(mode);
 
-        this->hp->setModeSetting(deviceMode);
-        this->hp->setPowerSetting("ON");
+        this->hpState->setModeSetting(deviceMode);
+        this->hpState->setPowerSetting("ON");
         this->internalPowerOn = true;
     }
 
     void DeviceStateManager::turnOff() {
-        this->hp->setPowerSetting("OFF");
+        this->hpState->setPowerSetting("OFF");
         this->internalPowerOn = false;
     }
 
@@ -249,18 +195,13 @@ namespace devicestate {
         }
 
         const char* deviceMode = deviceModeToString(this->deviceState.mode);
-        this->hp->setModeSetting(deviceMode);
-        this->hp->setPowerSetting("ON");
+        this->hpState->setModeSetting(deviceMode);
+        this->hpState->setPowerSetting("ON");
         this->internalSetCorrectedTemperature(this->getTargetTemperature());
-        if (this->commit()) {
-            this->lastInternalPowerUpdate = end;
-            this->internalPowerOn = true;
-            ESP_LOGW(TAG, "Performed internal turn on!");
-            return true;
-        } else {
-            ESP_LOGW(TAG, "Failed to perform internal turn on!");
-            return false;
-        }
+        // TODO: How to validate?
+        this->lastInternalPowerUpdate = end;
+        this->internalPowerOn = true;
+        return true;
     }
 
     bool DeviceStateManager::internalTurnOff() {
@@ -278,25 +219,14 @@ namespace devicestate {
         }
 
         ESP_LOGW(TAG, "Set power OFF");
-        this->hp->setPowerSetting("OFF");
+        this->hpState->setPowerSetting("OFF");
         ESP_LOGW(TAG, "Commit change");
-        if (this->commit()) {
-            ESP_LOGW(TAG, "Change committed.");
-            this->lastInternalPowerUpdate = end;
-            this->internalPowerOn = false;
-            ESP_LOGW(TAG, "Performed internal turn off!");
-            return true;
-        } else {
-            ESP_LOGW(TAG, "Failed to perform internal turn off!");
-            return false;
-        }
+        this->lastInternalPowerUpdate = end;
+        this->internalPowerOn = false;
+        return true;
     }
 
     bool DeviceStateManager::setFanMode(FanMode mode) {
-        return this->setFanMode(mode, true);
-    }
-
-    bool DeviceStateManager::setFanMode(FanMode mode, bool commit) {
         const char* newMode = fanModeToString(mode);
         if (mode == this->deviceState.fanMode) {
             const char* oldMode = fanModeToString(this->deviceState.fanMode);
@@ -309,25 +239,11 @@ namespace devicestate {
             return false;
         }
 
-        this->hp->setFanSpeed(newMode);
-        if (!commit) {
-            return true;
-        }
-
-        if (this->commit()) {
-            ESP_LOGW(TAG, "Performed set fan mode!");
-            return true;
-        } else {
-            ESP_LOGW(TAG, "Failed to perform set fan mode!");
-            return false;
-        }
+        this->hpState->setFanSpeed(newMode);
+        return true;
     }
 
     bool DeviceStateManager::setVerticalSwingMode(VerticalSwingMode mode) {
-        return this->setVerticalSwingMode(mode, true);
-    }
-
-    bool DeviceStateManager::setVerticalSwingMode(VerticalSwingMode mode, bool commit) {
         const char* newMode = verticalSwingModeToString(mode);
         if (mode == this->deviceState.verticalSwingMode) {
             const char* oldMode = verticalSwingModeToString(this->deviceState.verticalSwingMode);
@@ -340,25 +256,11 @@ namespace devicestate {
             return false;
         }
 
-        this->hp->setVaneSetting(newMode);
-        if (!commit) {
-            return true;
-        }
-
-        if (this->commit()) {
-            ESP_LOGW(TAG, "Performed set vertical swing mode!");
-            return true;
-        } else {
-            ESP_LOGW(TAG, "Failed to perform set vertical swing mode!");
-            return false;
-        }
+        this->hpState->setVaneSetting(newMode);
+        return true;
     }
 
     bool DeviceStateManager::setHorizontalSwingMode(HorizontalSwingMode mode) {
-        return this->setHorizontalSwingMode(mode, true);
-    }
-
-    bool DeviceStateManager::setHorizontalSwingMode(HorizontalSwingMode mode, bool commit) {
         const char* newMode = horizontalSwingModeToString(mode);
         if (mode == this->deviceState.horizontalSwingMode) {
             const char* oldMode = horizontalSwingModeToString(this->deviceState.horizontalSwingMode);
@@ -371,18 +273,8 @@ namespace devicestate {
             return false;
         }
 
-        this->hp->setWideVaneSetting(newMode);
-        if (!commit) {
-            return true;
-        }
-
-        if (this->commit()) {
-            ESP_LOGW(TAG, "Performed set horizontal swing mode!");
-            return true;
-        } else {
-            ESP_LOGW(TAG, "Failed to perform set horizontal swing mode!");
-            return false;
-        }
+        this->hpState->setWideVaneSetting(newMode);
+        return true;
     }
 
     float DeviceStateManager::getCurrentTemperature() {
@@ -437,7 +329,7 @@ namespace devicestate {
 
         const float oldCorrectedTargetTemperature = this->correctedTargetTemperature;
         this->correctedTargetTemperature = adjustedCorrectedTemperature;
-        this->hp->setTemperature(this->correctedTargetTemperature);
+        this->hpState->setTemperature(this->correctedTargetTemperature);
 
         ESP_LOGW(TAG, "internalSetCorrectedTemperature: Adjusted corrected temperature: oldCorrection={%f} newCorrection={%f} roundedNewCorrection={%f} deviceTarget={%f} componentTarget={%f}", oldCorrectedTargetTemperature, adjustedCorrectedTemperature, roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, this->getTargetTemperature());
         return true;
@@ -449,22 +341,7 @@ namespace devicestate {
         const float oldTargetTemperature = this->targetTemperature;
         this->targetTemperature = adjustedTargetTemperature;
         ESP_LOGW(TAG, "setTargetTemperature: Device target temp changing from %f to %f", oldTargetTemperature, this->targetTemperature);
-        this->hp->setTemperature(this->targetTemperature);
-    }
-
-    void DeviceStateManager::setRemoteTemperature(const float current) {
-        const float normalizedCurrent = this->getOffsetDirection()
-            ? std::ceil(current * 2.0) / 2.0
-            : std::floor(current * 2.0) / 2.0;
-
-        this->hp->setRemoteTemperature(normalizedCurrent);
-    }
-
-    bool DeviceStateManager::commit() {
-        ESP_LOGW(TAG, "DeviceStateManager attempting commit");
-        const bool result = this->hp->update();
-        ESP_LOGW(TAG, "DeviceStateManager completed commit: %s", TRUEFALSE(result));
-        return result;
+        this->hpState->setTemperature(this->targetTemperature);
     }
 
     void DeviceStateManager::log_heatpump_settings(heatpumpSettings currentSettings) {
@@ -488,7 +365,6 @@ namespace devicestate {
     void DeviceStateManager::dump_state() {
         ESP_LOGI(TAG, "Internal State");
         ESP_LOGI(TAG, "  powerOn: %s", TRUEFALSE(this->isInternalPowerOn()));
-        ESP_LOGI(TAG, "  connected: %s", TRUEFALSE(this->hp->isConnected()));
 
         ESP_LOGI(TAG, "Device State");
         ESP_LOGI(TAG, "  active: %s", TRUEFALSE(this->deviceState.active));
@@ -504,7 +380,7 @@ namespace devicestate {
         ESP_LOGI(TAG, "  runtimeHours: %f", this->deviceStatus.runtimeHours);
 
         ESP_LOGI(TAG, "Heatpump Settings");
-        heatpumpSettings currentSettings = this->hp->getSettings();
+        heatpumpSettings currentSettings = this->hpState->getCurrentSettings();
         this->log_heatpump_settings(currentSettings);
     }
 
@@ -518,7 +394,6 @@ namespace devicestate {
         this->device_status_runtime_hours->publish_state(this->deviceStatus.runtimeHours);
 
         // Public device state
-        this->device_state_connected->publish_state(this->hp->isConnected());
         this->internal_power_on->publish_state(this->internalPowerOn);
         this->device_state_active->publish_state(this->deviceState.active);
         this->device_set_point->publish_state(this->deviceState.targetTemperature);

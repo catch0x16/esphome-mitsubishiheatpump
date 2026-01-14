@@ -1,5 +1,7 @@
 #include "cn105_controlflow.h"
 
+#include "cn105_logging.h"
+
 #include "esphome.h"
 
 namespace devicestate {
@@ -13,6 +15,7 @@ namespace devicestate {
             RequestScheduler::TerminateCallback terminateCallback,
             RetryCallback retryCallback
         ): connection_{connection},
+            timeoutCallback_{timeoutCallback},
             retryCallback_{retryCallback},
             scheduler_(
                 // send_callback: envoie un paquet via buildAndSendInfoPacket
@@ -26,6 +29,7 @@ namespace devicestate {
             ),
             hpProtocol{} {
         this->hpState_ = hpState;
+        this->remote_temp_timeout_ = 4294967295;    // uint32_t max
     }
 
     void CN105ControlFlow::set_debounce_delay(uint32_t delay) {
@@ -66,17 +70,23 @@ namespace devicestate {
     void CN105ControlFlow::sendWantedSettingsDelegate() {
         this->hpState_->getWantedSettings().sent();
         ESP_LOGI(TAG, "sending wantedSettings..");
-        //this->debugSettings("wantedSettings", wantedSettings);
+        wantedHeatpumpSettings wantedSettings = this->hpState_->getWantedSettings();
+        debugSettings("wantedSettings", wantedSettings);
         // and then we send the update packet
         uint8_t packet[PACKET_LEN] = {};
         hpProtocol.createPacket(packet, *this->hpState_);
         this->connection_->writePacket(packet, PACKET_LEN);
         hpPacketDebug(packet, 22, "WRITE_SETTINGS");
 
+        //this->hpState_->resetWantedSettings();
+        this->hpState_->updateCurrentSettings(wantedSettings);
         //this->publishWantedSettingsStateToHA();
 
+        ESP_LOGI(TAG, "resettings wantedSettings..");
         // as soon as the packet is sent, we reset the settings
-        this->hpState_->getWantedSettings().resetSettings();
+        //this->hpState_->getWantedSettings().resetSettings();
+        this->hpState_->resetWantedSettings();
+        ESP_LOGI(TAG, "reset wantedSettings..");
     }
 
     bool CN105ControlFlow::sendWantedSettings() {
@@ -87,14 +97,17 @@ namespace devicestate {
 #else
                 this->emulateMutex("WRITE_SETTINGS", std::bind(&CN105ControlFlow::sendWantedSettingsDelegate, this));
 #endif
+            ESP_LOGW(TAG, "Sent wanted settings.");
             return true;
         }
+        ESP_LOGW(TAG, "Failed to send wanted settings.");
         return false;
     }
 
     void CN105ControlFlow::checkPendingWantedSettings(cycleManagement& loopCycle) {
         long now = CUSTOM_MILLIS;
         if (!(this->hpState_->getWantedSettings().hasChanged) || (now - this->hpState_->getWantedSettings().lastChange < this->debounce_delay_)) {
+            ESP_LOGI(LOG_ACTION_EVT_TAG, "Skipping checkPendingWantedSettings: %s", TRUEFALSE(this->hpState_->getWantedSettings().hasChanged));
             return;
         }
 
@@ -215,30 +228,37 @@ namespace devicestate {
         if (!this->connection_->processInput([this, &loopCycle]() {
                     // let's say that the last complete cycle was over now
                     loopCycle.lastCompleteCycleMs = CUSTOM_MILLIS;
-                    this->hpState_->getCurrentSettings().resetSettings();      // each time we connect, we need to reset current setting to force a complete sync with ha component state and receievdSettings
-                    this->hpState_->getCurrentRunStates().resetSettings();
+                    this->hpState_->resetCurrentSettings();
+                    this->hpState_->resetCurrentRunStates();
+                    //this->hpState_->getCurrentSettings().resetSettings();
+                    //this->hpState_->getCurrentRunStates().resetSettings();
                 }, 
                 [this](const uint8_t* packet, const int dataLength) {
                     const uint8_t code = packet[0];
                     if (this->scheduler_.process_response(code)) {
                         return;
                     }
+                    ESP_LOGW(TAG, "Scheduler failed to process response.");
                     this->hpProtocol.getDataFromResponsePacket(packet, dataLength, *this->hpState_);
                 })) {                                            // if we don't get any input: no read op
 
             if (!can_talk_to_hp) {
+                ESP_LOGW(TAG, "Unable to communicate with HeatPump.");
                 return;
             }
 
-            if ((this->hpState_->getWantedSettings().hasChanged) && (!loopCycle.isCycleRunning())) {
+            if (this->hpState_->getWantedSettings().hasChanged && (!loopCycle.isCycleRunning())) {
+                ESP_LOGW(TAG, "Settings changed, updating.");
                 this->checkPendingWantedSettings(loopCycle);
-            } else if ((this->hpState_->getWantedRunStates().hasChanged) && (!loopCycle.isCycleRunning())) {
+            } else if (this->hpState_->getWantedRunStates().hasChanged && (!loopCycle.isCycleRunning())) {
+                ESP_LOGW(TAG, "Run states changed, updating.");
                 this->checkPendingWantedRunStates(loopCycle);
             } else {
                 if (loopCycle.isCycleRunning()) {                         // if we are  running an update cycle
                     loopCycle.checkTimeout();
                 } else { // we are not running a cycle
                     if (loopCycle.hasUpdateIntervalPassed()) {
+                        ESP_LOGW(TAG, "Update interval passed");
                         this->buildAndSendRequestsInfoPackets(loopCycle);            // initiate an update cycle with this->cycleStarted();
                     }
                 }
@@ -254,14 +274,16 @@ namespace devicestate {
         r_settings.onResponse = [this](CN105State& self) {
             //(void)self; this->getSettingsFromResponsePacket();
             ESP_LOGW(TAG, "settings");
+            this->hpProtocol.parseSettings0x02(this->connection_->getData(), self);
         };
         scheduler_.register_request(r_settings);
-
+/*
         // 0x03 Room temperature
         InfoRequest r_room("room_temp", "Room temperature", 0x03, 3, 0);
         r_room.onResponse = [this](CN105State& self) {
             //(void)self; this->getRoomTemperatureFromResponsePacket()
             ESP_LOGW(TAG, "room_temp");
+            this->hpProtocol.parseStatus0x03(this->connection_->getData(), self);
          };
         scheduler_.register_request(r_room);
 
@@ -270,15 +292,19 @@ namespace devicestate {
         r_status.onResponse = [this](CN105State& self) {
             //(void)self; this->getOperatingAndCompressorFreqFromResponsePacket();
             ESP_LOGW(TAG, "status");
+            this->hpProtocol.parseStatus0x06(this->connection_->getData(), self);
         };
         scheduler_.register_request(r_status);
-
+*/
+        /*
         // 0x09 Standby/Power
         InfoRequest r_power("standby", "Power/Standby", 0x09, 3, 500);
         r_power.onResponse = [this](CN105State& self) {
             //(void)self; this->getPowerFromResponsePacket();
             ESP_LOGW(TAG, "standby");
+            this->hpProtocol.parseStatus0x06(this->connection_->getData(), self);
         };
+        r_power.disabled = true;
         scheduler_.register_request(r_power);
 
         // 0x42 HVAC options
@@ -287,11 +313,12 @@ namespace devicestate {
             (void)self;
             //return (this->air_purifier_switch_ != nullptr || this->night_mode_switch_ != nullptr || this->circulator_switch_ != nullptr);
             return false;
-            };
+        };
         r_hvac_opts.onResponse = [this](CN105State& self) {
             //(void)self; this->getHVACOptionsFromResponsePacket();
             ESP_LOGW(TAG, "hvac_options");
         };
+        r_hvac_opts.disabled = true;
         scheduler_.register_request(r_hvac_opts);
 
         // Placeholders
@@ -302,9 +329,72 @@ namespace devicestate {
         InfoRequest r_timers("timers", "Timers", 0x05, 1, 0);
         r_timers.disabled = true;
         scheduler_.register_request(r_timers);
-
+*/
         // Appel vers la nouvelle méthode dédiée
         //this->registerHardwareSettingsRequests();
+    }
+
+    bool CN105ControlFlow::getOffsetDirection() {
+        if (std::strcmp(this->hpState_->getCurrentSettings().mode, "HEAT") == 0) {
+            return true;
+        }
+        return false;
+    }
+
+    void CN105ControlFlow::setRemoteTemperature(const float current) {
+        if (std::isnan(current)) {
+            ESP_LOGW(LOG_REMOTE_TEMP, "Remote temperature is NaN, ignoring.");
+            return;
+        }
+
+        const float normalizedRemoteTemp = this->getOffsetDirection()
+            ? std::ceil(current * 2.0) / 2.0
+            : std::floor(current * 2.0) / 2.0;
+        
+        this->remoteTemperature_ = normalizedRemoteTemp;
+        this->shouldSendExternalTemperature_ = true;
+        ESP_LOGD(LOG_REMOTE_TEMP, "setting remote temperature to %f", this->remoteTemperature_);
+    }
+
+    void CN105ControlFlow::completeCycle() {
+        if (this->shouldSendExternalTemperature_) {
+            // We will receive ACK packet for this.
+            // Sending WantedSettings must be delayed in this case (lastSend timestamp updated).        
+            ESP_LOGI(LOG_REMOTE_TEMP, "Sending remote temperature...");
+            this->sendRemoteTemperature();
+        }
+    }
+
+    void CN105ControlFlow::sendRemoteTemperature() {
+        this->shouldSendExternalTemperature_ = false;
+
+        uint8_t packet[PACKET_LEN] = {};
+        hpProtocol.prepareSetPacket(packet, PACKET_LEN);
+
+        packet[5] = 0x07;
+        if (this->remoteTemperature_ > 0) {
+            packet[6] = 0x01;
+            float temp = round(this->remoteTemperature_ * 2);
+            packet[7] = static_cast<uint8_t>(temp - 16);
+            packet[8] = static_cast<uint8_t>(temp + 128);
+        } else {
+            packet[8] = 0x80; //MHK1 send 80, even though it could be 00, since ControlByte is 00
+        }
+        // add the checksum
+        uint8_t chkSum = checkSum(packet, 21);
+        packet[21] = chkSum;
+        ESP_LOGD(LOG_REMOTE_TEMP, "Sending remote temperature packet... -> %f", this->remoteTemperature_);
+        this->connection_->writePacket(packet, PACKET_LEN);
+
+        // this resets the timeout
+        this->pingExternalTemperature();
+    }
+
+    void CN105ControlFlow::pingExternalTemperature() {
+        timeoutCallback_(SCHEDULER_REMOTE_TEMP_TIMEOUT, this->remote_temp_timeout_, [this]() {
+            ESP_LOGW(LOG_REMOTE_TEMP, "Remote temperature timeout occured, fall back to internal temperature!");
+            this->setRemoteTemperature(0);
+        });
     }
 
 }

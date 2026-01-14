@@ -60,10 +60,6 @@ MitsubishiHeatPump::MitsubishiHeatPump(
     this->traits_.set_visual_current_temperature_step(ESPMHP_CURRENT_TEMPERATURE_STEP);
 
     this->loopCycle.init();
-
-    // Assume a succesful connection was made to the ESPHome controller on
-    // launch.
-    this->ping();
 }
 
 uint32_t MitsubishiHeatPump::get_update_interval() const { return this->update_interval_; }
@@ -77,14 +73,20 @@ void MitsubishiHeatPump::set_update_interval(uint32_t update_interval) {
 }
 
 void MitsubishiHeatPump::terminateCycle() {
-    //if (this->shouldSendExternalTemperature_) {
-        // We will receive ACK packet for this.
-        // Sending WantedSettings must be delayed in this case (lastSend timestamp updated).        
-    //    ESP_LOGD(LOG_REMOTE_TEMP, "Sending remote temperature...");
-    //    this->sendRemoteTemperature();
-    //}
+    ESP_LOGW(TAG, "Terminate cycle start");
+    this->hpControlFlow_->completeCycle();
+
+    this->dsm->update();
+
+    this->updateDevice();
+
+    //this->enforce_remote_temperature_sensor_timeout();
+    this->run_workflows();
+
+    this->dsm->publish();
 
     this->loopCycle.cycleEnded();
+    ESP_LOGW(TAG, "Terminate cycle complete");
 }
 
 void MitsubishiHeatPump::banner() {
@@ -97,23 +99,6 @@ void MitsubishiHeatPump::banner() {
  */
 void MitsubishiHeatPump::loop() {
     this->hpControlFlow_->loop(loopCycle);
-    /*
-    // This will be called every "update_interval" milliseconds.
-    this->dsm->update(loopCycle);
-    if (!this->dsm->isInitialized()) {
-        ESP_LOGW(TAG, "Waiting for HeatPump to read the settings the first time.");
-        return;
-    }
-
-    if (false) {
-        this->updateDevice();
-
-        this->enforce_remote_temperature_sensor_timeout();
-        this->run_workflows();
-    }
-
-    this->dsm->publish();
-    */
 }
 
 void MitsubishiHeatPump::set_baud_rate(int baud) {
@@ -362,29 +347,29 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
                 updated = true;
                 break;
             case climate::CLIMATE_FAN_DIFFUSE:
-                this->dsm->setFanMode(devicestate::FanMode::FanMode_Quiet, false);
+                this->dsm->setFanMode(devicestate::FanMode::FanMode_Quiet);
                 updated = true;
                 break;
             case climate::CLIMATE_FAN_LOW:
-                this->dsm->setFanMode(devicestate::FanMode::FanMode_Low, false);
+                this->dsm->setFanMode(devicestate::FanMode::FanMode_Low);
                 updated = true;
                 break;
             case climate::CLIMATE_FAN_MEDIUM:
-                this->dsm->setFanMode(devicestate::FanMode::FanMode_Medium, false);
+                this->dsm->setFanMode(devicestate::FanMode::FanMode_Medium);
                 updated = true;
                 break;
             case climate::CLIMATE_FAN_MIDDLE:
-                this->dsm->setFanMode(devicestate::FanMode::FanMode_Middle, false);
+                this->dsm->setFanMode(devicestate::FanMode::FanMode_Middle);
                 updated = true;
                 break;
             case climate::CLIMATE_FAN_HIGH:
-                this->dsm->setFanMode(devicestate::FanMode::FanMode_High, false);
+                this->dsm->setFanMode(devicestate::FanMode::FanMode_High);
                 updated = true;
                 break;
             case climate::CLIMATE_FAN_ON:
             case climate::CLIMATE_FAN_AUTO:
             default:
-                this->dsm->setFanMode(devicestate::FanMode::FanMode_Auto, false);
+                this->dsm->setFanMode(devicestate::FanMode::FanMode_Auto);
                 updated = true;
                 break;
         }
@@ -398,23 +383,23 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
         this->swing_mode = *call.get_swing_mode();
         switch(*call.get_swing_mode()) {
             case climate::CLIMATE_SWING_OFF:
-                this->dsm->setVerticalSwingMode(devicestate::VerticalSwingMode::VerticalSwingMode_Auto, false);
-                this->dsm->setHorizontalSwingMode(devicestate::HorizontalSwingMode::HorizontalSwingMode_Center, false);
+                this->dsm->setVerticalSwingMode(devicestate::VerticalSwingMode::VerticalSwingMode_Auto);
+                this->dsm->setHorizontalSwingMode(devicestate::HorizontalSwingMode::HorizontalSwingMode_Center);
                 updated = true;
                 break;
             case climate::CLIMATE_SWING_VERTICAL:
-                this->dsm->setVerticalSwingMode(devicestate::VerticalSwingMode::VerticalSwingMode_Swing, false);
-                this->dsm->setHorizontalSwingMode(devicestate::HorizontalSwingMode::HorizontalSwingMode_Center, false);
+                this->dsm->setVerticalSwingMode(devicestate::VerticalSwingMode::VerticalSwingMode_Swing);
+                this->dsm->setHorizontalSwingMode(devicestate::HorizontalSwingMode::HorizontalSwingMode_Center);
                 updated = true;
                 break;
             case climate::CLIMATE_SWING_HORIZONTAL:
-                this->dsm->setVerticalSwingMode(devicestate::VerticalSwingMode::VerticalSwingMode_Center, false);
-                this->dsm->setHorizontalSwingMode(devicestate::HorizontalSwingMode::HorizontalSwingMode_Swing, false);
+                this->dsm->setVerticalSwingMode(devicestate::VerticalSwingMode::VerticalSwingMode_Center);
+                this->dsm->setHorizontalSwingMode(devicestate::HorizontalSwingMode::HorizontalSwingMode_Swing);
                 updated = true;
                 break;
             case climate::CLIMATE_SWING_BOTH:
-                this->dsm->setVerticalSwingMode(devicestate::VerticalSwingMode::VerticalSwingMode_Swing, false);
-                this->dsm->setHorizontalSwingMode(devicestate::HorizontalSwingMode::HorizontalSwingMode_Swing, false);
+                this->dsm->setVerticalSwingMode(devicestate::VerticalSwingMode::VerticalSwingMode_Swing);
+                this->dsm->setHorizontalSwingMode(devicestate::HorizontalSwingMode::HorizontalSwingMode_Swing);
                 updated = true;
                 break;
             default:
@@ -426,13 +411,6 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
 
     // send the update back to esphome:
     this->publish_state();
-
-    if (updated) {
-        // and the heat pump:
-        if (!this->dsm->commit()) {
-            ESP_LOGW(TAG, "Failed to update device state");
-        }
-    }
 }
 
 void MitsubishiHeatPump::updateDevice() {
@@ -663,13 +641,9 @@ void MitsubishiHeatPump::set_remote_temperature(float temp) {
     if (this->remote_temperature_updated) {
         this->remote_temperature = temp;
     }
-    this->dsm->setRemoteTemperature(temp);
-    this->publish_state();
-}
 
-void MitsubishiHeatPump::ping() {
-    ESP_LOGD(TAG, "Ping request received");
-    last_ping_request_ = std::chrono::steady_clock::now();
+    //this->hpControlFlow_->setRemoteTemperature(temp);
+    this->publish_state();
 }
 
 void MitsubishiHeatPump::set_remote_operating_timeout_minutes(int minutes) {
@@ -685,34 +659,6 @@ void MitsubishiHeatPump::set_remote_idle_timeout_minutes(int minutes) {
 void MitsubishiHeatPump::set_remote_ping_timeout_minutes(int minutes) {
     ESP_LOGD(TAG, "Setting remote ping timeout time: %d minutes", minutes);
     remote_ping_timeout_ = std::chrono::minutes(minutes);
-}
-
-void MitsubishiHeatPump::enforce_remote_temperature_sensor_timeout() {
-    // Handle ping timeouts.
-    if (remote_ping_timeout_.has_value() && last_ping_request_.has_value()) {
-        auto time_since_last_ping =
-            std::chrono::steady_clock::now() - last_ping_request_.value();
-        if(time_since_last_ping > remote_ping_timeout_.value()) {
-            ESP_LOGW(TAG, "Ping timeout.");
-            this->set_remote_temperature(0);
-            last_ping_request_.reset();
-            return;
-        }
-    }
-
-    // Handle set_remote_temperature timeouts.
-    auto remote_set_temperature_timeout =
-        this->operating_ ? remote_operating_timeout_ : remote_idle_timeout_;
-    if (remote_set_temperature_timeout.has_value() &&
-            last_remote_temperature_sensor_update_.has_value()) {
-        auto time_since_last_temperature_update =
-            std::chrono::steady_clock::now() - last_remote_temperature_sensor_update_.value();
-        if (time_since_last_temperature_update > remote_set_temperature_timeout.value()) {
-            ESP_LOGW(TAG, "Set remote temperature timeout, operating=%d", this->operating_);
-            this->set_remote_temperature(0);
-            return;
-        }
-    }
 }
 
 void MitsubishiHeatPump::setup() {
@@ -771,8 +717,8 @@ void MitsubishiHeatPump::setup() {
         hpConnection,
         hpState,
         timeoutCallback,
-        nullptr,
-        nullptr
+        terminateCallback,
+        retryCallback
     );
 
     this->hpControlFlow_->registerInfoRequests();

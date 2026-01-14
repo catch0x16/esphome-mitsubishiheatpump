@@ -30,6 +30,8 @@ namespace devicestate {
 
             void writePacket(uint8_t* packet, int length, bool checkIsActive = true);
 
+            uint8_t* getData();
+            int getDataLength();
             bool processInput(ConnectedCallback connectedCallback, PacketCallback packetCallback);
 
         private:

@@ -223,12 +223,6 @@ namespace devicestate {
     }
 
     DeviceState toDeviceState(heatpumpSettings *currentSettings) {
-        /*
-        * ************ HANDLE POWER AND MODE CHANGES ***********
-        * https://github.com/geoffdavis/HeatPump/blob/stream/src/HeatPump.h#L125
-        * const char* POWER_MAP[2]       = {"OFF", "ON"};
-        * const char* MODE_MAP[5]        = {"HEAT", "DRY", "COOL", "FAN", "AUTO"};
-        */
         DeviceState deviceState;
         deviceState.active = isDeviceActive(currentSettings);
         deviceState.mode = toDeviceMode(currentSettings);

@@ -29,10 +29,14 @@ namespace devicestate {
     }
 
     void CN105Connection::ensureConnection() {
-        if (this->conn_bootstrap_started_) return;
+        if (this->conn_bootstrap_started_) {
+            return;
+        }
 
         // Timeout global: au bout de 2 minutes on démarre même sans WiFi
         if (!this->conn_timeout_armed_) {
+            ESP_LOGI(TAG, "Connection timeout not armed, arming.");
+
             this->conn_timeout_armed_ = true;
             timeoutCallback_("cn105_bootstrap_timeout", 120000, [this]() {
                 if (this->conn_bootstrap_started_) return;
@@ -57,6 +61,7 @@ namespace devicestate {
         const uint32_t grace_ms = this->conn_bootstrap_delay_ms_;
         const uint32_t elapsed = CUSTOM_MILLIS - this->boot_ms_;
         if (elapsed < grace_ms) {
+            ESP_LOGI(LOG_CONN_TAG, "Elased < grace_ms", grace_ms);
             if (!this->conn_grace_logged_) {
                 this->conn_grace_logged_ = true;
                 ESP_LOGI(LOG_CONN_TAG, "Bootstrap connexion: délai de grâce %ums pour logs OTA", grace_ms);
@@ -376,7 +381,14 @@ namespace devicestate {
                 this->bytesRead++;
             }
         }
+    }
 
+    uint8_t* CN105Connection::getData() {
+        return this->data;
+    }
+
+    int CN105Connection::getDataLength() {
+        return this->dataLength;
     }
 
     bool CN105Connection::processInput(ConnectedCallback connectedCallback, PacketCallback packetCallback) {

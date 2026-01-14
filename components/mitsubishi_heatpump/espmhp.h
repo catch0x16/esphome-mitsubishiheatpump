@@ -20,7 +20,6 @@
 
 #include <chrono>
 
-#include "HeatPump.h"
 #include "cycle_management.h"
 #include "logging.h"
 
@@ -138,10 +137,6 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         void set_vertical_vane_select(esphome::select::Select *vertical_vane_select);
         void set_horizontal_vane_select(esphome::select::Select *horizontal_vane_select);
 
-        // Used to validate that a connection is present between the controller
-        // and this heatpump.
-        void ping();
-
         // Number of minutes before the heatpump reverts back to the internal
         // temperature sensor if the machine is currently operating.
         void set_remote_operating_timeout_minutes(int);
@@ -256,8 +251,6 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         float remote_temperature{NAN};
         bool remote_temperature_updated{false};
 
-        void enforce_remote_temperature_sensor_timeout();
-
         // Retrieve the HardwareSerial pointer from friend and subclasses.
         esphome::uart::UARTComponent* hw_serial_;
         int baud_ = 0;
@@ -280,7 +273,6 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         std::optional<std::chrono::duration<long long, std::ratio<60>>> remote_idle_timeout_;
         std::optional<std::chrono::duration<long long, std::ratio<60>>> remote_ping_timeout_;
         std::optional<std::chrono::time_point<std::chrono::steady_clock>> last_remote_temperature_sensor_update_;
-        std::optional<std::chrono::time_point<std::chrono::steady_clock>> last_ping_request_;
 
         void update_setpoint(float value);
 

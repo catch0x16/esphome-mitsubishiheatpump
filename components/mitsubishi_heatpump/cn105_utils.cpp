@@ -62,4 +62,11 @@ namespace devicestate {
         return valuesMap[0];
     }
 
+    const char* getIfNotNull(const char* what, const char* defaultValue) {
+        if (what == NULL) {
+            return defaultValue;
+        }
+        return what;
+    }
+
 }

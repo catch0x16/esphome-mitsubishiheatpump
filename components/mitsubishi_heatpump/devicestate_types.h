@@ -97,8 +97,6 @@ namespace devicestate {
         virtual bool internalTurnOff() = 0;
         virtual bool isInternalPowerOn() = 0;
 
-        virtual bool commit() = 0;
-
         virtual bool internalSetCorrectedTemperature(const float value) = 0;
 
         virtual ~IDeviceStateManager() = default;    // Virtual destructor for safety

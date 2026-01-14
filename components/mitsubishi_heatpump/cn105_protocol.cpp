@@ -39,8 +39,8 @@ namespace devicestate {
         packet[21] = chkSum;
     }
 
-    void CN105Protocol::prepareInfoPacket(byte* packet, int length) {
-        memset(packet, 0, length * sizeof(byte));
+    void CN105Protocol::prepareInfoPacket(uint8_t* packet, int length) {
+        memset(packet, 0, length * sizeof(uint8_t));
         
         for (int i = 0; i < INFOHEADER_LEN && i < length; i++) {
             packet[i] = INFOHEADER[i];
@@ -130,7 +130,7 @@ namespace devicestate {
 
         hpState.setWideVaneAdj((packet[10] & 0xF0) == 0x80 ? true : false);
 
-        hpState.setCurrentSettings(receivedSettings);
+        hpState.updateCurrentSettings(receivedSettings);
     }
 
     void CN105Protocol::parseStatus0x03(uint8_t* packet, CN105State& hpState) {

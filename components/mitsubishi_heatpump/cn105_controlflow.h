@@ -36,15 +36,24 @@ namespace devicestate {
             void loop(cycleManagement& loopCycle);
             void registerInfoRequests();
 
+            void setRemoteTemperature(const float current);
+            void pingExternalTemperature();
+            void completeCycle();
+
         private:
             CN105Connection* connection_;
             CN105State* hpState_;
             RequestScheduler scheduler_;
             CN105Protocol hpProtocol;
 
+            RequestScheduler::TimeoutCallback timeoutCallback_;
             RetryCallback retryCallback_;
 
             uint32_t debounce_delay_;
+            uint32_t remote_temp_timeout_;
+
+            bool shouldSendExternalTemperature_ = false;
+            float remoteTemperature_ = 0;
 
 #ifdef USE_ESP32
             std::mutex wantedSettingsMutex;
@@ -64,6 +73,10 @@ namespace devicestate {
 
             bool sendWantedRunStates();
             void checkPendingWantedRunStates(cycleManagement& loopCycle);
+
+            bool getOffsetDirection();
+
+            void sendRemoteTemperature();
     };
 
 }

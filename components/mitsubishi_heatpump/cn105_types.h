@@ -26,7 +26,7 @@ namespace devicestate {
     static const char* LOG_HARDWARE_SELECT_TAG = "HardwareSelect";
     static const char* LOG_CONN_TAG = "CN105_CONN";
 
-    static const char* SHEDULER_REMOTE_TEMP_TIMEOUT = "->remote_temp_timeout";
+    static const char* SCHEDULER_REMOTE_TEMP_TIMEOUT = "->remote_temp_timeout";
 
     static const int DEFER_SCHEDULE_UPDATE_LOOP_DELAY = 750;
     static const uint32_t RECEIVED_SETPOINT_GRACE_WINDOW_MS = 3000;

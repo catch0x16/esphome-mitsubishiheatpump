@@ -1,5 +1,8 @@
 #include "cn105_logging.h"
 
+#include "cn105_utils.h"
+#include <cmath>
+
 #include "esphome.h"
 
 namespace devicestate {
@@ -29,5 +32,34 @@ namespace devicestate {
 
         ESP_LOGD(packetDirection, "%s", output.c_str());
     }
+
+    void debugSettings(const char* settingName, heatpumpSettings& settings) {
+        ESP_LOGD(LOG_SETTINGS_TAG, "[%s]-> [power: %s, target °C: %.1f, mode: %s, fan: %s, vane: %s, wvane: %s]",
+            getIfNotNull(settingName, "unnamed"),
+            getIfNotNull(settings.power, "-"),
+            settings.temperature,
+            getIfNotNull(settings.mode, "-"),
+            getIfNotNull(settings.fan, "-"),
+            getIfNotNull(settings.vane, "-"),
+            getIfNotNull(settings.wideVane, "-")
+        );
+    }
+
+    void debugStatus(const char* statusName, heatpumpStatus status) {
+        // Déclarez un buffer (tableau de char) pour la conversion float -> string
+        // 6 caractères suffisent pour "-99.9\0"
+        static char outside_temp_buffer[6];
+
+        ESP_LOGI(LOG_STATUS_TAG, "[%s]-> [room C°: %.1f, outside C°: %s, operating: %s, compressor freq: %.1f Hz]",
+            statusName,
+            status.roomTemperature,
+            // Utilisation de snprintf dans l'expression ternaire
+            std::isnan(status.outsideAirTemperature)
+                ? "N/A"
+                : (snprintf(outside_temp_buffer, sizeof(outside_temp_buffer), "%.1f", status.outsideAirTemperature) > 0 ? outside_temp_buffer : "ERR"),
+            status.operating ? "YES" : "NO ",
+            status.compressorFrequency);
+    }
+
 
 }
