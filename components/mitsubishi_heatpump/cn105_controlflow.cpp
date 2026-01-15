@@ -68,19 +68,25 @@ namespace devicestate {
 #endif
 
     void CN105ControlFlow::sendWantedSettingsDelegate() {
+        ESP_LOGE(TAG, "sending wantedSettings..");
         this->hpState_->getWantedSettings().sent();
-        ESP_LOGI(TAG, "sending wantedSettings..");
+        ESP_LOGE(TAG, "wantedSettings sent..");
+        
         wantedHeatpumpSettings wantedSettings = this->hpState_->getWantedSettings();
         debugSettings("wantedSettings", wantedSettings);
         // and then we send the update packet
+        ESP_LOGE(TAG, "Create and Send packet...");
         uint8_t packet[PACKET_LEN] = {};
         hpProtocol.createPacket(packet, *this->hpState_);
         this->connection_->writePacket(packet, PACKET_LEN);
         hpPacketDebug(packet, 22, "WRITE_SETTINGS");
+        ESP_LOGE(TAG, "Create and Send packet completed...");
 
+        ESP_LOGE(TAG, "updating current settings");
         //this->hpState_->resetWantedSettings();
         this->hpState_->updateCurrentSettings(wantedSettings);
         //this->publishWantedSettingsStateToHA();
+        ESP_LOGE(TAG, "updated current settings");
 
         ESP_LOGI(TAG, "resettings wantedSettings..");
         // as soon as the packet is sent, we reset the settings
@@ -90,24 +96,31 @@ namespace devicestate {
     }
 
     bool CN105ControlFlow::sendWantedSettings() {
-        if (this->connection_->ensureActiveConnection()) {
-#ifdef USE_ESP32
-                std::lock_guard<std::mutex> guard(wantedSettingsMutex);
-                this->sendWantedSettingsDelegate();
-#else
-                this->emulateMutex("WRITE_SETTINGS", std::bind(&CN105ControlFlow::sendWantedSettingsDelegate, this));
-#endif
-            ESP_LOGW(TAG, "Sent wanted settings.");
-            return true;
+        if (!this->connection_->ensureActiveConnection()) {
+            ESP_LOGW(TAG, "Failed to send wanted settings.");
+            return false;
         }
-        ESP_LOGW(TAG, "Failed to send wanted settings.");
-        return false;
+
+#ifdef USE_ESP32
+        std::lock_guard<std::mutex> guard(wantedSettingsMutex);
+        this->sendWantedSettingsDelegate();
+#else
+        this->emulateMutex("WRITE_SETTINGS", std::bind(&CN105ControlFlow::sendWantedSettingsDelegate, this));
+#endif
+        ESP_LOGW(TAG, "Sent wanted settings.");
+        return true;
     }
 
     void CN105ControlFlow::checkPendingWantedSettings(cycleManagement& loopCycle) {
         long now = CUSTOM_MILLIS;
-        if (!(this->hpState_->getWantedSettings().hasChanged) || (now - this->hpState_->getWantedSettings().lastChange < this->debounce_delay_)) {
+
+        if (!this->hpState_->getWantedSettings().hasChanged) {
             ESP_LOGI(LOG_ACTION_EVT_TAG, "Skipping checkPendingWantedSettings: %s", TRUEFALSE(this->hpState_->getWantedSettings().hasChanged));
+            return;
+        }
+
+        if (!(now - this->hpState_->getWantedSettings().lastChange < this->debounce_delay_)) {
+            ESP_LOGI(LOG_ACTION_EVT_TAG, "Skipping checkPendingWantedSettings due to lastChange");
             return;
         }
 
@@ -226,12 +239,14 @@ namespace devicestate {
         // On continue quand même à lire/processer l'input afin de détecter le 0x7A/0x7B (connection success).
         const bool can_talk_to_hp = this->connection_->isConnected();
         if (!this->connection_->processInput([this, &loopCycle]() {
+                    ESP_LOGE(TAG, "Processed Input..");
                     // let's say that the last complete cycle was over now
                     loopCycle.lastCompleteCycleMs = CUSTOM_MILLIS;
                     this->hpState_->resetCurrentSettings();
                     this->hpState_->resetCurrentRunStates();
                     //this->hpState_->getCurrentSettings().resetSettings();
                     //this->hpState_->getCurrentRunStates().resetSettings();
+                    ESP_LOGE(TAG, "Reset current settings..");
                 }, 
                 [this](const uint8_t* packet, const int dataLength) {
                     const uint8_t code = packet[0];
@@ -248,7 +263,7 @@ namespace devicestate {
             }
 
             if (this->hpState_->getWantedSettings().hasChanged && (!loopCycle.isCycleRunning())) {
-                ESP_LOGW(TAG, "Settings changed, updating.");
+                ESP_LOGW(TAG, "Settings changed, updating: %s", TRUEFALSE(this->hpState_->getWantedSettings().hasChanged));
                 this->checkPendingWantedSettings(loopCycle);
             } else if (this->hpState_->getWantedRunStates().hasChanged && (!loopCycle.isCycleRunning())) {
                 ESP_LOGW(TAG, "Run states changed, updating.");

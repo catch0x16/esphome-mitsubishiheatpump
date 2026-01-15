@@ -138,6 +138,10 @@ namespace devicestate {
         this->hpStatusChanged(currentStatus);
     }
 
+    void DeviceStateManager::commit() {
+        this->hpState->onSettingsChanged();
+    }
+
     bool DeviceStateManager::isInternalPowerOn() {
         return this->internalPowerOn;
     }
@@ -198,7 +202,7 @@ namespace devicestate {
         this->hpState->setModeSetting(deviceMode);
         this->hpState->setPowerSetting("ON");
         this->internalSetCorrectedTemperature(this->getTargetTemperature());
-        // TODO: How to validate?
+        this->commit();
         this->lastInternalPowerUpdate = end;
         this->internalPowerOn = true;
         return true;
@@ -221,6 +225,7 @@ namespace devicestate {
         ESP_LOGW(TAG, "Set power OFF");
         this->hpState->setPowerSetting("OFF");
         ESP_LOGW(TAG, "Commit change");
+        this->commit();
         this->lastInternalPowerUpdate = end;
         this->internalPowerOn = false;
         return true;
@@ -240,6 +245,7 @@ namespace devicestate {
         }
 
         this->hpState->setFanSpeed(newMode);
+        this->commit();
         return true;
     }
 
@@ -257,6 +263,7 @@ namespace devicestate {
         }
 
         this->hpState->setVaneSetting(newMode);
+        this->commit();
         return true;
     }
 
@@ -274,6 +281,7 @@ namespace devicestate {
         }
 
         this->hpState->setWideVaneSetting(newMode);
+        this->commit();
         return true;
     }
 

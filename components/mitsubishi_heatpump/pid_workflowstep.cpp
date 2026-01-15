@@ -76,8 +76,8 @@ namespace workflow {
                     setPointCorrectionSimple, adjustedSetPointCorrectionSimple,
                     this->adaptivePID->kp(), this->adaptivePID->ki(), this->adaptivePID->kd());
 
-                if (!deviceManager->internalSetCorrectedTemperature(adjustedSetPointCorrectionSimple)) {
-                    ESP_LOGE(TAG, "PidWorkflowStep failed to update corrected temperature");
+                if (deviceManager->internalSetCorrectedTemperature(adjustedSetPointCorrectionSimple)) {
+                    deviceManager->commit();
                 }
             }
         }

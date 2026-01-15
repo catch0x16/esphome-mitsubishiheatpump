@@ -24,8 +24,6 @@ namespace devicestate {
             bool wideVaneAdj;
             bool tempMode;
 
-            void onSettingsChanged();
-
             bool hasChanged(const char* before, const char* now, const char* field, bool checkNotNull = false);
 
         public:
@@ -34,6 +32,7 @@ namespace devicestate {
             heatpumpSettings& getCurrentSettings();
             void updateCurrentSettings(heatpumpSettings& currentSettings);
             void resetCurrentSettings();
+            void onSettingsChanged();
 
             wantedHeatpumpSettings& getWantedSettings();
             void resetWantedSettings();

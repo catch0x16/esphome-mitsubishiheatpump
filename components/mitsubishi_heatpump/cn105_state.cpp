@@ -169,12 +169,10 @@ namespace devicestate {
         } else {
             wantedSettings.mode = MODE_MAP[0];
         }
-        this->onSettingsChanged();
     }
 
     void CN105State::setPowerSetting(bool setting) {
         wantedSettings.power = lookupByteMapIndex(POWER_MAP, 2, POWER_MAP[setting ? 1 : 0]) > -1 ? POWER_MAP[setting ? 1 : 0] : POWER_MAP[0];
-        this->onSettingsChanged();
     }
 
     void CN105State::setPowerSetting(const char* setting) {
@@ -184,7 +182,6 @@ namespace devicestate {
         } else {
             wantedSettings.power = POWER_MAP[0];
         }
-        this->onSettingsChanged();
     }
 
     void CN105State::setFanSpeed(const char* setting) {
@@ -194,7 +191,6 @@ namespace devicestate {
         } else {
             wantedSettings.fan = FAN_MAP[0];
         }
-        this->onSettingsChanged();
     }
 
     void CN105State::setVaneSetting(const char* setting) {
@@ -204,7 +200,6 @@ namespace devicestate {
         } else {
             wantedSettings.vane = VANE_MAP[0];
         }
-        this->onSettingsChanged();
     }
 
     void CN105State::setWideVaneSetting(const char* setting) {
@@ -214,7 +209,6 @@ namespace devicestate {
         } else {
             wantedSettings.wideVane = WIDEVANE_MAP[0];
         }
-        this->onSettingsChanged();
     }
 
     void CN105State::setAirflowControlSetting(const char* setting) {
@@ -238,8 +232,6 @@ namespace devicestate {
             temperature = setting < 10 ? 10 : (setting > 31 ? 31 : setting);
         }
         wantedSettings.temperature = temperature;
-
-        this->onSettingsChanged();
     }
 
     void CN105State::setRoomTemperature(float value) {
@@ -276,7 +268,7 @@ namespace devicestate {
 
     void CN105State::onSettingsChanged() {
         ESP_LOGE(TAG, "Setting onSettingsChanged triggered");
-        //wantedSettings.hasChanged = true;
+        wantedSettings.hasChanged = true;
         wantedSettings.hasBeenSent = false;
         wantedSettings.lastChange = CUSTOM_MILLIS;
     }

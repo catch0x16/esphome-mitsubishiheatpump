@@ -93,6 +93,7 @@ namespace devicestate {
         virtual float getTargetTemperature() = 0;
         virtual bool getOffsetDirection() = 0;
 
+        virtual void commit() = 0;
         virtual bool internalTurnOn() = 0;
         virtual bool internalTurnOff() = 0;
         virtual bool isInternalPowerOn() = 0;

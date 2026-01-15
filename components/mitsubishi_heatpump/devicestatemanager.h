@@ -90,6 +90,7 @@ namespace devicestate {
       bool isInitialized();
 
       void update();
+      void commit();
 
       void setCool();
       void setHeat();

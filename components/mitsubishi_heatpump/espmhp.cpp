@@ -385,6 +385,9 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
         }
     }
     ESP_LOGD(TAG, "control - Was HeatPump updated? %s", YESNO(updated));
+    if (updated) {
+        this->dsm->commit();
+    }
 
     // send the update back to esphome:
     this->publish_state();
