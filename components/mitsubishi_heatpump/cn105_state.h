@@ -32,7 +32,6 @@ namespace devicestate {
             CN105State();
 
             heatpumpSettings& getCurrentSettings();
-            void setCurrentSettings(heatpumpSettings currentSettings);
             void updateCurrentSettings(heatpumpSettings& currentSettings);
             void resetCurrentSettings();
 

@@ -43,10 +43,6 @@ namespace devicestate {
         return currentSettings;
     }
 
-    void CN105State::setCurrentSettings(heatpumpSettings currentSettings) {
-        this->currentSettings = currentSettings;
-    }
-
     void CN105State::resetCurrentSettings() {
         this->currentSettings.resetSettings();
     }
@@ -279,8 +275,8 @@ namespace devicestate {
     }
 
     void CN105State::onSettingsChanged() {
-        ESP_LOGW(TAG, "Setting onSettingsChanged triggered");
-        wantedSettings.hasChanged = true;
+        ESP_LOGE(TAG, "Setting onSettingsChanged triggered");
+        //wantedSettings.hasChanged = true;
         wantedSettings.hasBeenSent = false;
         wantedSettings.lastChange = CUSTOM_MILLIS;
     }

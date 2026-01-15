@@ -1,23 +1,3 @@
-/**
- * espmhp.cpp
- *
- * Implementation of esphome-mitsubishiheatpump
- *
- * Author: Geoff Davis <geoff@geoffdavis.com>
- * Author: Phil Genera @pgenera on Github.
- * Author: Barry Loong @loongyh on GitHub.
- * Author: @am-io on Github.
- * Author: @nao-pon on Github.
- * Author: Simon Knopp @sijk on Github
- * Author: Paul Murphy @donutsoft on GitHub
- * Last Updated: 2023-04-22
- * License: BSD
- *
- * Requirements:
- * - https://github.com/SwiCago/HeatPump
- * - ESPHome 1.18.0 or greater
- */
-
 #include "espmhp.h"
 using namespace esphome;
 
@@ -77,12 +57,9 @@ void MitsubishiHeatPump::terminateCycle() {
     this->hpControlFlow_->completeCycle();
 
     this->dsm->update();
-
     this->updateDevice();
 
-    //this->enforce_remote_temperature_sensor_timeout();
     this->run_workflows();
-
     this->dsm->publish();
 
     this->loopCycle.cycleEnded();
@@ -720,8 +697,8 @@ void MitsubishiHeatPump::setup() {
         terminateCallback,
         retryCallback
     );
-
-    this->hpControlFlow_->registerInfoRequests();
+    hpState->getWantedSettings().resetSettings();
+    hpState->getWantedSettings().resetSettings();
 
     ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
     this->dsm = new devicestate::DeviceStateManager(
@@ -768,6 +745,7 @@ void MitsubishiHeatPump::setup() {
         this->horizontal_swing_state_ = "auto";
     }
 
+    this->hpControlFlow_->registerInfoRequests();
     this->dump_config();
 }
 

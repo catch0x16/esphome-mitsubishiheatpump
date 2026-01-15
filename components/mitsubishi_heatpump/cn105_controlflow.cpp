@@ -208,7 +208,7 @@ namespace devicestate {
     void CN105ControlFlow::buildAndSendRequestsInfoPackets(cycleManagement& loopCycle) {
         if (this->connection_->isConnected()) {
             ESP_LOGV(LOG_UPD_INT_TAG, "triggering infopacket because of update interval tick");
-            ESP_LOGV("CONTROL_WANTED_SETTINGS", "hasChanged is %s", wantedSettings.hasChanged ? "true" : "false");
+            ESP_LOGV("CONTROL_WANTED_SETTINGS", "hasChanged is %s", TRUEFALSE(this->hpState_->getWantedSettings().hasChanged));
             loopCycle.cycleStarted();
             //this->nbCycles_++;
             // Envoie la première requête activable (la liste est enregistrée une fois au constructeur)
