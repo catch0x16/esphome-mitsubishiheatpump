@@ -44,12 +44,10 @@ MitsubishiHeatPump::MitsubishiHeatPump(
 
 uint32_t MitsubishiHeatPump::get_update_interval() const { return this->update_interval_; }
 void MitsubishiHeatPump::set_update_interval(uint32_t update_interval) {
-    //ESP_LOGD(TAG, "Setting update interval to %lu", update_interval);
     log_debug_uint32(TAG, "Setting update interval to ", update_interval);
 
     this->update_interval_ = update_interval;
     this->loopCycle.setUpdateInterval(this->update_interval_);
-    //this->autoUpdate = (update_interval != 0);
 }
 
 void MitsubishiHeatPump::terminateCycle() {
@@ -687,30 +685,44 @@ void MitsubishiHeatPump::setup() {
         this->terminateCycle();
     };
 
+    this->hpState_ = new CN105State();
+    auto loopCycle = this->loopCycle;
+    auto connectedCallback = [this, &loopCycle](bool state) {
+        if (state) {
+            // let's say that the last complete cycle was over now
+            loopCycle.lastCompleteCycleMs = CUSTOM_MILLIS;
+            this->hpState_->resetCurrentSettings();
+            this->hpState_->resetCurrentRunStates();
+            //this->hpState_->getCurrentSettings().resetSettings();
+            //this->hpState_->getCurrentRunStates().resetSettings();
+            ESP_LOGI(TAG, "Reset current settings..");
+        }
+        this->device_state_connected->publish_state(state);
+    };
+
     CN105Connection* hpConnection = new CN105Connection(
         io_device,
         timeoutCallback,
+        connectedCallback,
         this->get_update_interval()
     );
-    CN105State* hpState = new CN105State();
     this->hpControlFlow_ = new CN105ControlFlow(
         hpConnection,
-        hpState,
+        this->hpState_,
         timeoutCallback,
         terminateCallback,
         retryCallback
     );
-    hpState->getWantedSettings().resetSettings();
-    hpState->getWantedSettings().resetSettings();
+    this->hpState_->getWantedSettings().resetSettings();
+    this->hpState_->getWantedSettings().resetSettings();
 
     ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
     this->dsm = new devicestate::DeviceStateManager(
         io_device,
-        hpState,
+        this->hpState_,
         this->min_temp,
         this->max_temp,
         this->internal_power_on,
-        this->device_state_connected,
         this->device_state_active,
         this->device_set_point,
         this->device_status_operating,
@@ -721,9 +733,6 @@ void MitsubishiHeatPump::setup() {
         this->device_status_runtime_hours,
         this->pid_set_point_correction
     );
-
-    ESP_LOGCONFIG(TAG, "Calling dsm->initialize()");
-    //this->dsm->initialize();
 
     // create various setpoint persistence:
     cool_storage = global_preferences->make_preference<uint8_t>(this->get_object_id_hash() + 1);

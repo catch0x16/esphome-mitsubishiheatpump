@@ -244,6 +244,7 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         uint32_t update_interval_;
 
         devicestate::CN105ControlFlow* hpControlFlow_{nullptr};
+        devicestate::CN105State* hpState_{nullptr};
 
         void terminateCycle();
 

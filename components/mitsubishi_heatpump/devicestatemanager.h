@@ -28,7 +28,6 @@ namespace devicestate {
       float maxTemp;
 
       esphome::binary_sensor::BinarySensor* internal_power_on;
-      esphome::binary_sensor::BinarySensor* device_state_connected;
       esphome::binary_sensor::BinarySensor* device_state_active;
       esphome::sensor::Sensor* device_set_point;
       esphome::binary_sensor::BinarySensor* device_status_operating;
@@ -72,7 +71,6 @@ namespace devicestate {
         const float minTemp,
         const float maxTemp,
         esphome::binary_sensor::BinarySensor* internal_power_on,
-        esphome::binary_sensor::BinarySensor* device_state_connected,
         esphome::binary_sensor::BinarySensor* device_state_active,
         esphome::sensor::Sensor* device_set_point,
         esphome::binary_sensor::BinarySensor* device_status_operating,

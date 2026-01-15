@@ -18,9 +18,11 @@ namespace devicestate {
     CN105Connection::CN105Connection(
             IIODevice* io_device,
             TimeoutCallback timeoutCallback,
+            ConnectedCallback connectedCallback,
             int update_interval) :
         io_device_{io_device},
         timeoutCallback_{timeoutCallback},
+        connectedCallback_{connectedCallback},
         update_interval_{update_interval} {
     }
 
@@ -151,7 +153,7 @@ namespace devicestate {
 
     // SERIAL_8E1
     void CN105Connection::setupUART() {
-        this->isHeatpumpConnected_ = false;
+        this->setConnectionState(false);
         this->isUARTConnected_ = false;
 
         if (io_device_->begin()) {
@@ -183,7 +185,7 @@ namespace devicestate {
     void CN105Connection::sendFirstConnectionPacket() {
         if (this->isUARTConnected_) {
             this->lastReconnectTimeMs = CUSTOM_MILLIS;          // marker to prevent to many reconnections
-            this->isHeatpumpConnected_ = false;
+            this->setConnectionState(true);
             uint8_t packet[CONNECT_LEN];
             memcpy(packet, CONNECT, CONNECT_LEN);
 
@@ -292,7 +294,7 @@ namespace devicestate {
         // or a wantedSettings update ack
     }
 
-    void CN105Connection::processCommand(ConnectedCallback connectedCallback, PacketCallback packetCallback) {
+    void CN105Connection::processCommand(PacketCallback packetCallback) {
         switch (this->command) {
         case 0x61:  /* last update was successful */
             hpPacketDebug(this->storedInputData, this->bytesRead + 1, LOG_ACK);
@@ -309,16 +311,20 @@ namespace devicestate {
                 (this->command == 0x7b) ? "Installer" : "User",
                 this->command);
             hpPacketDebug(this->storedInputData, this->bytesRead + 1, LOG_CONN_TAG);
-            this->isHeatpumpConnected_ = true;
-
-            connectedCallback();
+            
+            this->setConnectionState(true);
             break;
         default:
             break;
         }
     }
 
-    void CN105Connection::processDataPacket(ConnectedCallback connectedCallback, PacketCallback packetCallback) {
+    void CN105Connection::setConnectionState(bool state) {
+        this->isHeatpumpConnected_ = state;
+        connectedCallback_(state);
+    }
+
+    void CN105Connection::processDataPacket(PacketCallback packetCallback) {
         ESP_LOGV(TAG, "processing data packet...");
 
         this->data = &storedInputData[5];
@@ -337,11 +343,11 @@ namespace devicestate {
             this->lastResponseMs = CUSTOM_MILLIS;    //esphome::CUSTOM_MILLIS;
 
             // processing the specific command
-            processCommand(connectedCallback, packetCallback);
+            processCommand(packetCallback);
         }
     }
 
-    void CN105Connection::parse(uint8_t inputData, ConnectedCallback connectedCallback, PacketCallback packetCallback) {
+    void CN105Connection::parse(uint8_t inputData, PacketCallback packetCallback) {
         ESP_LOGV("Decoder", "--> %02X [nb: %d]", inputData, this->bytesRead);
 
         bool hasNext = false;
@@ -370,7 +376,7 @@ namespace devicestate {
                 }
 
                 if ((this->bytesRead) == this->dataLength + 5) {
-                    this->processDataPacket(connectedCallback, packetCallback);
+                    this->processDataPacket(packetCallback);
                     this->initBytePointer();
                 } else {                                        // packet is still filling
                     this->bytesRead++;                          // more data to come
@@ -391,13 +397,13 @@ namespace devicestate {
         return this->dataLength;
     }
 
-    bool CN105Connection::processInput(ConnectedCallback connectedCallback, PacketCallback packetCallback) {
+    bool CN105Connection::processInput(PacketCallback packetCallback) {
         bool processed = false;
         while (this->io_device_->available()) {
             processed = true;
             uint8_t inputData;
             if (this->io_device_->read(&inputData)) {
-                parse(inputData, connectedCallback, packetCallback);
+                parse(inputData, packetCallback);
             }
         }
         return processed;

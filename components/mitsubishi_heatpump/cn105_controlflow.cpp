@@ -20,7 +20,6 @@ namespace devicestate {
             scheduler_(
                 // send_callback: envoie un paquet via buildAndSendInfoPacket
                 [this](uint8_t code) {
-                    ESP_LOGI(TAG, "scheduled code: %d", code);
                     this->buildAndSendInfoPacket(code);
                 },
                 timeoutCallback,
@@ -68,31 +67,22 @@ namespace devicestate {
 #endif
 
     void CN105ControlFlow::sendWantedSettingsDelegate() {
-        ESP_LOGE(TAG, "sending wantedSettings..");
         this->hpState_->getWantedSettings().sent();
-        ESP_LOGE(TAG, "wantedSettings sent..");
-        
+
         wantedHeatpumpSettings wantedSettings = this->hpState_->getWantedSettings();
         debugSettings("wantedSettings", wantedSettings);
         // and then we send the update packet
-        ESP_LOGE(TAG, "Create and Send packet...");
+
         uint8_t packet[PACKET_LEN] = {};
         hpProtocol.createPacket(packet, *this->hpState_);
         this->connection_->writePacket(packet, PACKET_LEN);
         hpPacketDebug(packet, 22, "WRITE_SETTINGS");
-        ESP_LOGE(TAG, "Create and Send packet completed...");
 
-        ESP_LOGE(TAG, "updating current settings");
-        //this->hpState_->resetWantedSettings();
         this->hpState_->updateCurrentSettings(wantedSettings);
-        //this->publishWantedSettingsStateToHA();
-        ESP_LOGE(TAG, "updated current settings");
 
-        ESP_LOGI(TAG, "resettings wantedSettings..");
         // as soon as the packet is sent, we reset the settings
         //this->hpState_->getWantedSettings().resetSettings();
         this->hpState_->resetWantedSettings();
-        ESP_LOGI(TAG, "reset wantedSettings..");
     }
 
     bool CN105ControlFlow::sendWantedSettings() {
@@ -238,16 +228,7 @@ namespace devicestate {
         // Tant que la connexion n'a pas réussi, on ne lance AUCUN cycle/écriture (sinon ça court-circuite le délai).
         // On continue quand même à lire/processer l'input afin de détecter le 0x7A/0x7B (connection success).
         const bool can_talk_to_hp = this->connection_->isConnected();
-        if (!this->connection_->processInput([this, &loopCycle]() {
-                    ESP_LOGE(TAG, "Processed Input..");
-                    // let's say that the last complete cycle was over now
-                    loopCycle.lastCompleteCycleMs = CUSTOM_MILLIS;
-                    this->hpState_->resetCurrentSettings();
-                    this->hpState_->resetCurrentRunStates();
-                    //this->hpState_->getCurrentSettings().resetSettings();
-                    //this->hpState_->getCurrentRunStates().resetSettings();
-                    ESP_LOGE(TAG, "Reset current settings..");
-                }, 
+        if (!this->connection_->processInput(
                 [this](const uint8_t* packet, const int dataLength) {
                     const uint8_t code = packet[0];
                     if (this->scheduler_.process_response(code)) {
@@ -287,8 +268,6 @@ namespace devicestate {
         // 0x02 Settings
         InfoRequest r_settings("settings", "Settings", 0x02, 3, 0);
         r_settings.onResponse = [this](CN105State& self) {
-            //(void)self; this->getSettingsFromResponsePacket();
-            ESP_LOGW(TAG, "settings");
             this->hpProtocol.parseSettings0x02(this->connection_->getData(), self);
         };
         scheduler_.register_request(r_settings);
@@ -296,8 +275,6 @@ namespace devicestate {
         // 0x03 Room temperature
         InfoRequest r_room("room_temp", "Room temperature", 0x03, 3, 0);
         r_room.onResponse = [this](CN105State& self) {
-            //(void)self; this->getRoomTemperatureFromResponsePacket()
-            ESP_LOGW(TAG, "room_temp");
             this->hpProtocol.parseStatus0x03(this->connection_->getData(), self);
          };
         scheduler_.register_request(r_room);
@@ -305,8 +282,6 @@ namespace devicestate {
         // 0x06 Status
         InfoRequest r_status("status", "Status", 0x06, 3, 0);
         r_status.onResponse = [this](CN105State& self) {
-            //(void)self; this->getOperatingAndCompressorFreqFromResponsePacket();
-            ESP_LOGW(TAG, "status");
             this->hpProtocol.parseStatus0x06(this->connection_->getData(), self);
         };
         scheduler_.register_request(r_status);
@@ -314,11 +289,8 @@ namespace devicestate {
         // 0x09 Standby/Power
         InfoRequest r_power("standby", "Power/Standby", 0x09, 3, 500);
         r_power.onResponse = [this](CN105State& self) {
-            //(void)self; this->getPowerFromResponsePacket();
-            ESP_LOGW(TAG, "standby");
             this->hpProtocol.parseStatus0x06(this->connection_->getData(), self);
         };
-        r_power.disabled = true;
         scheduler_.register_request(r_power);
 
         // 0x42 HVAC options

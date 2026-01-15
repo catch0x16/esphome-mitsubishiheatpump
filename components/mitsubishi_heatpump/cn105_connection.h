@@ -14,12 +14,13 @@ namespace devicestate {
     class CN105Connection {
         public:
             using TimeoutCallback = std::function<void(const std::string&, uint32_t, std::function<void()>)>;
-            using ConnectedCallback = std::function<void()>;
+            using ConnectedCallback = std::function<void(bool)>;
             using PacketCallback = std::function<void(const uint8_t* packet, const int dataLength)>;
 
             CN105Connection(
                 IIODevice* io_device,
                 TimeoutCallback timeoutCallback,
+                ConnectedCallback connectedCallback,
                 int update_interval_);
 
             bool isConnected();
@@ -32,11 +33,12 @@ namespace devicestate {
 
             uint8_t* getData();
             int getDataLength();
-            bool processInput(ConnectedCallback connectedCallback, PacketCallback packetCallback);
+            bool processInput(PacketCallback packetCallback);
 
         private:
             IIODevice* io_device_;
             TimeoutCallback timeoutCallback_;
+            ConnectedCallback connectedCallback_;
             int update_interval_;
 
             uint8_t storedInputData[MAX_DATA_BYTES]; // multi-byte data
@@ -70,6 +72,8 @@ namespace devicestate {
 
             bool isConnectionActive();
 
+            void setConnectionState(bool state);
+
             void initBytePointer();
             bool checkSum();
             void checkHeader(uint8_t inputData);
@@ -82,9 +86,9 @@ namespace devicestate {
             void try_write_pending_packet();
 
             void updateSuccess();
-            void processCommand(ConnectedCallback connectedCallback, PacketCallback packetCallback);
-            void processDataPacket(ConnectedCallback connectedCallback, PacketCallback packetCallback);
-            void parse(uint8_t inputData, ConnectedCallback connectedCallback, PacketCallback packetCallback);
+            void processCommand(PacketCallback packetCallback);
+            void processDataPacket(PacketCallback packetCallback);
+            void parse(uint8_t inputData, PacketCallback packetCallback);
     };
 
 }
