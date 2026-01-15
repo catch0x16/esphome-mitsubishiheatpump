@@ -292,7 +292,7 @@ namespace devicestate {
             this->hpProtocol.parseSettings0x02(this->connection_->getData(), self);
         };
         scheduler_.register_request(r_settings);
-/*
+
         // 0x03 Room temperature
         InfoRequest r_room("room_temp", "Room temperature", 0x03, 3, 0);
         r_room.onResponse = [this](CN105State& self) {
@@ -310,8 +310,7 @@ namespace devicestate {
             this->hpProtocol.parseStatus0x06(this->connection_->getData(), self);
         };
         scheduler_.register_request(r_status);
-*/
-        /*
+
         // 0x09 Standby/Power
         InfoRequest r_power("standby", "Power/Standby", 0x09, 3, 500);
         r_power.onResponse = [this](CN105State& self) {
@@ -344,7 +343,7 @@ namespace devicestate {
         InfoRequest r_timers("timers", "Timers", 0x05, 1, 0);
         r_timers.disabled = true;
         scheduler_.register_request(r_timers);
-*/
+
         // Appel vers la nouvelle méthode dédiée
         //this->registerHardwareSettingsRequests();
     }

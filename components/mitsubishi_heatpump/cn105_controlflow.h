@@ -43,11 +43,10 @@ namespace devicestate {
         private:
             CN105Connection* connection_;
             CN105State* hpState_;
-            RequestScheduler scheduler_;
-            CN105Protocol hpProtocol;
-
             RequestScheduler::TimeoutCallback timeoutCallback_;
             RetryCallback retryCallback_;
+            RequestScheduler scheduler_;
+            CN105Protocol hpProtocol;
 
             uint32_t debounce_delay_;
             uint32_t remote_temp_timeout_;

@@ -36,9 +36,8 @@ namespace devicestate {
 
         private:
             IIODevice* io_device_;
-            int update_interval_;
-
             TimeoutCallback timeoutCallback_;
+            int update_interval_;
 
             uint8_t storedInputData[MAX_DATA_BYTES]; // multi-byte data
             uint8_t* data;
