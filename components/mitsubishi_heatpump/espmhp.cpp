@@ -639,7 +639,7 @@ void MitsubishiHeatPump::set_remote_temperature(float temp) {
         this->remote_temperature = temp;
     }
 
-    //this->hpControlFlow_->setRemoteTemperature(temp);
+    this->hpControlFlow_->setRemoteTemperature(temp);
     this->publish_state();
 }
 
