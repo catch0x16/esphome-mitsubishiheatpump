@@ -73,5 +73,7 @@ bool cycleManagement::doesCycleTimeOut() {
     // Use signed arithmetic to correctly handle millis() wraparound
     int32_t elapsed = static_cast<int32_t>(CUSTOM_MILLIS - lastCycleStartMs);
     if (elapsed < 0) return false;
-    return static_cast<uint32_t>(elapsed) > (2 * update_interval) + 1000;
+    // Use 64-bit arithmetic to prevent overflow with large update_interval values
+    uint64_t timeout_ms = static_cast<uint64_t>(update_interval) * 2 + 1000;
+    return static_cast<uint32_t>(elapsed) > timeout_ms;
 }
