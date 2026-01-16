@@ -16,14 +16,17 @@ namespace devicestate {
     static const char* TAG = "CN105Connection"; // Logging tag
 
     CN105Connection::CN105Connection(
-            IIODevice* io_device,
-            TimeoutCallback timeoutCallback,
-            ConnectedCallback connectedCallback,
-            int update_interval) :
-        io_device_{io_device},
-        timeoutCallback_{timeoutCallback},
-        connectedCallback_{connectedCallback},
-        update_interval_{update_interval} {
+                IIODevice* io_device,
+                TimeoutCallback timeoutCallback,
+                ConnectedCallback connectedCallback,
+                int update_interval) :
+            io_device_{io_device},
+            timeoutCallback_{timeoutCallback},
+            connectedCallback_{connectedCallback},
+            update_interval_{update_interval} {
+        this->boot_ms_ = CUSTOM_MILLIS;
+        this->initBytePointer();
+        this->lastResponseMs = CUSTOM_MILLIS;
     }
 
     bool CN105Connection::isConnected() {

@@ -110,7 +110,7 @@ namespace devicestate {
             return;
         }
 
-        //ESP_LOGV(LOG_ACTION_EVT_TAG, "checkPendingWantedSettings - wanted settings have changed, sending them to the heatpump...");
+        ESP_LOGI(LOG_ACTION_EVT_TAG, "checkPendingWantedSettings - wanted settings have changed, sending them to the heatpump...");
 
         if (this->sendWantedSettings()) {
             // as we've just sent a packet to the heatpump, we let it time for process
