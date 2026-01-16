@@ -315,6 +315,10 @@ namespace devicestate {
     }
 
     bool CN105ControlFlow::getOffsetDirection() {
+        if (this->hpState_->getCurrentSettings().mode == nullptr) {
+            return false;
+        }
+
         if (std::strcmp(this->hpState_->getCurrentSettings().mode, "HEAT") == 0) {
             return true;
         }
