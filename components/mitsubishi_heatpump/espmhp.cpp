@@ -51,7 +51,7 @@ void MitsubishiHeatPump::set_update_interval(uint32_t update_interval) {
 }
 
 void MitsubishiHeatPump::terminateCycle() {
-    ESP_LOGW(TAG, "Terminate cycle start");
+    ESP_LOGD(TAG, "Terminate cycle start");
     this->hpControlFlow_->completeCycle();
 
     this->dsm->update();
@@ -65,7 +65,7 @@ void MitsubishiHeatPump::terminateCycle() {
     }
 
     this->loopCycle.cycleEnded();
-    ESP_LOGW(TAG, "Terminate cycle complete");
+    ESP_LOGD(TAG, "Terminate cycle complete");
 }
 
 void MitsubishiHeatPump::banner() {

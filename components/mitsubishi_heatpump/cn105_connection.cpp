@@ -38,14 +38,14 @@ namespace devicestate {
             return;
         }
 
-        // Timeout global: au bout de 2 minutes on démarre même sans WiFi
+        // Global timeout: after 2 minutes we start even without WiFi
         if (!this->conn_timeout_armed_) {
             ESP_LOGI(TAG, "Connection timeout not armed, arming.");
 
             this->conn_timeout_armed_ = true;
             timeoutCallback_("cn105_bootstrap_timeout", 120000, [this]() {
                 if (this->conn_bootstrap_started_) return;
-                    ESP_LOGW(LOG_CONN_TAG, "Bootstrap connexion: timeout 120s, démarrage CN105 malgré tout");
+                    ESP_LOGW(LOG_CONN_TAG, "Bootstrap connection: timeout 120s, starting CN105 anyway");
                     this->conn_bootstrap_started_ = true;
                     this->setupUART();
                     this->sendFirstConnectionPacket();
@@ -56,25 +56,25 @@ namespace devicestate {
         if (esphome::wifi::global_wifi_component != nullptr && !esphome::wifi::global_wifi_component->is_connected()) {
             if (!this->conn_wait_logged_) {
                 this->conn_wait_logged_ = true;
-                ESP_LOGI(LOG_CONN_TAG, "Bootstrap connexion: attente WiFi avant init UART/CONNECT");
+                ESP_LOGI(LOG_CONN_TAG, "Bootstrap connection: waiting for WiFi before init UART/CONNECT");
             }
             return;
         }
     #endif
 
-        // Délai de grâce pour laisser le flux de logs OTA se connecter (évite de rater la séquence CONNECT)
+        // Grace delay to let OTA log stream connect (avoids missing the CONNECT sequence)
         const uint32_t grace_ms = this->conn_bootstrap_delay_ms_;
         const uint32_t elapsed = CUSTOM_MILLIS - this->boot_ms_;
         if (elapsed < grace_ms) {
             if (!this->conn_grace_logged_) {
                 this->conn_grace_logged_ = true;
-                ESP_LOGI(LOG_CONN_TAG, "Bootstrap connexion: délai de grâce %ums pour logs OTA", grace_ms);
+                ESP_LOGI(LOG_CONN_TAG, "Bootstrap connection: grace delay %ums for OTA logs", grace_ms);
             }
             return;
         }
 
         this->conn_bootstrap_started_ = true;
-        ESP_LOGI(LOG_CONN_TAG, "Bootstrap connexion: init UART + envoi CONNECT (loop)");
+        ESP_LOGI(LOG_CONN_TAG, "Bootstrap connection: init UART + sending CONNECT (loop)");
         this->setupUART();
         this->sendFirstConnectionPacket();
     }
@@ -167,11 +167,11 @@ namespace devicestate {
         this->isUARTConnected_ = false;
 
         if (io_device_->begin()) {
-            ESP_LOGI(LOG_CONN_TAG, "UART configuré en SERIAL_8E1");
+            ESP_LOGI(LOG_CONN_TAG, "UART configured as SERIAL_8E1");
             this->isUARTConnected_ = true;
             this->initBytePointer();
         } else {
-            ESP_LOGW(LOG_CONN_TAG, "UART n'est pas configuré en SERIAL_8E1");
+            ESP_LOGW(LOG_CONN_TAG, "UART is not configured as SERIAL_8E1");
         }
     }
 
@@ -185,8 +185,8 @@ namespace devicestate {
         ESP_LOGD(TAG, "reconnectUART()");
         this->lastReconnectTimeMs = CUSTOM_MILLIS;
         this->disconnectUART();
-        // Désactivé: le fallback UART bas-niveau (ESP-IDF 5.4.x) peut interférer avec les
-        // tests de handshake/fallback. On laisse UARTComponent gérer la réinit standard.
+        // Disabled: low-level UART fallback (ESP-IDF 5.4.x) can interfere with
+        // handshake/fallback tests. We let UARTComponent handle standard reinit.
         //this->force_low_level_uart_reinit();
         this->setupUART();
         this->sendFirstConnectionPacket();
@@ -199,12 +199,12 @@ namespace devicestate {
             uint8_t packet[CONNECT_LEN];
             memcpy(packet, CONNECT, CONNECT_LEN);
 
-            // Choix du mode de handshake: standard (0x5A) ou installateur (0x5B)
+            // Handshake mode selection: standard (0x5A) or installer (0x5B)
             packet[1] = 0x5A;
-            // CONNECT a un checksum pré-calculé dans la constante; si on modifie l'octet commande, on doit le recalculer.
+            // CONNECT has a pre-calculated checksum in the constant; if we modify the command byte, we must recalculate it.
             packet[CONNECT_LEN - 1] = devicestate::checkSum(packet, CONNECT_LEN - 1);
 
-            // Détails des octets en DEBUG sur le tag de connexion
+            // Byte details in DEBUG on the connection tag
             hpPacketDebug(packet, CONNECT_LEN, LOG_CONN_TAG);
 
             this->writePacket(packet, CONNECT_LEN, false);      // checkIsActive=false because it's the first packet and we don't have any reply yet
@@ -316,7 +316,7 @@ namespace devicestate {
             break;
         case 0x7a:  // Connection success (User / standard)
         case 0x7b:  // Connection success (Installer / extended)
-            // Log en INFO sur le tag dédié, détails en DEBUG via hpPacketDebug
+            // Log at INFO level on dedicated tag, details at DEBUG via hpPacketDebug
             ESP_LOGI(LOG_CONN_TAG, "--> Heatpump did reply: connection success (%s, 0x%02X)! <--",
                 (this->command == 0x7b) ? "Installer" : "User",
                 this->command);
@@ -341,8 +341,8 @@ namespace devicestate {
 
         hpPacketDebug(this->storedInputData, this->bytesRead + 1, "READ");
 
-        // Pendant le handshake (tant que non connecté), logguer toute trame RX sous CN105_CONN en DEBUG
-        // afin de faciliter le diagnostic (0x7A/0x7B attendus, ou autre réponse inattendue).
+        // During handshake (while not connected), log all RX frames under CN105_CONN at DEBUG level
+        // to facilitate diagnostics (0x7A/0x7B expected, or other unexpected response).
         if (!this->isHeatpumpConnected_) {
             ESP_LOGD(LOG_CONN_TAG, "RX during handshake (cmd=0x%02X len=%d)", this->command, this->dataLength);
             hpPacketDebug(storedInputData, this->bytesRead + 1, LOG_CONN_TAG);

@@ -8,13 +8,13 @@
 namespace devicestate {
 
     void hpPacketDebug(uint8_t* packet, unsigned int length, const char* packetDirection) {
-        // Construire la chaîne de sortie de façon sûre et performante
+        // Build the output string safely and efficiently
         std::string output;
-        output.reserve(length * 3 + 1); // "FF " par octet
+        output.reserve(length * 3 + 1); // "FF " per byte
 
         char byteBuf[4];
         for (unsigned int i = 0; i < length; i++) {
-            // Toujours borné à 3 caractères + NUL
+            // Always bounded to 3 characters + NUL
             int written = snprintf(byteBuf, sizeof(byteBuf), "%02X ", packet[i]);
             if (written > 0) {
                 output.append(byteBuf, static_cast<size_t>(written));
@@ -22,7 +22,7 @@ namespace devicestate {
         }
 
         char outputForSensor[15];
-        // Tronquer proprement pour la publication éventuelle sur un capteur
+        // Properly truncate for eventual publication to a sensor
         strncpy(outputForSensor, output.c_str(), sizeof(outputForSensor) - 1);
         outputForSensor[sizeof(outputForSensor) - 1] = '\0';
 
@@ -46,14 +46,14 @@ namespace devicestate {
     }
 
     void debugStatus(const char* statusName, heatpumpStatus status) {
-        // Déclarez un buffer (tableau de char) pour la conversion float -> string
-        // 6 caractères suffisent pour "-99.9\0"
+        // Declare a buffer (char array) for float -> string conversion
+        // 6 characters are enough for "-99.9\0"
         static char outside_temp_buffer[6];
 
         ESP_LOGI(LOG_STATUS_TAG, "[%s]-> [room C°: %.1f, outside C°: %s, operating: %s, compressor freq: %.1f Hz]",
             statusName,
             status.roomTemperature,
-            // Utilisation de snprintf dans l'expression ternaire
+            // Using snprintf in the ternary expression
             std::isnan(status.outsideAirTemperature)
                 ? "N/A"
                 : (snprintf(outside_temp_buffer, sizeof(outside_temp_buffer), "%.1f", status.outsideAirTemperature) > 0 ? outside_temp_buffer : "ERR"),

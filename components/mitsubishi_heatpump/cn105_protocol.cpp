@@ -264,9 +264,9 @@ namespace devicestate {
     }
 
     void CN105Protocol::getDataFromResponsePacket(const uint8_t* packet, const int dataLength, CN105State& hpState) {
-        // D'abord, laissons l'orchestrateur traiter les codes connus
+        // First, let the orchestrator handle known codes
         const uint8_t code = packet[0];
-        // Sinon, switch pour les cas non gérés par l'orchestrateur
+        // Otherwise, switch for cases not handled by the orchestrator
         switch (code) {
 
         case 0x04:

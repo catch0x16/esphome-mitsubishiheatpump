@@ -65,7 +65,7 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         );
 
         float get_setup_priority() const override {
-            return esphome::setup_priority::AFTER_WIFI;  // Configurez ce composant après le WiFi
+            return esphome::setup_priority::AFTER_WIFI;  // Configure this component after WiFi
         }
 
         esphome::binary_sensor::BinarySensor* internal_power_on;

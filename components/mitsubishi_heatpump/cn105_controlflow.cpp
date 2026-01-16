@@ -212,7 +212,7 @@ namespace devicestate {
             ESP_LOGV("CONTROL_WANTED_SETTINGS", "hasChanged is %s", TRUEFALSE(this->hpState_->getWantedSettings().hasChanged));
             loopCycle.cycleStarted();
             //this->nbCycles_++;
-            // Envoie la première requête activable (la liste est enregistrée une fois au constructeur)
+            // Send the first activatable request (the list is registered once in the constructor)
             this->scheduler_.send_next_after(0x00); // 0x00 -> start, pick first eligible
         } else {
             this->connection_->reconnectIfConnectionLost();
@@ -223,8 +223,8 @@ namespace devicestate {
         // Bootstrap connexion CN105 (UART + CONNECT) depuis loop()
         this->connection_->ensureConnection();
 
-        // Tant que la connexion n'a pas réussi, on ne lance AUCUN cycle/écriture (sinon ça court-circuite le délai).
-        // On continue quand même à lire/processer l'input afin de détecter le 0x7A/0x7B (connection success).
+        // While the connection has not succeeded, we don't start ANY cycle/write (otherwise it short-circuits the delay).
+        // We still continue to read/process input to detect 0x7A/0x7B (connection success).
         const bool can_talk_to_hp = this->connection_->isConnected();
         if (!this->connection_->processInput(
                 [this](const uint8_t* packet, const int dataLength) {
@@ -312,7 +312,7 @@ namespace devicestate {
         r_timers.disabled = true;
         scheduler_.register_request(r_timers);
 
-        // Appel vers la nouvelle méthode dédiée
+        // Call to the new dedicated method
         //this->registerHardwareSettingsRequests();
     }
 

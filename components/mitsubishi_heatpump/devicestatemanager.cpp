@@ -89,7 +89,7 @@ namespace devicestate {
             return;
         }
         
-        ESP_LOGW(TAG, "Callback hpStatusChanged starting");
+        ESP_LOGD(TAG, "Callback hpStatusChanged starting");
         if (!this->statusInitialized) {
             this->statusInitialized = true;
             ESP_LOGW(TAG, "HeatPump status initialized.");
@@ -103,7 +103,7 @@ namespace devicestate {
             ESP_LOGI(TAG, "HeatPump device status updated.");
         }
 
-        ESP_LOGW(TAG, "Callback hpStatusChanged completed");
+        ESP_LOGD(TAG, "Callback hpStatusChanged completed");
     }
 
     void DeviceStateManager::log_packet(uint8_t* packet, unsigned int length, char* packetDirection) {

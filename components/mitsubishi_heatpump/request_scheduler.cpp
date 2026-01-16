@@ -40,7 +40,7 @@ namespace devicestate {
     }
 
     void RequestScheduler::send_request(uint8_t code, CN105State* context) {
-        // Obtenir le contexte si non fourni mais que le callback est disponible
+        // Get context if not provided but callback is available
         if (!context && context_callback_) {
             context = context_callback_();
         }
@@ -50,7 +50,7 @@ namespace devicestate {
             if (req.code != code) continue;
             if (req.disabled) { return; }
 
-            // Vérifier canSend si présent et si le contexte est disponible
+            // Check canSend if present and context is available
             if (req.canSend && context) {
                 if (!req.canSend(*context)) {
                     return;
@@ -63,12 +63,12 @@ namespace devicestate {
             req.awaiting = true;
             req.last_request_time = CUSTOM_MILLIS;
 
-            // Envoyer le paquet via le callback
+            // Send the packet via callback
             if (send_callback_) {
                 send_callback_(req.code);
             }
 
-            // Gérer le timeout si configuré et si le callback est disponible
+            // Handle timeout if configured and callback is available
             if (req.soft_timeout_ms > 0 && timeout_callback_) {
                 uint8_t code_copy = req.code;
                 const std::string tname = req.timeout_name.empty() ?
@@ -76,13 +76,13 @@ namespace devicestate {
                     req.timeout_name;
 
                 timeout_callback_(tname, req.soft_timeout_ms, [this, code_copy]() {
-                    // Obtenir le contexte pour send_next_after
+                    // Get context for send_next_after
                     CN105State* ctx = nullptr;
                     if (this->context_callback_) {
                         ctx = this->context_callback_();
                     }
 
-                    // Si la réponse est toujours attendue, considérer comme un échec soft et continuer
+                    // If response is still awaited, consider it a soft failure and continue
                     for (auto& r : this->requests_) {
                         if (r.code == code_copy && r.awaiting) {
                             r.awaiting = false;
@@ -107,7 +107,7 @@ namespace devicestate {
     }
 
     void RequestScheduler::mark_response_seen(uint8_t code, CN105State* context) {
-        // Obtenir le contexte si non fourni mais que le callback est disponible
+        // Get context if not provided but callback is available
         if (!context && context_callback_) {
             context = context_callback_();
         }
@@ -118,7 +118,7 @@ namespace devicestate {
                 req.failures = 0;
                 ESP_LOGD(LOG_CYCLE_TAG, "Receiving %s (0x%02X)", req.description, req.code);
 
-                // Appeler le callback onResponse si présent et si le contexte est disponible
+                // Call onResponse callback if present and context is available
                 if (req.onResponse && context) {
                     req.onResponse(*context);
                 }
@@ -128,12 +128,12 @@ namespace devicestate {
     }
 
     void RequestScheduler::send_next_after(uint8_t previous_code, CN105State* context) {
-        // Obtenir le contexte si non fourni mais que le callback est disponible
+        // Get context if not provided but callback is available
         if (!context && context_callback_) {
             context = context_callback_();
         }
 
-        // Trouver l'index de départ (par code) puis essayer les entrées activables suivantes dans l'ordre
+        // Find starting index (by code) then try next activatable entries in order
         int start = -1;
         for (size_t i = 0; i < requests_.size(); ++i) {
             if (requests_[i].code == previous_code) {
@@ -152,7 +152,7 @@ namespace devicestate {
                 continue;
             }
 
-            // Vérifier canSend si présent et si le contexte est disponible
+            // Check canSend if present and context is available
             if (req.canSend && context) {
                 if (!req.canSend(*context)) {
                     if (req.log_tag) {
@@ -171,24 +171,24 @@ namespace devicestate {
                 continue;
             }
 
-            // Envoyer la requête trouvée
+            // Send the found request
             send_request(req.code, context);
             return;
         }
 
-        // Plus de requêtes → terminer le cycle
+        // No more requests -> terminate the cycle
         if (terminate_callback_) {
             terminate_callback_();
         }
     }
 
     bool RequestScheduler::process_response(uint8_t code, CN105State* context) {
-        // Obtenir le contexte si non fourni mais que le callback est disponible
+        // Get context if not provided but callback is available
         if (!context && context_callback_) {
             context = context_callback_();
         }
 
-        // Chercher si le code est géré par le scheduler
+        // Check if the code is handled by the scheduler
         bool handled = false;
         for (auto& req : requests_) {
             if (req.code == code) {
@@ -204,9 +204,9 @@ namespace devicestate {
     }
 
     void RequestScheduler::loop() {
-        // Actuellement, la gestion des timeouts est faite via des callbacks
-        // Cette méthode est prévue pour une gestion future si nécessaire
-        // (par exemple, pour vérifier les timeouts manuellement dans le loop principal)
+        // Currently, timeout management is done via callbacks
+        // This method is intended for future management if needed
+        // (for example, to check timeouts manually in the main loop)
     }
 
 }
