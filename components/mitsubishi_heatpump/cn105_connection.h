@@ -65,10 +65,10 @@ namespace devicestate {
             bool pending_check_is_active_ = true;
             bool has_pending_packet_ = false;
 
-            unsigned long lastSend;
-            unsigned long lastConnectRqTimeMs;
-            unsigned long lastReconnectTimeMs;
-            unsigned long lastResponseMs;
+            unsigned long lastSend = 0;
+            unsigned long lastConnectRqTimeMs = 0;
+            unsigned long lastReconnectTimeMs = 0;
+            unsigned long lastResponseMs = 0;
 
             bool isConnectionActive();
 

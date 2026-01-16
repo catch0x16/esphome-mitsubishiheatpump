@@ -28,6 +28,7 @@ namespace devicestate {
             ),
             hpProtocol{} {
         this->hpState_ = hpState;
+        this->debounce_delay_ = 0;
         this->remote_temp_timeout_ = 4294967295;    // uint32_t max
     }
 
@@ -47,7 +48,7 @@ namespace devicestate {
             if (this->wantedSettingsMutex) {
                 if (retry_count < 1) {
                     ESP_LOGW(retryName, "10 retry calls failed because mutex was locked, forcing unlock...");
-                    this->wantedSettingsMutex = true;
+                    this->wantedSettingsMutex = false;  // Fixed: was incorrectly set to true
                     f();
                     this->wantedSettingsMutex = false;
                     return esphome::RetryResult::DONE;
@@ -105,8 +106,9 @@ namespace devicestate {
             return;
         }
 
-        if (!(now - this->hpState_->getWantedSettings().lastChange < this->debounce_delay_)) {
-            ESP_LOGI(LOG_ACTION_EVT_TAG, "Skipping checkPendingWantedSettings due to lastChange");
+        // Skip if not enough time has passed since last change (debounce)
+        if ((now - this->hpState_->getWantedSettings().lastChange) < this->debounce_delay_) {
+            ESP_LOGI(LOG_ACTION_EVT_TAG, "Skipping checkPendingWantedSettings: debounce delay not elapsed");
             return;
         }
 

@@ -125,7 +125,13 @@ namespace devicestate {
     }
 
     bool CN105Connection::checkSum() {
-        // TODO: use the CN105Connection::checkSum(byte bytes[], int len) function
+        // Bounds check: ensure we don't read past buffer
+        if (this->bytesRead >= MAX_DATA_BYTES || this->dataLength < 0 ||
+            (this->dataLength + 5) > MAX_DATA_BYTES) {
+            ESP_LOGW("chkSum", "Invalid packet dimensions: bytesRead=%d dataLength=%d",
+                     this->bytesRead, this->dataLength);
+            return false;
+        }
 
         uint8_t packetCheckSum = storedInputData[this->bytesRead];
         uint8_t processedCS = 0;

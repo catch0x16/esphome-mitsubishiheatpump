@@ -347,7 +347,8 @@ namespace devicestate {
     }
 
     void CN105State::updateCurrentStatus(heatpumpStatus& status) {
-        if (status != this->currentStatus) {
+        // Skip update if status is unchanged (was inverted before)
+        if (status == this->currentStatus) {
             return;
         }
         this->statusInitialized = true;

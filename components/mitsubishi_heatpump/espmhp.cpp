@@ -567,30 +567,41 @@ void MitsubishiHeatPump::updateDevice() {
     switch (deviceState.swingMode) {
         case SwingMode::SwingMode_Both:
             this->swing_mode = climate::CLIMATE_SWING_BOTH;
+            break;
         case SwingMode::SwingMode_Vertical:
             this->swing_mode = climate::CLIMATE_SWING_VERTICAL;
+            break;
         case SwingMode::SwingMode_Horizontal:
             this->swing_mode = climate::CLIMATE_SWING_HORIZONTAL;
+            break;
         case SwingMode::SwingMode_Off:
             this->swing_mode = climate::CLIMATE_SWING_OFF;
+            break;
     }
     ESP_LOGD(TAG, "Swing mode is: %d", this->swing_mode);
 
     switch(deviceState.verticalSwingMode) {
         case VerticalSwingMode::VerticalSwingMode_Swing:
             this->update_swing_vertical("swing");
+            break;
         case VerticalSwingMode::VerticalSwingMode_Auto:
             this->update_swing_vertical("auto");
+            break;
         case VerticalSwingMode::VerticalSwingMode_Up:
             this->update_swing_vertical("up");
+            break;
         case VerticalSwingMode::VerticalSwingMode_UpCenter:
             this->update_swing_vertical("up_center");
+            break;
         case VerticalSwingMode::VerticalSwingMode_Center:
             this->update_swing_vertical("center");
+            break;
         case VerticalSwingMode::VerticalSwingMode_DownCenter:
             this->update_swing_vertical("down_center");
+            break;
         case VerticalSwingMode::VerticalSwingMode_Down:
             this->update_swing_vertical("down");
+            break;
         default:
             break;
     }
@@ -599,18 +610,25 @@ void MitsubishiHeatPump::updateDevice() {
     switch(deviceState.horizontalSwingMode) {
         case HorizontalSwingMode::HorizontalSwingMode_Swing:
             this->update_swing_horizontal("swing");
+            break;
         case HorizontalSwingMode::HorizontalSwingMode_Auto:
             this->update_swing_horizontal("auto");
+            break;
         case HorizontalSwingMode::HorizontalSwingMode_Left:
             this->update_swing_horizontal("left");
+            break;
         case HorizontalSwingMode::HorizontalSwingMode_LeftCenter:
             this->update_swing_horizontal("left_center");
+            break;
         case HorizontalSwingMode::HorizontalSwingMode_Center:
             this->update_swing_horizontal("center");
+            break;
         case HorizontalSwingMode::HorizontalSwingMode_RightCenter:
             this->update_swing_horizontal("right_center");
+            break;
         case HorizontalSwingMode::HorizontalSwingMode_Right:
             this->update_swing_horizontal("right");
+            break;
         default:
             break;
     }
@@ -672,12 +690,17 @@ void MitsubishiHeatPump::setup() {
         this->max_temp = this->visual_max_temperature_override_.value();
     }
 
-    this->hysterisisWorkflowStep = new HysterisisWorkflowStep(
+    this->hysterisisWorkflowStep = new (std::nothrow) HysterisisWorkflowStep(
         this->hysterisisOn_,
         this->hysterisisOff_
     );
+    if (this->hysterisisWorkflowStep == nullptr) {
+        ESP_LOGE(TAG, "Failed to allocate HysterisisWorkflowStep");
+        this->mark_failed();
+        return;
+    }
 
-    this->pidWorkflowStep = new PidWorkflowStep(
+    this->pidWorkflowStep = new (std::nothrow) PidWorkflowStep(
         this->get_update_interval(),
         this->min_temp,
         this->max_temp,
@@ -687,10 +710,20 @@ void MitsubishiHeatPump::setup() {
         this->maxAdjustmentUnder_,
         this->maxAdjustmentOver_
     );
+    if (this->pidWorkflowStep == nullptr) {
+        ESP_LOGE(TAG, "Failed to allocate PidWorkflowStep");
+        this->mark_failed();
+        return;
+    }
 
-    IIODevice* io_device = new UARTIODevice(
+    IIODevice* io_device = new (std::nothrow) UARTIODevice(
         this->get_hw_serial_()
     );
+    if (io_device == nullptr) {
+        ESP_LOGE(TAG, "Failed to allocate UARTIODevice");
+        this->mark_failed();
+        return;
+    }
 
     auto timeoutCallback = [this](const std::string& name, uint32_t timeout_ms, std::function<void()> callback) {
         this->set_timeout(name.c_str(), timeout_ms, std::move(callback));
@@ -704,7 +737,12 @@ void MitsubishiHeatPump::setup() {
         this->terminateCycle();
     };
 
-    this->hpState_ = new CN105State();
+    this->hpState_ = new (std::nothrow) CN105State();
+    if (this->hpState_ == nullptr) {
+        ESP_LOGE(TAG, "Failed to allocate CN105State");
+        this->mark_failed();
+        return;
+    }
     auto loopCycle = this->loopCycle;
     auto connectedCallback = [this, &loopCycle](bool state) {
         if (state) {
@@ -719,24 +757,36 @@ void MitsubishiHeatPump::setup() {
         this->device_state_connected->publish_state(state);
     };
 
-    CN105Connection* hpConnection = new CN105Connection(
+    CN105Connection* hpConnection = new (std::nothrow) CN105Connection(
         io_device,
         timeoutCallback,
         connectedCallback,
         this->get_update_interval()
     );
-    this->hpControlFlow_ = new CN105ControlFlow(
+    if (hpConnection == nullptr) {
+        ESP_LOGE(TAG, "Failed to allocate CN105Connection");
+        this->mark_failed();
+        return;
+    }
+
+    this->hpControlFlow_ = new (std::nothrow) CN105ControlFlow(
         hpConnection,
         this->hpState_,
         timeoutCallback,
         terminateCallback,
         retryCallback
     );
+    if (this->hpControlFlow_ == nullptr) {
+        ESP_LOGE(TAG, "Failed to allocate CN105ControlFlow");
+        this->mark_failed();
+        return;
+    }
+
     this->hpState_->getWantedSettings().resetSettings();
     this->hpState_->getWantedSettings().resetSettings();
 
     ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
-    this->dsm = new devicestate::DeviceStateManager(
+    this->dsm = new (std::nothrow) devicestate::DeviceStateManager(
         io_device,
         this->hpState_,
         this->min_temp,
@@ -752,6 +802,11 @@ void MitsubishiHeatPump::setup() {
         this->device_status_runtime_hours,
         this->pid_set_point_correction
     );
+    if (this->dsm == nullptr) {
+        ESP_LOGE(TAG, "Failed to allocate DeviceStateManager");
+        this->mark_failed();
+        return;
+    }
 
     // create various setpoint persistence:
     cool_storage = global_preferences->make_preference<uint8_t>(this->get_object_id_hash() + 1);

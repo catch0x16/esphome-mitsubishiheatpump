@@ -392,19 +392,29 @@ namespace devicestate {
     }
 
     void DeviceStateManager::publish() {
-        // Publish device status
-        this->device_status_operating->publish_state(this->deviceStatus.operating);
-        this->device_status_current_temperature->publish_state(this->deviceStatus.currentTemperature);
-        this->device_status_compressor_frequency->publish_state(this->deviceStatus.compressorFrequency);
-        this->device_status_input_power->publish_state(this->deviceStatus.inputPower);
-        this->device_status_kwh->publish_state(this->deviceStatus.kWh);
-        this->device_status_runtime_hours->publish_state(this->deviceStatus.runtimeHours);
+        // Publish device status (with null checks)
+        if (this->device_status_operating)
+            this->device_status_operating->publish_state(this->deviceStatus.operating);
+        if (this->device_status_current_temperature)
+            this->device_status_current_temperature->publish_state(this->deviceStatus.currentTemperature);
+        if (this->device_status_compressor_frequency)
+            this->device_status_compressor_frequency->publish_state(this->deviceStatus.compressorFrequency);
+        if (this->device_status_input_power)
+            this->device_status_input_power->publish_state(this->deviceStatus.inputPower);
+        if (this->device_status_kwh)
+            this->device_status_kwh->publish_state(this->deviceStatus.kWh);
+        if (this->device_status_runtime_hours)
+            this->device_status_runtime_hours->publish_state(this->deviceStatus.runtimeHours);
 
-        // Public device state
-        this->internal_power_on->publish_state(this->internalPowerOn);
-        this->device_state_active->publish_state(this->deviceState.active);
-        this->device_set_point->publish_state(this->deviceState.targetTemperature);
-        this->pid_set_point_correction->publish_state(this->correctedTargetTemperature);
+        // Publish device state (with null checks)
+        if (this->internal_power_on)
+            this->internal_power_on->publish_state(this->internalPowerOn);
+        if (this->device_state_active)
+            this->device_state_active->publish_state(this->deviceState.active);
+        if (this->device_set_point)
+            this->device_set_point->publish_state(this->deviceState.targetTemperature);
+        if (this->pid_set_point_correction)
+            this->pid_set_point_correction->publish_state(this->correctedTargetTemperature);
     }
 
 }

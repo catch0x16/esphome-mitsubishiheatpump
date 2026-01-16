@@ -61,11 +61,17 @@ void cycleManagement::cycleEnded(bool timedOut) {
 }
 
 bool cycleManagement::hasUpdateIntervalPassed() {
-    if (CUSTOM_MILLIS < lastCompleteCycleMs) return false;      // must be checked because operands are they are unsigned
-    return (CUSTOM_MILLIS - lastCompleteCycleMs) > update_interval;
+    // Use signed arithmetic to correctly handle millis() wraparound
+    // Signed subtraction works correctly even after 32-bit overflow (~49.7 days)
+    int32_t elapsed = static_cast<int32_t>(CUSTOM_MILLIS - lastCompleteCycleMs);
+    // Negative elapsed means lastCompleteCycleMs is in the future (deferred)
+    if (elapsed < 0) return false;
+    return static_cast<uint32_t>(elapsed) > update_interval;
 }
 
 bool cycleManagement::doesCycleTimeOut() {
-    if (CUSTOM_MILLIS < lastCycleStartMs) return false;         // must be checked because operands are they are unsigned
-    return (CUSTOM_MILLIS - lastCycleStartMs) > (2 * update_interval) + 1000;
+    // Use signed arithmetic to correctly handle millis() wraparound
+    int32_t elapsed = static_cast<int32_t>(CUSTOM_MILLIS - lastCycleStartMs);
+    if (elapsed < 0) return false;
+    return static_cast<uint32_t>(elapsed) > (2 * update_interval) + 1000;
 }

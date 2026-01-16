@@ -2,6 +2,7 @@
 #define FLOATSDS_H
 
 #include <cmath>
+#include <new>
 #include <vector>
 
 namespace devicestate {
@@ -42,11 +43,15 @@ namespace devicestate {
 
         public:
             CircularBuffer(int capacity) {
-                this->capacity = capacity;
+                this->capacity = (capacity > 0) ? capacity : 1;  // Ensure valid capacity
                 this->count = 0;
-                this->items = new float[capacity];
+                this->items = new (std::nothrow) float[this->capacity];
                 this->head = 0;
                 this->tail = 0;
+            }
+
+            bool isValid() const {
+                return this->items != nullptr;
             }
 
             bool offer(float next) {
@@ -96,6 +101,12 @@ namespace devicestate {
 
             float increment(float next) {
                 const int n = this->data.size();
+
+                // Handle empty vector case - no delta for first element
+                if (n == 0) {
+                    this->data.push_back(next);
+                    return 0;
+                }
 
                 if (n == window) {
                     double lastDelta = calculateDelta(this->data[0], this->data[1]);

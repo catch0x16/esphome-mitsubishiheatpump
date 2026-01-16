@@ -20,6 +20,10 @@ namespace workflow {
         
         void HysterisisWorkflowStep::executeHysterisisWorkflowStep(
                 HysterisisResult* result, devicestate::IDeviceStateManager* deviceManager) {
+            if (result == nullptr || deviceManager == nullptr) {
+                ESP_LOGW(TAG, "executeHysterisisWorkflowStep: null parameter");
+                return;
+            }
             if (result->active) {
                 ESP_LOGV(TAG, "Active while %s: delta={%f} current={%f} targetTemperature={%f}", result->label.c_str(), result->delta, result->currentTemperature, result->targetTemperature);
                 if (result->delta > this->hysterisisOff) {
@@ -38,7 +42,13 @@ namespace workflow {
         HysterisisResult HysterisisWorkflowStep::getHysterisisResult(
                 const float currentTemperature, devicestate::IDeviceStateManager* deviceManager) {
             HysterisisResult result;
-        
+            result.shouldRun = false;  // Default to not running
+
+            if (deviceManager == nullptr) {
+                ESP_LOGW(TAG, "getHysterisisResult: deviceManager is null");
+                return result;
+            }
+
             const float targetTemperature = deviceManager->getTargetTemperature();
         
             const DeviceState deviceState = deviceManager->getDeviceState();
@@ -72,6 +82,10 @@ namespace workflow {
         }
         
         void HysterisisWorkflowStep::run(const float currentTemperature, devicestate::IDeviceStateManager* deviceManager) {
+            if (deviceManager == nullptr) {
+                ESP_LOGW(TAG, "run: deviceManager is null");
+                return;
+            }
             HysterisisResult result = this->getHysterisisResult(currentTemperature, deviceManager);
             if (result.shouldRun) {
                 this->executeHysterisisWorkflowStep(&result, deviceManager);

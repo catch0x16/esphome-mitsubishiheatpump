@@ -41,6 +41,10 @@ namespace workflow {
         }
 
         bool PidWorkflowStep::ensurePIDTarget(devicestate::IDeviceStateManager* deviceManager) {
+            if (deviceManager == nullptr || this->adaptivePID == nullptr) {
+                ESP_LOGW(TAG, "ensurePIDTarget: null parameter");
+                return false;
+            }
             if (devicestate::same_float(deviceManager->getTargetTemperature(), this->adaptivePID->get_target(), 0.01f)) {
                 return false;
             }
@@ -51,6 +55,10 @@ namespace workflow {
         }
 
         void PidWorkflowStep::run(const float currentTemperature, devicestate::IDeviceStateManager* deviceManager) {
+            if (deviceManager == nullptr) {
+                ESP_LOGW(TAG, "run: deviceManager is null");
+                return;
+            }
             const bool updatedPidTarget = this->ensurePIDTarget(deviceManager);
 
             // if pid target is not updated and internal power is not on
