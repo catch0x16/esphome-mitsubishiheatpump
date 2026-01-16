@@ -51,18 +51,18 @@ namespace devicestate {
       DeviceStatus deviceStatus;
 
       void hpSettingsChanged();
-      void hpStatusChanged(heatpumpStatus currentStatus);
+      void hpStatusChanged();
 
       bool shouldThrottle(uint32_t end);
 
       void dump_state();
-      void log_heatpump_settings(heatpumpSettings currentSettings);
-      void log_heatpump_status(heatpumpStatus currentStatus);
+      void log_heatpump_settings(heatpumpSettings& currentSettings);
+      void log_heatpump_status(heatpumpStatus& currentStatus);
       static void log_packet(uint8_t* packet, unsigned int length, char* packetDirection);
 
       float getRoundedTemp(float value);
 
-      bool getOffsetDirection(const DeviceState* deviceState);
+      bool getOffsetDirection(const DeviceState& deviceState);
 
     public:
       DeviceStateManager(

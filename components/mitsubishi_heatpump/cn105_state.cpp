@@ -267,21 +267,26 @@ namespace devicestate {
     }
 
     void CN105State::onSettingsChanged() {
-        ESP_LOGE(TAG, "Setting onSettingsChanged triggered");
         wantedSettings.hasChanged = true;
         wantedSettings.hasBeenSent = false;
         wantedSettings.lastChange = CUSTOM_MILLIS;
     }
 
+    bool CN105State::isSettingsInitialized() {
+        return this->settingsInitialized;
+    }
+
     void CN105State::updateCurrentSettings(heatpumpSettings& settings) {
-        if (settings != this->currentSettings) {
-            ESP_LOGI(LOG_SETTINGS_TAG, "Settings changed, updating HA states");
-            debugSettings("current", this->currentSettings);
-            debugSettings("received", settings);
-            debugSettings("wanted", this->wantedSettings);
-            //this->debugClimate("climate");
-            //this->publishStateToHA(settings);
+        if (settings == this->currentSettings) {
+            return;
         }
+        this->settingsInitialized = true;
+
+        debugSettings("current[before]", this->currentSettings);
+        debugSettings("received", settings);
+        debugSettings("wanted", this->wantedSettings);
+        //this->debugClimate("climate");
+        //this->publishStateToHA(settings);
 
         if ((this->wantedSettings.mode == nullptr) && (this->wantedSettings.power == nullptr)) {        // to prevent overwriting a user demand
             if (this->hasChanged(currentSettings.power, settings.power, "power") ||
@@ -329,34 +334,38 @@ namespace devicestate {
             ESP_LOGD(TAG, "Ignoring incoming setpoint due to pending user change or grace window");
         }
 
-        ESP_LOGW(TAG, "Wrapping-up updateCurrentSettings");
-
         this->currentSettings.iSee = settings.iSee;
-
         this->currentSettings.connected = true;
-        ESP_LOGW(TAG, "Completed running updateCurrentSettings");
+        debugSettings("current[after]", this->currentSettings);
 
         // publish to HA
         //this->publish_state();
     }
 
+    bool CN105State::isStatusInitialized() {
+        return this->statusInitialized;
+    }
+
     void CN105State::updateCurrentStatus(heatpumpStatus& status) {
         if (status != this->currentStatus) {
-            debugStatus("received", status);
-            debugStatus("current", currentStatus);
+            return;
+        }
+        this->statusInitialized = true;
 
-            this->currentStatus.operating = status.operating;
-            this->currentStatus.compressorFrequency = status.compressorFrequency;
-            this->currentStatus.inputPower = status.inputPower;
-            this->currentStatus.kWh = status.kWh;
-            this->currentStatus.runtimeHours = status.runtimeHours;
-            this->currentStatus.roomTemperature = status.roomTemperature;
-            this->currentStatus.outsideAirTemperature = status.outsideAirTemperature;
-            //this->setCurrentTemperature(this->currentStatus.roomTemperature);
+        debugStatus("received", status);
+        debugStatus("current", currentStatus);
 
-            //this->updateAction();       // update action info on HA climate component
-            //this->publish_state();
-        } // else no change
+        this->currentStatus.operating = status.operating;
+        this->currentStatus.compressorFrequency = status.compressorFrequency;
+        this->currentStatus.inputPower = status.inputPower;
+        this->currentStatus.kWh = status.kWh;
+        this->currentStatus.runtimeHours = status.runtimeHours;
+        this->currentStatus.roomTemperature = status.roomTemperature;
+        this->currentStatus.outsideAirTemperature = status.outsideAirTemperature;
+        //this->setCurrentTemperature(this->currentStatus.roomTemperature);
+
+        //this->updateAction();       // update action info on HA climate component
+        //this->publish_state();
     }
 
 
@@ -371,4 +380,5 @@ namespace devicestate {
         }
         return ((before == NULL) || (strcmp(before, now) != 0));
     }
+
 }

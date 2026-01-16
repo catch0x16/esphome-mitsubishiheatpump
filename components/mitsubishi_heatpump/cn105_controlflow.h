@@ -22,6 +22,7 @@ namespace devicestate {
     class CN105ControlFlow {
         public:
             using RetryCallback = std::function<void(const std::string&, uint32_t, uint8_t, std::function<esphome::RetryResult(uint8_t)>)>;
+            using AcquireCallback = std::function<void()>;
 
             CN105ControlFlow(
                 CN105Connection* connection,
@@ -39,6 +40,8 @@ namespace devicestate {
             void setRemoteTemperature(const float current);
             void pingExternalTemperature();
             void completeCycle();
+
+            void acquireWantedSettingsLock(AcquireCallback callback);
 
         private:
             CN105Connection* connection_;

@@ -24,6 +24,9 @@ namespace devicestate {
             bool wideVaneAdj;
             bool tempMode;
 
+            bool settingsInitialized = false;
+            bool statusInitialized = false;
+
             bool hasChanged(const char* before, const char* now, const char* field, bool checkNotNull = false);
 
         public:
@@ -33,12 +36,14 @@ namespace devicestate {
             void updateCurrentSettings(heatpumpSettings& currentSettings);
             void resetCurrentSettings();
             void onSettingsChanged();
+            bool isSettingsInitialized();
 
             wantedHeatpumpSettings& getWantedSettings();
             void resetWantedSettings();
 
             heatpumpStatus& getCurrentStatus();
             void updateCurrentStatus(heatpumpStatus& currentStatus);
+            bool isStatusInitialized();
 
             heatpumpFunctions& getFunctions();
 

@@ -87,17 +87,13 @@ namespace devicestate {
 
     bool CN105ControlFlow::sendWantedSettings() {
         if (!this->connection_->ensureActiveConnection()) {
-            ESP_LOGW(TAG, "Failed to send wanted settings.");
             return false;
         }
 
-#ifdef USE_ESP32
-        std::lock_guard<std::mutex> guard(wantedSettingsMutex);
-        this->sendWantedSettingsDelegate();
-#else
-        this->emulateMutex("WRITE_SETTINGS", std::bind(&CN105ControlFlow::sendWantedSettingsDelegate, this));
-#endif
-        ESP_LOGW(TAG, "Sent wanted settings.");
+        auto callback = [this]() {
+            this->sendWantedSettingsDelegate();
+        };
+        this->acquireWantedSettingsLock(callback);
         return true;
     }
 
@@ -114,7 +110,7 @@ namespace devicestate {
             return;
         }
 
-        ESP_LOGI(LOG_ACTION_EVT_TAG, "checkPendingWantedSettings - wanted settings have changed, sending them to the heatpump...");
+        //ESP_LOGV(LOG_ACTION_EVT_TAG, "checkPendingWantedSettings - wanted settings have changed, sending them to the heatpump...");
 
         if (this->sendWantedSettings()) {
             // as we've just sent a packet to the heatpump, we let it time for process
@@ -239,22 +235,20 @@ namespace devicestate {
                 })) {                                            // if we don't get any input: no read op
 
             if (!can_talk_to_hp) {
-                ESP_LOGW(TAG, "Unable to communicate with HeatPump.");
                 return;
             }
 
             if (this->hpState_->getWantedSettings().hasChanged && (!loopCycle.isCycleRunning())) {
-                ESP_LOGW(TAG, "Settings changed, updating: %s", TRUEFALSE(this->hpState_->getWantedSettings().hasChanged));
+                //ESP_LOGI(TAG, "Settings changed, updating: %s", TRUEFALSE(this->hpState_->getWantedSettings().hasChanged));
                 this->checkPendingWantedSettings(loopCycle);
             } else if (this->hpState_->getWantedRunStates().hasChanged && (!loopCycle.isCycleRunning())) {
-                ESP_LOGW(TAG, "Run states changed, updating.");
+                ESP_LOGD(TAG, "Run states changed, updating: %s", TRUEFALSE(this->hpState_->getWantedRunStates().hasChanged));
                 this->checkPendingWantedRunStates(loopCycle);
             } else {
                 if (loopCycle.isCycleRunning()) {                         // if we are  running an update cycle
                     loopCycle.checkTimeout();
                 } else { // we are not running a cycle
                     if (loopCycle.hasUpdateIntervalPassed()) {
-                        ESP_LOGW(TAG, "Update interval passed");
                         this->buildAndSendRequestsInfoPackets(loopCycle);            // initiate an update cycle with this->cycleStarted();
                     }
                 }
@@ -381,6 +375,15 @@ namespace devicestate {
             ESP_LOGW(LOG_REMOTE_TEMP, "Remote temperature timeout occured, fall back to internal temperature!");
             this->setRemoteTemperature(0);
         });
+    }
+
+    void CN105ControlFlow::acquireWantedSettingsLock(AcquireCallback callback) {
+#ifdef USE_ESP32
+        std::lock_guard<std::mutex> guard(wantedSettingsMutex);
+        callback();
+#else
+        this->emulateMutex("WRITE_SETTINGS", std::move(callback));
+#endif
     }
 
 }

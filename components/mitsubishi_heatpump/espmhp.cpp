@@ -55,10 +55,14 @@ void MitsubishiHeatPump::terminateCycle() {
     this->hpControlFlow_->completeCycle();
 
     this->dsm->update();
-    this->updateDevice();
+    if (this->dsm->isInitialized()) {
+        this->updateDevice();
 
-    this->run_workflows();
-    this->dsm->publish();
+        this->run_workflows();
+        this->dsm->publish();
+    } else {
+        ESP_LOGW(TAG, "DeviceStateManager not yet initialized.");
+    }
 
     this->loopCycle.cycleEnded();
     ESP_LOGW(TAG, "Terminate cycle complete");
@@ -203,12 +207,7 @@ void MitsubishiHeatPump::on_horizontal_swing_change(const std::string &swing) {
     ESP_LOGD(TAG, "Horizontal vane - Was HeatPump updated? %s", YESNO(updated));
  }
 
-/**
- * Implement control of a MitsubishiHeatPump.
- *
- * Maps HomeAssistant/ESPHome modes to Mitsubishi modes.
- */
-void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
+ void MitsubishiHeatPump::controlDelegate(const climate::ClimateCall &call) {
     ESP_LOGW(TAG, "Control called.");
 
     ESP_LOGW(TAG, "Has target temp: %s", TRUEFALSE(call.get_target_temperature().has_value()));
@@ -312,7 +311,7 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
     }
 
     if (call.get_fan_mode().has_value()) {
-        ESP_LOGV("control", "Requested fan mode is %s",
+        ESP_LOGW("control", "Requested fan mode is %s",
                  climate::climate_fan_mode_to_string(*call.get_fan_mode()));
         this->fan_mode = *call.get_fan_mode();
 
@@ -389,6 +388,19 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
 
     // send the update back to esphome:
     this->publish_state();
+ }
+
+/**
+ * Implement control of a MitsubishiHeatPump.
+ *
+ * Maps HomeAssistant/ESPHome modes to Mitsubishi modes.
+ */
+void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
+    auto callback = [this, &call]() {
+        this->controlDelegate(call);
+    };
+
+    this->hpControlFlow_->acquireWantedSettingsLock(callback);
 }
 
 void MitsubishiHeatPump::updateDevice() {
@@ -433,6 +445,7 @@ void MitsubishiHeatPump::updateDevice() {
                     }
                 }
 
+                ESP_LOGW(TAG, "Setting action...");
                 if (deviceStatus.operating) {
                     this->action = climate::CLIMATE_ACTION_HEATING;
                 } else {
@@ -532,16 +545,22 @@ void MitsubishiHeatPump::updateDevice() {
     switch (deviceState.fanMode) {
         case FanMode::FanMode_Quiet:
             this->fan_mode = climate::CLIMATE_FAN_DIFFUSE;
+            break;
         case FanMode::FanMode_Low:
             this->fan_mode = climate::CLIMATE_FAN_LOW;
+            break;
         case FanMode::FanMode_Medium:
             this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+            break;
         case FanMode::FanMode_Middle:
             this->fan_mode = climate::CLIMATE_FAN_MIDDLE;
+            break;
         case FanMode::FanMode_High:
             this->fan_mode = climate::CLIMATE_FAN_HIGH;
+            break;
         default:
             this->fan_mode = climate::CLIMATE_FAN_AUTO;
+            break;
     }
     ESP_LOGD(TAG, "Fan mode is: %d", this->fan_mode.value_or(-1));
 

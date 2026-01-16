@@ -63,7 +63,6 @@ namespace devicestate {
         const uint32_t grace_ms = this->conn_bootstrap_delay_ms_;
         const uint32_t elapsed = CUSTOM_MILLIS - this->boot_ms_;
         if (elapsed < grace_ms) {
-            ESP_LOGI(LOG_CONN_TAG, "Elased < grace_ms", grace_ms);
             if (!this->conn_grace_logged_) {
                 this->conn_grace_logged_ = true;
                 ESP_LOGI(LOG_CONN_TAG, "Bootstrap connexion: délai de grâce %ums pour logs OTA", grace_ms);
@@ -78,7 +77,7 @@ namespace devicestate {
     }
 
     bool CN105Connection::ensureActiveConnection() {
-        if (this->isConnectionActive() && this->isConnected()) {
+        if (this->isConnectionActive() && this->isUARTConnected_) {
             if (CUSTOM_MILLIS - this->lastSend > 300) {        // we don't want to send too many packets
                 //this->cycleEnded();   // only if we let the cycle be interrupted to send wented settings
                 return true;
@@ -86,6 +85,7 @@ namespace devicestate {
                 ESP_LOGD(TAG, "will send later because we've sent one too recently...");
             }
         } else {
+            ESP_LOGW(TAG, "attempting to reconnect...");
             this->reconnectIfConnectionLost();
         }
         return false;
@@ -95,6 +95,7 @@ namespace devicestate {
         long reconnectTimeMs = CUSTOM_MILLIS - this->lastReconnectTimeMs;
 
         if (reconnectTimeMs < this->update_interval_) {
+            ESP_LOGW(TAG, "reconnect time to recent...");
             return;
         }
 

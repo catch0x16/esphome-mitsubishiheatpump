@@ -2,6 +2,8 @@
 
 #include "esphome.h"
 
+#define SAFE_STR(s) ((s) ? (s) : "(null)")
+
 using namespace devicestate;
 
 namespace devicestate {
@@ -55,13 +57,13 @@ namespace devicestate {
 
         wantedHeatpumpSettings wantedSettings = hpState.getWantedSettings();
         if (wantedSettings.power != nullptr) {
-            ESP_LOGD(TAG, "power -> %s", hpState.getPowerSetting());
+            ESP_LOGD(TAG, "power -> %s", SAFE_STR(hpState.getPowerSetting()));
             int idx = lookupByteMapIndex(POWER_MAP, 2, hpState.getPowerSetting(), "power (write)");
             if (idx >= 0) { packet[8] = POWER[idx]; packet[6] += CONTROL_PACKET_1[0]; } else { ESP_LOGW(TAG, "Ignoring invalid power setting while building packet"); }
         }
 
         if (wantedSettings.mode != nullptr) {
-            ESP_LOGD(TAG, "heatpump mode -> %s", hpState.getModeSetting());
+            ESP_LOGD(TAG, "heatpump mode -> %s", SAFE_STR(hpState.getModeSetting()));
             int idx = lookupByteMapIndex(MODE_MAP, 5, hpState.getModeSetting(), "mode (write)");
             if (idx >= 0) { packet[9] = MODE[idx]; packet[6] += CONTROL_PACKET_1[1]; } else { ESP_LOGW(TAG, "Ignoring invalid mode setting while building packet"); }
         }
@@ -80,19 +82,19 @@ namespace devicestate {
         }
 
         if (wantedSettings.fan != nullptr) {
-            ESP_LOGD(TAG, "heatpump fan -> %s", hpState.getFanSpeedSetting());
+            ESP_LOGD(TAG, "heatpump fan -> %s", SAFE_STR(hpState.getFanSpeedSetting()));
             int idx = lookupByteMapIndex(FAN_MAP, 6, hpState.getFanSpeedSetting(), "fan (write)");
             if (idx >= 0) { packet[11] = FAN[idx]; packet[6] += CONTROL_PACKET_1[3]; } else { ESP_LOGW(TAG, "Ignoring invalid fan setting while building packet"); }
         }
 
         if (wantedSettings.vane != nullptr) {
-            ESP_LOGD(TAG, "heatpump vane -> %s", hpState.getVaneSetting());
+            ESP_LOGD(TAG, "heatpump vane -> %s", SAFE_STR(hpState.getVaneSetting()));
             int idx = lookupByteMapIndex(VANE_MAP, 7, hpState.getVaneSetting(), "vane (write)");
             if (idx >= 0) { packet[12] = VANE[idx]; packet[6] += CONTROL_PACKET_1[4]; } else { ESP_LOGW(TAG, "Ignoring invalid vane setting while building packet"); }
         }
 
         if (wantedSettings.wideVane != nullptr) {
-            ESP_LOGD(TAG, "heatpump widevane -> %s", hpState.getWideVaneSetting());
+            ESP_LOGD(TAG, "heatpump widevane -> %s", SAFE_STR(hpState.getWideVaneSetting()));
             int idx = lookupByteMapIndex(WIDEVANE_MAP, 8, hpState.getWideVaneSetting(), "wideVane (write)");
             if (idx >= 0) { packet[18] = WIDEVANE[idx] | (hpState.shouldWideVaneAdj() ? 0x80 : 0x00); packet[7] += CONTROL_PACKET_2[0]; } else { ESP_LOGW(TAG, "Ignoring invalid wideVane setting while building packet"); }
         }
@@ -109,27 +111,66 @@ namespace devicestate {
     // Read Protocol
 
     void CN105Protocol::parseSettings0x02(uint8_t* packet, CN105State &hpState) {
-        heatpumpSettings receivedSettings;
-              
-        receivedSettings.power = lookupByteMapValue(POWER_MAP, POWER, 2, packet[3]);
-        receivedSettings.iSee = packet[4] > 0x08 ? true : false;
-        receivedSettings.mode = lookupByteMapValue(MODE_MAP, MODE, 5, receivedSettings.iSee  ? (packet[4] - 0x08) : packet[4]);
+        heatpumpSettings receivedSettings{};
+        heatpumpRunStates receivedRunStates{};
+        ESP_LOGD("Decoder", "[0x02 is settings]");
 
-        if(packet[11] != 0x00) {
+        receivedSettings.connected = true;
+        receivedSettings.power = lookupByteMapValue(POWER_MAP, POWER, 2, packet[3], "power reading");
+        receivedSettings.iSee = packet[4] > 0x08 ? true : false;
+        receivedSettings.mode = lookupByteMapValue(MODE_MAP, MODE, 5, receivedSettings.iSee ? (packet[4] - 0x08) : packet[4], "mode reading");
+
+        ESP_LOGD("Decoder", "[Power : %s]", SAFE_STR(receivedSettings.power));
+        ESP_LOGD("Decoder", "[iSee  : %d]", receivedSettings.iSee);
+        ESP_LOGD("Decoder", "[Mode  : %s]", SAFE_STR(receivedSettings.mode));
+
+        if (packet[11] != 0x00) {
             int temp = packet[11];
             temp -= 128;
             receivedSettings.temperature = (float)temp / 2;
             hpState.setTempMode(true);
         } else {
-            receivedSettings.temperature = lookupByteMapValue(TEMP_MAP, TEMP, 16, packet[5]);
+            receivedSettings.temperature = lookupByteMapValue(TEMP_MAP, TEMP, 16, packet[5], "temperature reading");
         }
 
-        receivedSettings.fan         = lookupByteMapValue(FAN_MAP, FAN, 6, packet[6]);
-        receivedSettings.vane        = lookupByteMapValue(VANE_MAP, VANE, 7, packet[7]);
-        receivedSettings.wideVane    = lookupByteMapValue(WIDEVANE_MAP, WIDEVANE, 7, packet[10] & 0x0F);
+        ESP_LOGD("Decoder", "[Temp °C: %f]", receivedSettings.temperature);
 
-        hpState.setWideVaneAdj((packet[10] & 0xF0) == 0x80 ? true : false);
+        receivedSettings.fan = lookupByteMapValue(FAN_MAP, FAN, 6, packet[6], "fan reading");
+        ESP_LOGD("Decoder", "[Fan: %s]", SAFE_STR(receivedSettings.fan));
 
+        receivedSettings.vane = lookupByteMapValue(VANE_MAP, VANE, 7, packet[7], "vane reading");
+        ESP_LOGD("Decoder", "[Vane: %s]", SAFE_STR(receivedSettings.vane));
+
+        // --- START OF MODIFIED SECTION - Reverted widevane section back to more or less original state
+        if (packet[10] != 0) {    // wideVane is not always supported
+            receivedSettings.wideVane = lookupByteMapValue(WIDEVANE_MAP, WIDEVANE, 8, packet[10] & 0x0F, "wideVane reading");
+            hpState.setWideVaneAdj((packet[10] & 0xF0) == 0x80 ? true : false);
+            ESP_LOGD("Decoder", "[wideVane: %s (adj:%d)]", SAFE_STR(receivedSettings.wideVane), hpState.shouldWideVaneAdj());
+        }
+        // --- END OF MODIFIED SECTION ---
+
+        // --- AIRFLOW CONTROL START
+        /*
+        if (this->airflow_control_select_ != nullptr) {
+            if (packet[10] == 0x80) {
+                if (receivedSettings.iSee) {
+                    receivedRunStates.airflow_control = lookupByteMapValue(AIRFLOW_CONTROL_MAP, AIRFLOW_CONTROL, 3, packet[14], "airflow control reading");
+                } else {
+                    // For some reason packet[10] is 0x80, but the i-See sensor is not active. 
+                    // Some units let us do this, but the real mode is unknown (might be powersave) and the i-See sensor does not get activated.
+                    //receivedRunStates.airflow_control = "N/A";
+                    ESP_LOGD("Decoder", "i-See sensor not present/active.");
+                    receivedRunStates.airflow_control = AIRFLOW_CONTROL_MAP[0];
+                }
+            } else {
+                receivedRunStates.airflow_control = AIRFLOW_CONTROL_MAP[0];
+            }
+            if (!this->currentRunStates.airflow_control || strcmp(receivedRunStates.airflow_control, this->currentRunStates.airflow_control) != 0) {
+                this->currentRunStates.airflow_control = receivedRunStates.airflow_control;
+                this->airflow_control_select_->publish_state(receivedRunStates.airflow_control);
+            }
+        }
+        */
         hpState.updateCurrentSettings(receivedSettings);
     }
 
@@ -145,19 +186,36 @@ namespace devicestate {
         // SP = room setpoint temperature?
         // RM = indoor unit operating time in minutes
 
-        heatpumpStatus receivedStatus;
-        if(packet[6] != 0x00) {
+        heatpumpStatus receivedStatus{};
+        if (packet[5] > 1) {
+            receivedStatus.outsideAirTemperature = (packet[5] - 128) / 2.0f;
+        } else {
+            receivedStatus.outsideAirTemperature = NAN;
+        }
+
+        if (packet[6] != 0x00) {
             int temp = packet[6];
             temp -= 128;
-            receivedStatus.roomTemperature = (float)temp / 2;
+            receivedStatus.roomTemperature = temp / 2.0f;
+            ESP_LOGD(LOG_TEMP_SENSOR_TAG, "packet[6]  --> [Room °C: %f]", receivedStatus.roomTemperature);
         } else {
             receivedStatus.roomTemperature = lookupByteMapValue(ROOM_TEMP_MAP, ROOM_TEMP, 32, packet[3]);
+            ESP_LOGD(LOG_TEMP_SENSOR_TAG, "packet[3] map --> [Room °C : %f]", receivedStatus.roomTemperature);
         }
 
         receivedStatus.runtimeHours = float((packet[11] << 16) | (packet[12] << 8) | packet[13]) / 60;
 
-        hpState.setRoomTemperature(receivedStatus.roomTemperature);
-        hpState.setRuntimeHours(receivedStatus.runtimeHours);
+        ESP_LOGD("Decoder", "[Room °C: %f]", receivedStatus.roomTemperature);
+        ESP_LOGD("Decoder", "[OAT  °C: %f]", receivedStatus.outsideAirTemperature);
+
+        heatpumpStatus currentStatus = hpState.getCurrentStatus();
+        // no change with this packet to currentStatus for operating and compressorFrequency
+        receivedStatus.operating = currentStatus.operating;
+        receivedStatus.compressorFrequency = currentStatus.compressorFrequency;
+        receivedStatus.inputPower = currentStatus.inputPower;
+        receivedStatus.kWh = currentStatus.kWh;
+
+        hpState.updateCurrentStatus(receivedStatus);
     }
 
     void CN105Protocol::parseTimers0x05(uint8_t* packet, CN105State& hpState) {

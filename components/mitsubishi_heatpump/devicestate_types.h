@@ -14,7 +14,7 @@ namespace devicestate {
     DeviceMode_Auto,
     DeviceMode_Unknown
   };
-  DeviceMode toDeviceMode(heatpumpSettings *currentSettings);
+  DeviceMode toDeviceMode(heatpumpSettings& currentSettings);
   const char* deviceModeToString(DeviceMode mode);
 
   enum FanMode {
@@ -25,7 +25,7 @@ namespace devicestate {
     FanMode_Middle,
     FanMode_High
   };
-  FanMode toFanMode(heatpumpSettings *currentSettings);
+  FanMode toFanMode(heatpumpSettings& currentSettings);
   const char* fanModeToString(FanMode mode);
 
   enum SwingMode {
@@ -34,7 +34,8 @@ namespace devicestate {
     SwingMode_Horizontal,
     SwingMode_Off
   };
-  SwingMode toSwingMode(heatpumpSettings *currentSettings);
+  SwingMode toSwingMode(heatpumpSettings& currentSettings);
+  const char* swingModeToString(SwingMode swingMode);
 
   enum VerticalSwingMode {
     VerticalSwingMode_Swing,
@@ -46,7 +47,7 @@ namespace devicestate {
     VerticalSwingMode_Down,
     VerticalSwingMode_Off
   };
-  VerticalSwingMode toVerticalSwingMode(heatpumpSettings *currentSettings);
+  VerticalSwingMode toVerticalSwingMode(heatpumpSettings& currentSettings);
   const char* verticalSwingModeToString(VerticalSwingMode mode);
 
   enum HorizontalSwingMode {
@@ -59,7 +60,7 @@ namespace devicestate {
     HorizontalSwingMode_Right,
     HorizontalSwingMode_Off
   };
-  HorizontalSwingMode toHorizontalSwingMode(heatpumpSettings *currentSettings);
+  HorizontalSwingMode toHorizontalSwingMode(heatpumpSettings& currentSettings);
   const char* horizontalSwingModeToString(HorizontalSwingMode mode);
 
   struct DeviceStatus {
@@ -71,7 +72,7 @@ namespace devicestate {
     float runtimeHours;
   };
   bool deviceStatusEqual(const DeviceStatus& left, const DeviceStatus& right);
-  DeviceStatus toDeviceStatus(heatpumpStatus *currentStatus);
+  DeviceStatus toDeviceStatus(heatpumpStatus& currentStatus);
 
   struct DeviceState {
     bool active;
@@ -81,9 +82,13 @@ namespace devicestate {
     VerticalSwingMode verticalSwingMode;
     HorizontalSwingMode horizontalSwingMode;
     float targetTemperature;
+
+    DeviceState& operator=(const DeviceState& other);
   };
   bool deviceStateEqual(const DeviceState& left, const DeviceState& right);
-  DeviceState toDeviceState(heatpumpSettings *currentSettings);
+  DeviceState toDeviceState(heatpumpSettings& currentSettings);
+
+  void log_device_state(const DeviceState& state);
 
   class IDeviceStateManager {
     public:

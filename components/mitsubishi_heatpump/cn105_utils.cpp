@@ -27,6 +27,10 @@ namespace devicestate {
     }
 
     int lookupByteMapIndex(const char* valuesMap[], int len, const char* lookupValue, const char* debugInfo) {
+        if (lookupValue == nullptr) {
+            ESP_LOGW(TAG, "%s caution: lookupValue is null, returning -1", debugInfo);
+            return -1;
+        }
         for (int i = 0; i < len; i++) {
             if (strcasecmp(valuesMap[i], lookupValue) == 0) {
                 return i;

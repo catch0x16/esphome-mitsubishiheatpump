@@ -34,7 +34,7 @@ namespace devicestate {
     }
 
     void debugSettings(const char* settingName, heatpumpSettings& settings) {
-        ESP_LOGD(LOG_SETTINGS_TAG, "[%s]-> [power: %s, target °C: %.1f, mode: %s, fan: %s, vane: %s, wvane: %s]",
+        ESP_LOGI(LOG_SETTINGS_TAG, "[%s]-> [power: %s, target °C: %.1f, mode: %s, fan: %s, vane: %s, wvane: %s]",
             getIfNotNull(settingName, "unnamed"),
             getIfNotNull(settings.power, "-"),
             settings.temperature,

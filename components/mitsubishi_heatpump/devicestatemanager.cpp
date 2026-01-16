@@ -8,6 +8,8 @@ using namespace esphome;
 #include <cstring>
 #include <string>
 
+#define SAFE_STR(s) ((s) ? (s) : "null")
+
 namespace devicestate {
 
     static const char* TAG = "DeviceStateManager"; // Logging tag
@@ -48,24 +50,19 @@ namespace devicestate {
     }
 
     void DeviceStateManager::hpSettingsChanged() {
-        heatpumpSettings currentSettings = this->hpState->getCurrentSettings();
-        ESP_LOGI(TAG, "Heatpump Settings Changed:");
-        this->log_heatpump_settings(currentSettings);
-
-        if (currentSettings.power == NULL) {
-            /*
-            * We should always get a valid pointer here once the HeatPump
-            * component fully initializes. If HeatPump hasn't read the settings
-            * from the unit yet (hp->connect() doesn't do this, sadly), we'll need
-            * to punt on the update. Likely not an issue when run in callback
-            * mode, but that isn't working right yet.
-            */
-            ESP_LOGW(TAG, "Waiting for HeatPump to read the settings the first time (currentSettings.power == NULL).");
-            esphome::delay(10);
+        if (!this->hpState->isSettingsInitialized()){
             return;
         }
 
-        const DeviceState deviceState = devicestate::toDeviceState(&currentSettings);
+        heatpumpSettings currentSettings = this->hpState->getCurrentSettings();
+        ESP_LOGD(TAG, "Heatpump Settings Changed:");
+        this->log_heatpump_settings(currentSettings);
+
+        const DeviceState deviceState = devicestate::toDeviceState(currentSettings);
+        if (deviceStateEqual(this->deviceState, deviceState)) {
+            return;
+        }
+
         if (this->settingsInitialized) {
             if (this->internalPowerOn != deviceState.active) {
                 ESP_LOGI(TAG, "Device active on change: deviceState.active={%s} internalPowerOn={%s}", YESNO(deviceState.active), YESNO(this->internalPowerOn));
@@ -81,23 +78,26 @@ namespace devicestate {
         }
 
         this->deviceState = deviceState;
-        ESP_LOGI(TAG, "HeatPump device state updated.");
-
         ESP_LOGW(TAG, "Callback hpStatusChanged");
     }
 
     /**
      * Report changes in the current temperature sensed by the HeatPump.
      */
-    void DeviceStateManager::hpStatusChanged(heatpumpStatus currentStatus) {
+    void DeviceStateManager::hpStatusChanged() {
+        if (!this->hpState->isStatusInitialized()) {
+            return;
+        }
+        
         ESP_LOGW(TAG, "Callback hpStatusChanged starting");
         if (!this->statusInitialized) {
             this->statusInitialized = true;
             ESP_LOGW(TAG, "HeatPump status initialized.");
         }
 
+        heatpumpStatus currentStatus = this->hpState->getCurrentStatus();
         this->log_heatpump_status(currentStatus);
-        const DeviceStatus newDeviceStatus = devicestate::toDeviceStatus(&currentStatus);
+        const DeviceStatus newDeviceStatus = devicestate::toDeviceStatus(currentStatus);
         if (!devicestate::deviceStatusEqual(this->deviceStatus, newDeviceStatus)) {
             this->deviceStatus = newDeviceStatus;
             ESP_LOGI(TAG, "HeatPump device status updated.");
@@ -131,9 +131,13 @@ namespace devicestate {
     }
 
     void DeviceStateManager::update() {
+        //ESP_LOGE(TAG, "Updating...");
+        //log_device_state(this->deviceState);
         this->hpSettingsChanged();
-        heatpumpStatus currentStatus = this->hpState->getCurrentStatus();
-        this->hpStatusChanged(currentStatus);
+        //log_device_state(this->deviceState);
+
+        this->hpStatusChanged();
+        //ESP_LOGE(TAG, "Updated...");
     }
 
     void DeviceStateManager::commit() {
@@ -297,11 +301,11 @@ namespace devicestate {
 
     bool DeviceStateManager::getOffsetDirection() {
         const DeviceState deviceState = this->getDeviceState();
-        return this->getOffsetDirection(&deviceState);
+        return this->getOffsetDirection(deviceState);
     }
 
-    bool DeviceStateManager::getOffsetDirection(const DeviceState* deviceState) {
-        switch(deviceState->mode) {
+    bool DeviceStateManager::getOffsetDirection(const DeviceState& deviceState) {
+        switch(deviceState.mode) {
             case devicestate::DeviceMode::DeviceMode_Heat: {
                 return true;
             }
@@ -309,7 +313,7 @@ namespace devicestate {
                 return false;
             }
             default: {
-                ESP_LOGE(TAG, "Unexpected state for offset direction");
+                ESP_LOGE(TAG, "Unexpected state for offset direction: %s", deviceModeToString(deviceState.mode));
                 return false;
             }
         }
@@ -323,7 +327,7 @@ namespace devicestate {
 
     bool DeviceStateManager::internalSetCorrectedTemperature(const float setPointCorrection) {
         const DeviceState deviceState = this->getDeviceState();
-        const bool direction = this->getOffsetDirection(&deviceState);
+        const bool direction = this->getOffsetDirection(deviceState);
 
         const float adjustedCorrectedTemperature = devicestate::clamp(setPointCorrection, this->minTemp, this->maxTemp);
         const float roundedAdjustedCorrectedTemperature = this->getRoundedTemp(adjustedCorrectedTemperature);
@@ -350,17 +354,17 @@ namespace devicestate {
         this->hpState->setTemperature(this->targetTemperature);
     }
 
-    void DeviceStateManager::log_heatpump_settings(heatpumpSettings currentSettings) {
-        ESP_LOGD(TAG, "  power: %s", currentSettings.power);
-        ESP_LOGD(TAG, "  mode: %s", currentSettings.mode);
+    void DeviceStateManager::log_heatpump_settings(heatpumpSettings& currentSettings) {
+        ESP_LOGD(TAG, "  power: %s", SAFE_STR(currentSettings.power));
+        ESP_LOGD(TAG, "  mode: %s", SAFE_STR(currentSettings.mode));
         ESP_LOGD(TAG, "  temperature: %f", currentSettings.temperature);
-        ESP_LOGD(TAG, "  fan: %s", currentSettings.fan);
-        ESP_LOGD(TAG, "  vane: %s", currentSettings.vane);
-        ESP_LOGD(TAG, "  wideVane: %s", currentSettings.wideVane);
+        ESP_LOGD(TAG, "  fan: %s", SAFE_STR(currentSettings.fan));
+        ESP_LOGD(TAG, "  vane: %s", SAFE_STR(currentSettings.vane));
+        ESP_LOGD(TAG, "  wideVane: %s", SAFE_STR(currentSettings.wideVane));
         ESP_LOGD(TAG, "  connected: %s", TRUEFALSE(currentSettings.connected));
     }
 
-    void DeviceStateManager::log_heatpump_status(heatpumpStatus currentStatus) {
+    void DeviceStateManager::log_heatpump_status(heatpumpStatus& currentStatus) {
         ESP_LOGD(TAG, "  roomTemperature: %f", currentStatus.roomTemperature);
         ESP_LOGD(TAG, "  compressorFrequency: %f", currentStatus.compressorFrequency);
         ESP_LOGD(TAG, "  inputPower: %f", currentStatus.inputPower);
@@ -372,10 +376,7 @@ namespace devicestate {
         ESP_LOGI(TAG, "Internal State");
         ESP_LOGI(TAG, "  powerOn: %s", TRUEFALSE(this->isInternalPowerOn()));
 
-        ESP_LOGI(TAG, "Device State");
-        ESP_LOGI(TAG, "  active: %s", TRUEFALSE(this->deviceState.active));
-        ESP_LOGI(TAG, "  mode: %s", devicestate::deviceModeToString(this->deviceState.mode));
-        ESP_LOGI(TAG, "  targetTemperature: %f", this->deviceState.targetTemperature);
+        log_device_state(this->deviceState);
 
         ESP_LOGI(TAG, "Heatpump Status");
         ESP_LOGI(TAG, "  roomTemperature: %.2f", this->deviceStatus.currentTemperature);

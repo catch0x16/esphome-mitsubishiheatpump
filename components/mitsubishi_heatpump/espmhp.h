@@ -246,6 +246,7 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         devicestate::CN105ControlFlow* hpControlFlow_{nullptr};
         devicestate::CN105State* hpState_{nullptr};
 
+        void controlDelegate(const esphome::climate::ClimateCall &call);
         void terminateCycle();
 
         /// The current temperature of the climate device, as reported from the integration.

@@ -319,7 +319,7 @@ def to_code(config):
 
     device_status_compressor_frequency_sensor_var = yield sensor.new_sensor({
         CONF_ID: cv.declare_id(sensor.Sensor)("device_status_compressor_frequency"),
-        CONF_NAME: "Device status compressor frequency",
+        CONF_NAME: "Compressor frequency",
         CONF_UNIT_OF_MEASUREMENT: UNIT_HERTZ,
         CONF_DEVICE_CLASS: DEVICE_CLASS_FREQUENCY,
         CONF_STATE_CLASS: StateClasses.STATE_CLASS_MEASUREMENT,
@@ -333,7 +333,7 @@ def to_code(config):
 
     device_status_input_power_sensor_var = yield sensor.new_sensor({
         CONF_ID: cv.declare_id(sensor.Sensor)("device_status_input_power"),
-        CONF_NAME: "Device status input power",
+        CONF_NAME: "Input power",
         CONF_UNIT_OF_MEASUREMENT: UNIT_WATT,
         CONF_DEVICE_CLASS: DEVICE_CLASS_POWER,
         CONF_STATE_CLASS: StateClasses.STATE_CLASS_MEASUREMENT,
@@ -347,7 +347,7 @@ def to_code(config):
 
     device_status_kwh_sensor_var = yield sensor.new_sensor({
         CONF_ID: cv.declare_id(sensor.Sensor)("device_status_kwh"),
-        CONF_NAME: "Device status kWh",
+        CONF_NAME: "kWh",
         CONF_UNIT_OF_MEASUREMENT: UNIT_KILOWATT_HOURS,
         CONF_DEVICE_CLASS: DEVICE_CLASS_ENERGY,
         CONF_STATE_CLASS: StateClasses.STATE_CLASS_TOTAL_INCREASING,
@@ -361,7 +361,7 @@ def to_code(config):
 
     device_status_runtime_hours_sensor_var = yield sensor.new_sensor({
         CONF_ID: cv.declare_id(sensor.Sensor)("device_status_runtime_hours"),
-        CONF_NAME: "Device status runtime hours",
+        CONF_NAME: "Runtime hours",
         CONF_UNIT_OF_MEASUREMENT: UNIT_HOUR,
         CONF_DEVICE_CLASS: DEVICE_CLASS_DURATION,
         CONF_STATE_CLASS: StateClasses.STATE_CLASS_TOTAL_INCREASING,
