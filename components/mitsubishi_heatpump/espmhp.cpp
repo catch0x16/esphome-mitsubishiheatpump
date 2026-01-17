@@ -50,6 +50,31 @@ void MitsubishiHeatPump::set_update_interval(uint32_t update_interval) {
     this->loopCycle.setUpdateInterval(this->update_interval_);
 }
 
+void MitsubishiHeatPump::set_remote_temp_timeout(uint32_t timeout) {
+    this->remote_temp_timeout_ = timeout;
+    if (timeout == 4294967295) {
+        ESP_LOGI(LOG_REMOTE_TEMP, "set_remote_temp_timeout is set to never.");
+    } else {
+        //ESP_LOGI(LOG_ACTION_EVT_TAG, "set_remote_temp_timeout is set to %lu", timeout);
+        log_info_uint32(LOG_REMOTE_TEMP, "set_remote_temp_timeout is set to ", timeout);
+    }
+
+    if (this->hpControlFlow_ != nullptr) {
+        this->hpControlFlow_->set_remote_temp_timeout(timeout);
+        this->hpControlFlow_->pingExternalTemperature();
+    }
+}
+
+void MitsubishiHeatPump::set_debounce_delay(uint32_t delay) {
+    this->debounce_delay_ = delay;
+    //ESP_LOGI(LOG_ACTION_EVT_TAG, "set_debounce_delay is set to %lu", delay);
+    log_info_uint32(LOG_ACTION_EVT_TAG, "set_debounce_delay is set to ", delay);
+
+    if (this->hpControlFlow_ != nullptr) {
+        this->hpControlFlow_->set_debounce_delay(delay);
+    }
+}
+
 void MitsubishiHeatPump::terminateCycle() {
     ESP_LOGD(TAG, "Terminate cycle start");
     this->hpControlFlow_->completeCycle();
@@ -78,18 +103,6 @@ void MitsubishiHeatPump::banner() {
  */
 void MitsubishiHeatPump::loop() {
     this->hpControlFlow_->loop(loopCycle);
-}
-
-void MitsubishiHeatPump::set_baud_rate(int baud) {
-    this->baud_ = baud;
-}
-
-void MitsubishiHeatPump::set_rx_pin(int rx_pin) {
-    this->rx_pin_ = rx_pin;
-}
-
-void MitsubishiHeatPump::set_tx_pin(int tx_pin) {
-    this->tx_pin_ = tx_pin;
 }
 
 /**
@@ -210,9 +223,9 @@ void MitsubishiHeatPump::on_horizontal_swing_change(const std::string &swing) {
  void MitsubishiHeatPump::controlDelegate(const climate::ClimateCall &call) {
     ESP_LOGW(TAG, "Control called.");
 
-    ESP_LOGW(TAG, "Has target temp: %s", TRUEFALSE(call.get_target_temperature().has_value()));
-    ESP_LOGW(TAG, "Has target temp low: %s", TRUEFALSE(call.get_target_temperature_low().has_value()));
-    ESP_LOGW(TAG, "Has target temp high: %s", TRUEFALSE(call.get_target_temperature_high().has_value()));
+    ESP_LOGW(TAG, "Has target temp: %s (%.2f)",
+        TRUEFALSE(call.get_target_temperature().has_value()),
+        call.get_target_temperature().has_value() ? call.get_target_temperature().value() : -1);
 
     bool updated = false;
     bool has_mode = call.get_mode().has_value();
@@ -302,10 +315,8 @@ void MitsubishiHeatPump::on_horizontal_swing_change(const std::string &swing) {
     }
 
     if (has_temp){
-        ESP_LOGW(
-            "control", "Sending target temp: %.1f",
-            *call.get_target_temperature()
-        );
+        ESP_LOGW("control", "Sending target temp: %.1f",
+                *call.get_target_temperature());
         this->update_setpoint(*call.get_target_temperature());
         updated = true;
     }
@@ -349,9 +360,8 @@ void MitsubishiHeatPump::on_horizontal_swing_change(const std::string &swing) {
         }
     }
 
-    ESP_LOGV(TAG, "in the swing mode stage");
     if (call.get_swing_mode().has_value()) {
-        ESP_LOGV(TAG, "control - requested swing mode is %s",
+        ESP_LOGI(TAG, "control - requested swing mode is %s",
                 climate::climate_swing_mode_to_string(*call.get_swing_mode()));
 
         this->swing_mode = *call.get_swing_mode();
@@ -381,13 +391,10 @@ void MitsubishiHeatPump::on_horizontal_swing_change(const std::string &swing) {
 
         }
     }
-    ESP_LOGD(TAG, "control - Was HeatPump updated? %s", YESNO(updated));
+    ESP_LOGI(TAG, "control - Was HeatPump updated? %s", YESNO(updated));
     if (updated) {
         this->dsm->commit();
     }
-
-    // send the update back to esphome:
-    this->publish_state();
  }
 
 /**
@@ -445,7 +452,6 @@ void MitsubishiHeatPump::updateDevice() {
                     }
                 }
 
-                ESP_LOGW(TAG, "Setting action...");
                 if (deviceStatus.operating) {
                     this->action = climate::CLIMATE_ACTION_HEATING;
                 } else {
@@ -774,7 +780,9 @@ void MitsubishiHeatPump::setup() {
         this->hpState_,
         timeoutCallback,
         terminateCallback,
-        retryCallback
+        retryCallback,
+        this->debounce_delay_,
+        this->remote_temp_timeout_
     );
     if (this->hpControlFlow_ == nullptr) {
         ESP_LOGE(TAG, "Failed to allocate CN105ControlFlow");
@@ -796,6 +804,7 @@ void MitsubishiHeatPump::setup() {
         this->device_set_point,
         this->device_status_operating,
         this->device_status_current_temperature,
+        this->device_status_outside_temperature,
         this->device_status_compressor_frequency,
         this->device_status_input_power,
         this->device_status_kwh,
@@ -879,24 +888,24 @@ void MitsubishiHeatPump::update_setpoint(const float value) {
     const float oldTargetTemperature = this->target_temperature;
     this->dsm->setTargetTemperature(value);
     this->target_temperature = this->dsm->getTargetTemperature();
-    ESP_LOGI(TAG, "Target temp changed from %f to %f", oldTargetTemperature, this->target_temperature);
+    ESP_LOGE(TAG, "Target temp changed from %f to %f", oldTargetTemperature, this->dsm->getTargetTemperature());
 
     const DeviceState deviceState = this->dsm->getDeviceState();
     switch (deviceState.mode) {
         case DeviceMode::DeviceMode_Heat:
-            save(value, heat_storage);
-            ESP_LOGW(TAG, "Saved new heat setting: %.1f", value);
+            save(this->dsm->getTargetTemperature(), heat_storage);
+            ESP_LOGW(TAG, "Saved new heat setting: %.1f",  this->dsm->getTargetTemperature());
             break;
         case DeviceMode::DeviceMode_Cool:
-            save(value, cool_storage);
-            ESP_LOGW(TAG, "Saved new cool setting: %.1f", value);
+            save(this->dsm->getTargetTemperature(), cool_storage);
+            ESP_LOGW(TAG, "Saved new cool setting: %.1f", this->dsm->getTargetTemperature());
             break;
         case DeviceMode::DeviceMode_Auto:
-            save(value, auto_storage);
-            ESP_LOGW(TAG, "Saved new auto setting: %.1f", value);
+            save(this->dsm->getTargetTemperature(), auto_storage);
+            ESP_LOGW(TAG, "Saved new auto setting: %.1f", this->dsm->getTargetTemperature());
             break;
         default:
-            ESP_LOGW(TAG, "Didn't save temperature: %.1f", value);
+            ESP_LOGW(TAG, "Didn't save temperature: %.1f", this->dsm->getTargetTemperature());
     }
 }
 

@@ -248,6 +248,7 @@ namespace devicestate {
     DeviceStatus toDeviceStatus(heatpumpStatus& currentStatus) {
         DeviceStatus deviceStatus;
         deviceStatus.currentTemperature = currentStatus.roomTemperature;
+        deviceStatus.outsideTemperature = currentStatus.outsideAirTemperature;
         deviceStatus.operating = currentStatus.operating;
         deviceStatus.compressorFrequency = currentStatus.compressorFrequency;
         deviceStatus.inputPower = currentStatus.inputPower;

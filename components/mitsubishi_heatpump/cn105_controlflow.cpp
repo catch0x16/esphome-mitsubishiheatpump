@@ -13,10 +13,14 @@ namespace devicestate {
             CN105State* hpState,
             RequestScheduler::TimeoutCallback timeoutCallback,
             RequestScheduler::TerminateCallback terminateCallback,
-            RetryCallback retryCallback
+            RetryCallback retryCallback,
+            uint32_t debounce_delay,
+            uint32_t remote_temp_timeout
         ): connection_{connection},
             timeoutCallback_{timeoutCallback},
             retryCallback_{retryCallback},
+            debounce_delay_{debounce_delay},
+            remote_temp_timeout_{remote_temp_timeout},
             scheduler_(
                 // send_callback: envoie un paquet via buildAndSendInfoPacket
                 [this](uint8_t code) {
@@ -28,14 +32,16 @@ namespace devicestate {
             ),
             hpProtocol{} {
         this->hpState_ = hpState;
-        this->debounce_delay_ = 0;
-        this->remote_temp_timeout_ = 4294967295;    // uint32_t max
     }
 
     void CN105ControlFlow::set_debounce_delay(uint32_t delay) {
         this->debounce_delay_ = delay;
-        //ESP_LOGI(LOG_ACTION_EVT_TAG, "set_debounce_delay is set to %lu", delay);
         log_info_uint32(LOG_ACTION_EVT_TAG, "set_debounce_delay is set to ", delay);
+    }
+
+    void CN105ControlFlow::set_remote_temp_timeout(uint32_t timeout) {
+        this->remote_temp_timeout_ = timeout;
+        log_info_uint32(LOG_ACTION_EVT_TAG, "remote_temp_timeout is set to ", timeout);
     }
 
 #ifndef USE_ESP32
@@ -348,6 +354,7 @@ namespace devicestate {
             // Sending WantedSettings must be delayed in this case (lastSend timestamp updated).        
             ESP_LOGI(LOG_REMOTE_TEMP, "Sending remote temperature...");
             this->sendRemoteTemperature();
+            ESP_LOGI(LOG_REMOTE_TEMP, "Sent remote temperature...");
         }
     }
 

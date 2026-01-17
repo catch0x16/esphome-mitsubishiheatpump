@@ -9,10 +9,8 @@ from esphome.components import (
 )
 from esphome.components.uart import UARTParityOptions
 
-from esphome.components.logger import HARDWARE_UART_TO_SERIAL
 from esphome.const import (
     CONF_ID,
-    CONF_HARDWARE_UART,
     CONF_BAUD_RATE,
     CONF_RX_PIN,
     CONF_TX_PIN,
@@ -20,7 +18,6 @@ from esphome.const import (
     CONF_MODE,
     CONF_FAN_MODE,
     CONF_SWING_MODE,
-    PLATFORM_ESP8266,
     CONF_NAME,
     CONF_DISABLED_BY_DEFAULT,
     CONF_INTERNAL,
@@ -51,6 +48,9 @@ AUTO_LOAD = ["climate", "select", "binary_sensor", "uart"]
 DEPENDENCIES = ["uart"]
 
 CONF_SUPPORTS = "supports"
+CONF_SUPPORTS_HORIZONTAL_VANE_MODE = "horizontal_vane_mode"
+CONF_REMOTE_TEMP_TIMEOUT = "remote_temperature_timeout"
+CONF_DEBOUNCE_DELAY = "debounce_delay"
 
 CONF_CONTROL_PARAMETERS = "control_parameters"
 CONF_KP = "kp"
@@ -83,6 +83,10 @@ HORIZONTAL_SWING_OPTIONS = [
 ]
 VERTICAL_SWING_OPTIONS = ["swing", "auto", "up", "up_center", "center", "down_center", "down"]
 
+DEFAULT_CLIMATE_MODES = ["AUTO", "COOL", "HEAT", "DRY", "FAN_ONLY"]
+DEFAULT_FAN_MODES = ["AUTO", "MIDDLE", "QUIET", "LOW", "MEDIUM", "HIGH"]
+DEFAULT_SWING_MODES = ["OFF", "VERTICAL", "HORIZONTAL", "BOTH"]
+
 # Remote temperature timeout configuration
 CONF_REMOTE_OPERATING_TIMEOUT = "remote_temperature_operating_timeout_minutes"
 CONF_REMOTE_IDLE_TIMEOUT = "remote_temperature_idle_timeout_minutes"
@@ -96,61 +100,7 @@ MitsubishiACSelect = cg.global_ns.class_(
     "MitsubishiACSelect", select.Select, cg.Component
 )
 
-def valid_uart(uart):
-    if CORE.is_esp8266:
-        uarts = ["UART0"]  # UART1 is tx-only
-    elif CORE.is_esp32:
-        uarts = ["UART0", "UART1", "UART2"]
-    else:
-        raise NotImplementedError
-
-    return cv.one_of(*uarts, upper=True)(uart)
-
-
 InternalPowerOnSensor = cg.global_ns.class_("InternalPowerOn", binary_sensor.BinarySensor, cg.Component)
-
-
-# --- Fonction d'aide pour récupérer les pins TX/RX (identique à votre version corrigée) ---
-def get_uart_pins_from_config(core_config, target_uart_id_str):
-    tx_pin_num = -1
-    rx_pin_num = -1
-    uart_config_found = {}
-    for uart_conf_item in core_config.get("uart", []):
-        if str(uart_conf_item[CONF_ID]) == target_uart_id_str:
-            uart_config_found = uart_conf_item
-            break
-    if uart_config_found:
-        tx_pin_schema = uart_config_found.get(CONF_TX_PIN)
-        if tx_pin_schema:
-            if isinstance(tx_pin_schema, dict) and "number" in tx_pin_schema:
-                tx_pin_num = tx_pin_schema["number"]
-            elif isinstance(tx_pin_schema, int):
-                tx_pin_num = tx_pin_schema
-        rx_pin_schema = uart_config_found.get(CONF_RX_PIN)
-        if rx_pin_schema:
-            if isinstance(rx_pin_schema, dict) and "number" in rx_pin_schema:
-                rx_pin_num = rx_pin_schema["number"]
-            elif isinstance(rx_pin_schema, int):
-                rx_pin_num = rx_pin_schema
-    return tx_pin_num, rx_pin_num
-
-
-def get_uart_port_index(core_config, target_uart_id_str):
-    # ESPHome ne fournit pas directement l'index de contrôleur; on l'infère
-    # via l'ordre de déclaration ou restons à 0 par défaut.
-    # On tente d'associer l'objet id() à sa position.
-    idx = 0
-    for i, uart_conf_item in enumerate(core_config.get("uart", [])):
-        if str(uart_conf_item[CONF_ID]) == target_uart_id_str:
-            idx = i  # souvent 0 => UART0, 1 => UART1, 2 => UART2
-            break
-    # Clamp 0..2
-    if idx < 0:
-        idx = 0
-    if idx > 2:
-        idx = 2
-    return idx
-
 
 SELECT_SCHEMA = select.select_schema(MitsubishiACSelect).extend(
     {cv.GenerateID(CONF_ID): cv.declare_id(MitsubishiACSelect)}
@@ -170,6 +120,12 @@ CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
         # reconnects, but doesn't then follow up with our data request.
         cv.Optional(CONF_UPDATE_INTERVAL, default="2000ms"): cv.All(
             cv.update_interval, cv.Range(max=cv.TimePeriod(milliseconds=8500))
+        ),
+        cv.Optional(CONF_REMOTE_TEMP_TIMEOUT, default="never"): cv.All(
+            cv.update_interval
+        ),
+        cv.Optional(CONF_DEBOUNCE_DELAY, default="100ms"): cv.All(
+            cv.update_interval
         ),
         # Add selects for vertical and horizontal vane positions
         cv.Optional(CONF_HORIZONTAL_SWING_SELECT): SELECT_SCHEMA,
@@ -195,6 +151,8 @@ CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
                     cv.ensure_list(climate.validate_climate_fan_mode),
                 cv.Optional(CONF_SWING_MODE, default=DEFAULT_SWING_MODES):
                     cv.ensure_list(climate.validate_climate_swing_mode),
+                cv.Optional(CONF_SUPPORTS_HORIZONTAL_VANE_MODE):
+                    cv.ensure_list(cv.string),
             }
         ),
     }
@@ -211,24 +169,6 @@ def to_code(config):
     cg.add(uart_var.set_data_bits(8))
     cg.add(uart_var.set_parity(UARTParityOptions.UART_CONFIG_PARITY_EVEN))
     cg.add(uart_var.set_stop_bits(1))
-
-    #uart_id_str_for_lookup = str(uart_id_object)
-    #tx_pin, rx_pin = get_uart_pins_from_config(CORE.config, uart_id_str_for_lookup)
-    #cg.add(var.set_tx_rx_pins(tx_pin, rx_pin))
-    #uart_port_index = get_uart_port_index(CORE.config, uart_id_str_for_lookup)
-    #cg.add(var.set_uart_port(uart_port_index))
-
-    #serial = HARDWARE_UART_TO_SERIAL[PLATFORM_ESP8266][config[CONF_HARDWARE_UART]]
-    #var = cg.new_Pvariable(config[CONF_ID], cg.RawExpression(f"&{serial}"))
-
-    #if CONF_BAUD_RATE in config:
-    #    cg.add(var.set_baud_rate(config[CONF_BAUD_RATE]))
-
-    #if CONF_RX_PIN in config:
-    #    cg.add(var.set_rx_pin(config[CONF_RX_PIN]))
-
-    #if CONF_TX_PIN in config:
-    #    cg.add(var.set_tx_pin(config[CONF_TX_PIN]))
 
     if CONF_REMOTE_OPERATING_TIMEOUT in config:
         cg.add(var.set_remote_operating_timeout_minutes(config[CONF_REMOTE_OPERATING_TIMEOUT]))
@@ -255,11 +195,54 @@ def to_code(config):
             climate.CLIMATE_SWING_MODES[mode]
         ))
 
+    horizontal_vane_options = []
+
+    if CONF_SUPPORTS in config:
+        supports = config[CONF_SUPPORTS]
+        traits = var.config_traits()
+
+        # Configurer les modes supportés
+        supported_modes = supports.get(CONF_MODE, DEFAULT_CLIMATE_MODES)
+        for mode_str in supported_modes:
+            if mode_str == "OFF":
+                continue
+            if mode_str in climate.CLIMATE_MODES:
+                cg.add(traits.add_supported_mode(climate.CLIMATE_MODES[mode_str]))
+
+        # Configure the horizontal vane options
+        horizontal_vane_options = supports.get(CONF_SUPPORTS_HORIZONTAL_VANE_MODE, [])
+
+        for fan_mode_str in supports.get(CONF_FAN_MODE, DEFAULT_FAN_MODES):
+            if fan_mode_str in climate.CLIMATE_FAN_MODES:
+                cg.add(
+                    traits.add_supported_fan_mode(
+                        climate.CLIMATE_FAN_MODES[fan_mode_str]
+                    )
+                )
+        for swing_mode_str in supports.get(CONF_SWING_MODE, DEFAULT_SWING_MODES):
+            if swing_mode_str in climate.CLIMATE_SWING_MODES:
+                cg.add(
+                    traits.add_supported_swing_mode(
+                        climate.CLIMATE_SWING_MODES[swing_mode_str]
+                    )
+                )
+
+    cg.add(var.set_remote_temp_timeout(config[CONF_REMOTE_TEMP_TIMEOUT]))
+    cg.add(var.set_debounce_delay(config[CONF_DEBOUNCE_DELAY]))
+
     if CONF_HORIZONTAL_SWING_SELECT in config:
-        conf = config[CONF_HORIZONTAL_SWING_SELECT]
-        swing_select = yield select.new_select(conf, options=HORIZONTAL_SWING_OPTIONS)
-        yield cg.register_component(swing_select, conf)
-        cg.add(var.set_horizontal_vane_select(swing_select))
+        conf_item = config[CONF_HORIZONTAL_SWING_SELECT]
+
+        swing_select_var = yield select.new_select(conf_item, options=[])
+        if horizontal_vane_options:
+            options_vector = cg.RawExpression(
+                "std::vector<std::string>{"
+                + ", ".join([f'"{opt}"' for opt in horizontal_vane_options])
+                + "}"
+            )
+        else:
+            options_vector = cg.RawExpression("std::vector<std::string>{}")
+        cg.add(var.set_horizontal_vane_select(swing_select_var, options_vector))
 
     if CONF_VERTICAL_SWING_SELECT in config:
         conf = config[CONF_VERTICAL_SWING_SELECT]
@@ -278,7 +261,7 @@ def to_code(config):
 
     device_state_connected_sensor_var = yield binary_sensor.new_binary_sensor({
         CONF_ID: cv.declare_id(binary_sensor.BinarySensor)("device_state_connected"),
-        CONF_NAME: "Device state connected",
+        CONF_NAME: "Connected",
         CONF_DISABLED_BY_DEFAULT: False,
         CONF_INTERNAL: False,
         CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
@@ -287,7 +270,7 @@ def to_code(config):
 
     device_state_active_sensor_var = yield binary_sensor.new_binary_sensor({
         CONF_ID: cv.declare_id(binary_sensor.BinarySensor)("device_state_active"),
-        CONF_NAME: "Device state active",
+        CONF_NAME: "Device power on",
         CONF_DISABLED_BY_DEFAULT: False,
         CONF_INTERNAL: False,
         CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
@@ -296,7 +279,7 @@ def to_code(config):
 
     device_status_operating_sensor_var = yield binary_sensor.new_binary_sensor({
         CONF_ID: cv.declare_id(binary_sensor.BinarySensor)("device_status_operating"),
-        CONF_NAME: "Device status operating",
+        CONF_NAME: "Operating",
         CONF_DISABLED_BY_DEFAULT: False,
         CONF_INTERNAL: False,
         CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
@@ -305,7 +288,7 @@ def to_code(config):
 
     device_status_current_temperature_sensor_var = yield sensor.new_sensor({
         CONF_ID: cv.declare_id(sensor.Sensor)("device_status_current_temperature"),
-        CONF_NAME: "Device current temperature",
+        CONF_NAME: "Current temperature",
         CONF_UNIT_OF_MEASUREMENT: UNIT_CELSIUS,
         CONF_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
         CONF_STATE_CLASS: StateClasses.STATE_CLASS_MEASUREMENT,
@@ -316,6 +299,20 @@ def to_code(config):
         CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
     })
     cg.add(var.set_device_status_current_temperature_sensor(device_status_current_temperature_sensor_var))
+
+    device_status_outside_temperature_sensor_var = yield sensor.new_sensor({
+        CONF_ID: cv.declare_id(sensor.Sensor)("device_status_outside_temperature"),
+        CONF_NAME: "Outside temperature",
+        CONF_UNIT_OF_MEASUREMENT: UNIT_CELSIUS,
+        CONF_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
+        CONF_STATE_CLASS: StateClasses.STATE_CLASS_MEASUREMENT,
+        CONF_ACCURACY_DECIMALS: 1,
+        CONF_FORCE_UPDATE: False,
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_INTERNAL: False,
+        CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+    })
+    cg.add(var.set_device_status_outside_temperature_sensor(device_status_outside_temperature_sensor_var))
 
     device_status_compressor_frequency_sensor_var = yield sensor.new_sensor({
         CONF_ID: cv.declare_id(sensor.Sensor)("device_status_compressor_frequency"),
@@ -375,7 +372,7 @@ def to_code(config):
 
     pid_set_point_correction_sensor_var = yield sensor.new_sensor({
         CONF_ID: cv.declare_id(sensor.Sensor)("pid_set_point_correction"),
-        CONF_NAME: "PID Set Point Correction",
+        CONF_NAME: "PID Set Point",
         CONF_UNIT_OF_MEASUREMENT: UNIT_CELSIUS,
         CONF_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
         CONF_STATE_CLASS: StateClasses.STATE_CLASS_MEASUREMENT,
@@ -389,7 +386,7 @@ def to_code(config):
 
     device_set_point_sensor_var = yield sensor.new_sensor({
         CONF_ID: cv.declare_id(sensor.Sensor)("device_set_point"),
-        CONF_NAME: "Device Set Point",
+        CONF_NAME: "Set Point",
         CONF_UNIT_OF_MEASUREMENT: UNIT_CELSIUS,
         CONF_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
         CONF_STATE_CLASS: StateClasses.STATE_CLASS_MEASUREMENT,

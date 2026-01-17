@@ -32,6 +32,7 @@ namespace devicestate {
       esphome::sensor::Sensor* device_set_point;
       esphome::binary_sensor::BinarySensor* device_status_operating;
       esphome::sensor::Sensor* device_status_current_temperature;
+      esphome::sensor::Sensor* device_status_outside_temperature;
       esphome::sensor::Sensor* device_status_compressor_frequency;
       esphome::sensor::Sensor* device_status_input_power;
       esphome::sensor::Sensor* device_status_kwh;
@@ -75,6 +76,7 @@ namespace devicestate {
         esphome::sensor::Sensor* device_set_point,
         esphome::binary_sensor::BinarySensor* device_status_operating,
         esphome::sensor::Sensor* device_status_current_temperature,
+        esphome::sensor::Sensor* device_status_outside_temperature,
         esphome::sensor::Sensor* device_status_compressor_frequency,
         esphome::sensor::Sensor* device_status_input_power,
         esphome::sensor::Sensor* device_status_kwh,

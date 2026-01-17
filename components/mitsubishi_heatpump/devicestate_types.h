@@ -66,6 +66,7 @@ namespace devicestate {
   struct DeviceStatus {
     bool operating;
     float currentTemperature;
+    float outsideTemperature;
     float compressorFrequency;
     float inputPower;
     float kWh;

@@ -24,6 +24,7 @@ namespace devicestate {
       esphome::sensor::Sensor* device_set_point,
       esphome::binary_sensor::BinarySensor* device_status_operating,
       esphome::sensor::Sensor* device_status_current_temperature,
+      esphome::sensor::Sensor* device_status_outside_temperature,
       esphome::sensor::Sensor* device_status_compressor_frequency,
       esphome::sensor::Sensor* device_status_input_power,
       esphome::sensor::Sensor* device_status_kwh,
@@ -40,6 +41,7 @@ namespace devicestate {
         this->device_set_point = device_set_point;
         this->device_status_operating = device_status_operating;
         this->device_status_current_temperature = device_status_current_temperature;
+        this->device_status_outside_temperature = device_status_outside_temperature;
         this->device_status_compressor_frequency = device_status_compressor_frequency;
         this->device_status_input_power = device_status_input_power;
         this->device_status_kwh = device_status_kwh;
@@ -104,18 +106,6 @@ namespace devicestate {
         }
 
         ESP_LOGD(TAG, "Callback hpStatusChanged completed");
-    }
-
-    void DeviceStateManager::log_packet(uint8_t* packet, unsigned int length, char* packetDirection) {
-        std::string packetHex;
-        packetHex.reserve(length * 3 + 1); // "FF " par octet
-        char textBuf[15];
-
-        for (int i = 0; i < length; i++) {
-            memset(textBuf, 0, 15);
-            sprintf(textBuf, "%02X ", packet[i]);
-            packetHex += textBuf;
-        }
     }
 
     bool DeviceStateManager::isInitialized() {
@@ -366,6 +356,7 @@ namespace devicestate {
 
     void DeviceStateManager::log_heatpump_status(heatpumpStatus& currentStatus) {
         ESP_LOGD(TAG, "  roomTemperature: %f", currentStatus.roomTemperature);
+        ESP_LOGD(TAG, "  outsideAirTemperature: %f", currentStatus.outsideAirTemperature);
         ESP_LOGD(TAG, "  compressorFrequency: %f", currentStatus.compressorFrequency);
         ESP_LOGD(TAG, "  inputPower: %f", currentStatus.inputPower);
         ESP_LOGD(TAG, "  kWh: %f", currentStatus.kWh);
@@ -380,6 +371,7 @@ namespace devicestate {
 
         ESP_LOGI(TAG, "Heatpump Status");
         ESP_LOGI(TAG, "  roomTemperature: %.2f", this->deviceStatus.currentTemperature);
+        ESP_LOGI(TAG, "  outsideTemperature: %.2f", this->deviceStatus.outsideTemperature);
         ESP_LOGI(TAG, "  operating: %s", TRUEFALSE(this->deviceStatus.operating));
         ESP_LOGI(TAG, "  compressorFrequency: %f", this->deviceStatus.compressorFrequency);
         ESP_LOGI(TAG, "  inputPower: %f", this->deviceStatus.inputPower);
@@ -393,28 +385,41 @@ namespace devicestate {
 
     void DeviceStateManager::publish() {
         // Publish device status (with null checks)
-        if (this->device_status_operating)
+        if (this->device_status_operating) {
             this->device_status_operating->publish_state(this->deviceStatus.operating);
-        if (this->device_status_current_temperature)
+        }
+        if (this->device_status_current_temperature) {
             this->device_status_current_temperature->publish_state(this->deviceStatus.currentTemperature);
-        if (this->device_status_compressor_frequency)
+        }
+        if (this->device_status_outside_temperature) {
+            this->device_status_outside_temperature->publish_state(this->deviceStatus.outsideTemperature);
+        }
+        if (this->device_status_compressor_frequency) {
             this->device_status_compressor_frequency->publish_state(this->deviceStatus.compressorFrequency);
-        if (this->device_status_input_power)
+        }
+        if (this->device_status_input_power) {
             this->device_status_input_power->publish_state(this->deviceStatus.inputPower);
-        if (this->device_status_kwh)
+        }
+        if (this->device_status_kwh) {
             this->device_status_kwh->publish_state(this->deviceStatus.kWh);
-        if (this->device_status_runtime_hours)
+        }
+        if (this->device_status_runtime_hours) {
             this->device_status_runtime_hours->publish_state(this->deviceStatus.runtimeHours);
+        }
 
         // Publish device state (with null checks)
-        if (this->internal_power_on)
+        if (this->internal_power_on) {
             this->internal_power_on->publish_state(this->internalPowerOn);
-        if (this->device_state_active)
+        }
+        if (this->device_state_active) {
             this->device_state_active->publish_state(this->deviceState.active);
-        if (this->device_set_point)
+        }
+        if (this->device_set_point) {
             this->device_set_point->publish_state(this->deviceState.targetTemperature);
-        if (this->pid_set_point_correction)
+        }
+        if (this->pid_set_point_correction) {
             this->pid_set_point_correction->publish_state(this->correctedTargetTemperature);
+        }
     }
 
 }

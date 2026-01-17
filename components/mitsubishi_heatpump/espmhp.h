@@ -73,6 +73,7 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         esphome::binary_sensor::BinarySensor* device_state_active;
         esphome::binary_sensor::BinarySensor* device_status_operating;
         esphome::sensor::Sensor* device_status_current_temperature;
+        esphome::sensor::Sensor* device_status_outside_temperature;
         esphome::sensor::Sensor* device_status_compressor_frequency;
         esphome::sensor::Sensor* device_status_input_power;
         esphome::sensor::Sensor* device_status_kwh;
@@ -82,15 +83,6 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
 
         // Print a banner with library information.
         void banner();
-
-        // Set the baud rate. Must be called before setup() to have any effect.
-        void set_baud_rate(int);
-
-        // Set the RX pin. Must be called before setup() to have any effect.
-        void set_rx_pin(int);
-
-        // Set the TX pin. Must be called before setup() to have any effect.
-        void set_tx_pin(int);
 
         void set_kp(float kp) { this->kp_ = kp; }
         void set_ki(float ki) { this->ki_ = ki; }
@@ -102,6 +94,9 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
 
         uint32_t get_update_interval() const;
         void set_update_interval(uint32_t update_interval);
+
+        void set_remote_temp_timeout(uint32_t timeout);
+        void set_debounce_delay(uint32_t delay);
 
         // handle a change in device;
         void updateDevice();
@@ -167,6 +162,10 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
 
         void set_device_status_current_temperature_sensor(esphome::sensor::Sensor* device_status_current_temperature) {
             this->device_status_current_temperature = device_status_current_temperature;
+        }
+
+        void set_device_status_outside_temperature_sensor(esphome::sensor::Sensor* device_status_outside_temperature) {
+            this->device_status_outside_temperature = device_status_outside_temperature;
         }
 
         void set_device_status_compressor_frequency_sensor(esphome::sensor::Sensor* device_status_compressor_frequency) {
@@ -242,6 +241,9 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
     private:
         cycleManagement loopCycle{};
         uint32_t update_interval_;
+
+        uint32_t debounce_delay_;
+        uint32_t remote_temp_timeout_;
 
         devicestate::CN105ControlFlow* hpControlFlow_{nullptr};
         devicestate::CN105State* hpState_{nullptr};

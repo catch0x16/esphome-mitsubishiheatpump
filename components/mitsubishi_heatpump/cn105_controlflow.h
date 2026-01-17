@@ -29,10 +29,13 @@ namespace devicestate {
                 CN105State* hpState,
                 RequestScheduler::TimeoutCallback timeoutCallback,
                 RequestScheduler::TerminateCallback terminateCallback,
-                RetryCallback retryCallback
+                RetryCallback retryCallback,
+                uint32_t debounce_delay = 0,
+                uint32_t remote_temp_timeout = 4294967295
             );
 
             void set_debounce_delay(uint32_t delay);
+            void set_remote_temp_timeout(uint32_t timeout);
 
             void loop(cycleManagement& loopCycle);
             void registerInfoRequests();
@@ -48,11 +51,10 @@ namespace devicestate {
             CN105State* hpState_;
             RequestScheduler::TimeoutCallback timeoutCallback_;
             RetryCallback retryCallback_;
-            RequestScheduler scheduler_;
-            CN105Protocol hpProtocol;
-
             uint32_t debounce_delay_;
             uint32_t remote_temp_timeout_;
+            RequestScheduler scheduler_;
+            CN105Protocol hpProtocol;
 
             bool shouldSendExternalTemperature_ = false;
             float remoteTemperature_ = 0;

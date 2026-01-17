@@ -26,10 +26,6 @@ namespace devicestate {
         strncpy(outputForSensor, output.c_str(), sizeof(outputForSensor) - 1);
         outputForSensor[sizeof(outputForSensor) - 1] = '\0';
 
-        /*if (strcasecmp(packetDirection, "WRITE") == 0) {
-            this->last_sent_packet_sensor->publish_state(outputForSensor);
-        }*/
-
         ESP_LOGD(packetDirection, "%s", output.c_str());
     }
 
