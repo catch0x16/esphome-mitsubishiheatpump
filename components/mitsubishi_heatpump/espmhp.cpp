@@ -688,12 +688,12 @@ void MitsubishiHeatPump::setup() {
     ESP_LOGCONFIG(TAG, "Setting up UART...");
 
     this->min_temp = ESPMHP_MIN_TEMPERATURE;
-    if (this->visual_min_temperature_override_.has_value()) {
-        this->min_temp = this->visual_min_temperature_override_.value();
+    if (this->visual_min_temperature_override_ > ESPMHP_MIN_TEMPERATURE) {
+        this->min_temp = this->visual_min_temperature_override_;
     }
     this->max_temp = ESPMHP_MAX_TEMPERATURE;
-    if (this->visual_max_temperature_override_.has_value()) {
-        this->max_temp = this->visual_max_temperature_override_.value();
+    if (this->visual_max_temperature_override_ < ESPMHP_MAX_TEMPERATURE) {
+        this->max_temp = this->visual_max_temperature_override_;
     }
 
     this->hysterisisWorkflowStep = new (std::nothrow) HysterisisWorkflowStep(
