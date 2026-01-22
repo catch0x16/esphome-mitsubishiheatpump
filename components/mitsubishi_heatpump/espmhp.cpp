@@ -154,7 +154,8 @@ void MitsubishiHeatPump::set_vertical_vane_select(
     select::Select *vertical_vane_select) {
     this->vertical_vane_select_ = vertical_vane_select;
     this->vertical_vane_select_->add_on_state_callback(
-        [this](const std::string &value, size_t index) {
+        [this](size_t index) {
+            auto value = this->vertical_vane_select_->at(index).value();
             if (value == this->vertical_swing_state_) return;
             this->on_vertical_swing_change(value);
         });
@@ -163,8 +164,10 @@ void MitsubishiHeatPump::set_vertical_vane_select(
 void MitsubishiHeatPump::set_horizontal_vane_select(
     select::Select *horizontal_vane_select) {
       this->horizontal_vane_select_ = horizontal_vane_select;
+
       this->horizontal_vane_select_->add_on_state_callback(
-          [this](const std::string &value, size_t index) {
+          [this](size_t index) {
+              auto value = this->horizontal_vane_select_->at(index).value();
               if (value == this->horizontal_swing_state_) return;
               this->on_horizontal_swing_change(value);
           });
@@ -688,13 +691,18 @@ void MitsubishiHeatPump::setup() {
     ESP_LOGCONFIG(TAG, "Setting up UART...");
 
     this->min_temp = ESPMHP_MIN_TEMPERATURE;
+#ifdef USE_CLIMATE_VISUAL_OVERRIDES
     if (this->visual_min_temperature_override_ > ESPMHP_MIN_TEMPERATURE) {
         this->min_temp = this->visual_min_temperature_override_;
     }
+#endif
+
     this->max_temp = ESPMHP_MAX_TEMPERATURE;
+#ifdef USE_CLIMATE_VISUAL_OVERRIDES
     if (this->visual_max_temperature_override_ < ESPMHP_MAX_TEMPERATURE) {
         this->max_temp = this->visual_max_temperature_override_;
     }
+#endif
 
     this->hysterisisWorkflowStep = new (std::nothrow) HysterisisWorkflowStep(
         this->hysterisisOn_,
@@ -888,7 +896,7 @@ void MitsubishiHeatPump::update_setpoint(const float value) {
     const float oldTargetTemperature = this->target_temperature;
     this->dsm->setTargetTemperature(value);
     this->target_temperature = this->dsm->getTargetTemperature();
-    ESP_LOGE(TAG, "Target temp changed from %f to %f", oldTargetTemperature, this->dsm->getTargetTemperature());
+    ESP_LOGD(TAG, "Target temp changed from %f to %f", oldTargetTemperature, this->dsm->getTargetTemperature());
 
     const DeviceState deviceState = this->dsm->getDeviceState();
     switch (deviceState.mode) {
