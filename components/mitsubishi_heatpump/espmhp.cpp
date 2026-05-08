@@ -757,15 +757,12 @@ void MitsubishiHeatPump::setup() {
         this->mark_failed();
         return;
     }
-    auto loopCycle = this->loopCycle;
-    auto connectedCallback = [this, &loopCycle](bool state) {
+    auto connectedCallback = [this](bool state) {
         if (state) {
             // let's say that the last complete cycle was over now
-            loopCycle.lastCompleteCycleMs = CUSTOM_MILLIS;
+            this->loopCycle.lastCompleteCycleMs = CUSTOM_MILLIS;
             this->hpState_->resetCurrentSettings();
             this->hpState_->resetCurrentRunStates();
-            //this->hpState_->getCurrentSettings().resetSettings();
-            //this->hpState_->getCurrentRunStates().resetSettings();
             ESP_LOGI(TAG, "Reset current settings..");
         }
         this->device_state_connected->publish_state(state);
