@@ -163,7 +163,7 @@ float AdaptivePID::convert_output_to_setpoint(float control_output, float curren
     float center = _target;
     float setpoint_offset = frac * half_span;
 
-    float sp = _heating ? (center + setpoint_offset) : (center - setpoint_offset);
+    float sp = center + setpoint_offset;
     // Clamp to output bounds
     if (sp < _output_min) sp = _output_min;
     if (sp > _output_max) sp = _output_max;
