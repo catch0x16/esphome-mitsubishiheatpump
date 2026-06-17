@@ -83,7 +83,7 @@ namespace devicestate {
     }
 
     bool heatpumpFunctions::operator==(const heatpumpFunctions& rhs) {
-        return this->isValid() == rhs.isValid() && memcmp(this->raw, rhs.raw, MAX_FUNCTION_CODE_COUNT * sizeof(int)) == 0;
+        return this->isValid() == rhs.isValid() && memcmp(this->raw, rhs.raw, sizeof(this->raw)) == 0;
     }
 
     bool heatpumpFunctions::operator!=(const heatpumpFunctions& rhs) {

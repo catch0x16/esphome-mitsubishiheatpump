@@ -406,7 +406,10 @@ void MitsubishiHeatPump::on_horizontal_swing_change(const std::string &swing) {
  * Maps HomeAssistant/ESPHome modes to Mitsubishi modes.
  */
 void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
-    auto callback = [this, &call]() {
+    // Capture `call` by value: on non-ESP32 acquireWantedSettingsLock defers the
+    // callback (set_timeout 0) to a later loop, by which point a reference to the
+    // caller's ClimateCall would dangle. ClimateCall is copyable, so copy it.
+    auto callback = [this, call]() {
         this->controlDelegate(call);
     };
 
