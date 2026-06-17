@@ -744,7 +744,32 @@ void MitsubishiHeatPump::setup() {
     };
 
     auto retryCallback = [this](const std::string& name, uint32_t initial_wait_time, uint8_t max_attempts, std::function<esphome::RetryResult(uint8_t)> callback) {
-        this->set_retry(name.c_str(), initial_wait_time, max_attempts, std::move(callback), 1.2f);
+        // set_retry was deprecated in ESPHome 2026.2.0 (removed in 2026.8.0).
+        // Reimplement its semantics with chained set_timeout + 1.2x exponential
+        // backoff (see esphome blog 2026/02/12): the first attempt runs
+        // immediately, the callback receives the remaining attempt countdown,
+        // and we stop on RetryResult::DONE or when the countdown reaches 0.
+        struct RetryState {
+            std::function<esphome::RetryResult(uint8_t)> func;
+            uint8_t countdown;
+            uint32_t interval;
+        };
+        auto state = std::make_shared<RetryState>(
+            RetryState{std::move(callback), max_attempts, initial_wait_time});
+        auto handler = std::make_shared<std::function<void()>>();
+        *handler = [this, name, state, handler]() {
+            if (state->countdown == 0) {
+                return;
+            }
+            esphome::RetryResult result = state->func(--state->countdown);
+            if (result == esphome::RetryResult::DONE || state->countdown == 0) {
+                return;
+            }
+            this->set_timeout(name.c_str(), state->interval, [handler]() { (*handler)(); });
+            state->interval = static_cast<uint32_t>(state->interval * 1.2f);
+        };
+        // First execution immediately, matching the old set_retry behavior.
+        this->set_timeout(name.c_str(), 0, [handler]() { (*handler)(); });
     };
 
     auto terminateCallback = [this]() {
