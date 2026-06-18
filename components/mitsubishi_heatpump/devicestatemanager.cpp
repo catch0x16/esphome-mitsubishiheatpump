@@ -61,22 +61,22 @@ namespace devicestate {
         this->log_heatpump_settings(currentSettings);
 
         const DeviceState deviceState = devicestate::toDeviceState(currentSettings);
+        if (!this->settingsInitialized) {
+            ESP_LOGW(TAG, "Initializing internalPowerOn state to %s", ONOFF(deviceState.active));
+            ESP_LOGW(TAG, "Initializing targetTemperature state from %f to %f", this->targetTemperature, deviceState.targetTemperature);
+            this->internalPowerOn = deviceState.active;
+            this->targetTemperature = deviceState.targetTemperature;
+            this->deviceState = deviceState;
+            this->settingsInitialized = true;
+            return;
+        }
+
         if (deviceStateEqual(this->deviceState, deviceState)) {
             return;
         }
 
-        if (this->settingsInitialized) {
-            if (this->internalPowerOn != deviceState.active) {
-                ESP_LOGI(TAG, "Device active on change: deviceState.active={%s} internalPowerOn={%s}", YESNO(deviceState.active), YESNO(this->internalPowerOn));
-            }
-        } else {
-            if (this->internalPowerOn != deviceState.active) {
-                ESP_LOGW(TAG, "Initializing internalPowerOn state from %s to %s", ONOFF(this->internalPowerOn), ONOFF(deviceState.active));
-                this->internalPowerOn = deviceState.active;
-            }
-            ESP_LOGW(TAG, "Initializing targetTemperature state from %f to %f", this->targetTemperature, deviceState.targetTemperature);
-            this->targetTemperature = deviceState.targetTemperature;
-            this->settingsInitialized = true;
+        if (this->internalPowerOn != deviceState.active) {
+            ESP_LOGI(TAG, "Device active on change: deviceState.active={%s} internalPowerOn={%s}", YESNO(deviceState.active), YESNO(this->internalPowerOn));
         }
 
         this->deviceState = deviceState;
@@ -92,19 +92,25 @@ namespace devicestate {
         }
         
         ESP_LOGD(TAG, "Callback hpStatusChanged starting");
-        if (!this->statusInitialized) {
-            this->statusInitialized = true;
-            ESP_LOGW(TAG, "HeatPump status initialized.");
-        }
 
         heatpumpStatus currentStatus = this->hpState->getCurrentStatus();
         this->log_heatpump_status(currentStatus);
         const DeviceStatus newDeviceStatus = devicestate::toDeviceStatus(currentStatus);
-        if (!devicestate::deviceStatusEqual(this->deviceStatus, newDeviceStatus)) {
+
+        if (!this->statusInitialized) {
             this->deviceStatus = newDeviceStatus;
+            this->statusInitialized = true;
+            ESP_LOGW(TAG, "HeatPump status initialized.");
             ESP_LOGI(TAG, "HeatPump device status updated.");
+            return;
         }
 
+        if (devicestate::deviceStatusEqual(this->deviceStatus, newDeviceStatus)) {
+            return;
+        }
+
+        this->deviceStatus = newDeviceStatus;
+        ESP_LOGI(TAG, "HeatPump device status updated.");
         ESP_LOGD(TAG, "Callback hpStatusChanged completed");
     }
 
@@ -384,6 +390,11 @@ namespace devicestate {
     }
 
     void DeviceStateManager::publish() {
+        if (!this->isInitialized()) {
+            ESP_LOGD(TAG, "Skipping state publication until settings and status are initialized.");
+            return;
+        }
+
         // Publish device status (with null checks)
         if (this->device_status_operating) {
             this->device_status_operating->publish_state(this->deviceStatus.operating);

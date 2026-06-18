@@ -419,7 +419,8 @@ void MitsubishiHeatPump::control(const climate::ClimateCall &call) {
 void MitsubishiHeatPump::updateDevice() {
     const DeviceState deviceState = this->dsm->getDeviceState();
     const DeviceStatus deviceStatus = this->dsm->getDeviceStatus();
-    if (devicestate::deviceStateEqual(this->lastDeviceState, deviceState) &&
+    if (this->hasLastDeviceSnapshot &&
+            devicestate::deviceStateEqual(this->lastDeviceState, deviceState) &&
             devicestate::deviceStatusEqual(this->lastDeviceStatus, deviceStatus) &&
             !this->remote_temperature_updated) {
         ESP_LOGD(TAG, "Skipping updateDevice due to no change");
@@ -430,6 +431,7 @@ void MitsubishiHeatPump::updateDevice() {
     this->remote_temperature_updated = false;
     this->lastDeviceState = deviceState;
     this->lastDeviceStatus = deviceStatus;
+    this->hasLastDeviceSnapshot = true;
 
     if (this->remote_temperature > 0) {
         ESP_LOGV(TAG, "Current: Using remote temperature %.2f", this->remote_temperature);
@@ -574,7 +576,8 @@ void MitsubishiHeatPump::updateDevice() {
             this->fan_mode = climate::CLIMATE_FAN_AUTO;
             break;
     }
-    ESP_LOGD(TAG, "Fan mode is: %d", this->fan_mode.value_or(-1));
+    ESP_LOGD(TAG, "Fan mode is: %d",
+        this->fan_mode.has_value() ? static_cast<int>(*this->fan_mode) : -1);
 
     switch (deviceState.swingMode) {
         case SwingMode::SwingMode_Both:

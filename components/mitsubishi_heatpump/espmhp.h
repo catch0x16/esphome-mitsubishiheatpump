@@ -284,8 +284,9 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
 
         bool isComponentActive();
 
-        devicestate::DeviceState lastDeviceState;
-        devicestate::DeviceStatus lastDeviceStatus;
+        bool hasLastDeviceSnapshot{false};
+        devicestate::DeviceState lastDeviceState{};
+        devicestate::DeviceStatus lastDeviceStatus{};
 
         float min_temp;
         float max_temp;

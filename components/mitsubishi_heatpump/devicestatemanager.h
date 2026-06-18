@@ -40,16 +40,16 @@ namespace devicestate {
       esphome::sensor::Sensor* pid_set_point_correction;
 
       uint32_t lastInternalPowerUpdate = esphome::millis();
-      bool internalPowerOn;
+      bool internalPowerOn = false;
 
       float targetTemperature = -1;
       float correctedTargetTemperature = -1;
 
-      bool settingsInitialized;
-      DeviceState deviceState;
+      bool settingsInitialized = false;
+      DeviceState deviceState{};
 
-      bool statusInitialized;
-      DeviceStatus deviceStatus;
+      bool statusInitialized = false;
+      DeviceStatus deviceStatus{};
 
       void hpSettingsChanged();
       void hpStatusChanged();
