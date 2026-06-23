@@ -290,9 +290,9 @@ namespace devicestate {
 
         // 0x09 Standby/Power
         InfoRequest r_power("standby", "Power/Standby", 0x09, 3, 500);
-        r_power.onResponse = [this](CN105State& self) {
-            this->hpProtocol.parseStatus0x06(this->connection_->getData(), self);
-        };
+        // The 0x09 payload has a different layout from the 0x06 status
+        // response. It is not currently decoded, so leave the current status
+        // untouched while still allowing the scheduler to complete the cycle.
         scheduler_.register_request(r_power);
 
         // 0x42 HVAC options

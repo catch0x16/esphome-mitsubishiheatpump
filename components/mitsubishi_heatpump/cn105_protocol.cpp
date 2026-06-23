@@ -243,9 +243,9 @@ namespace devicestate {
         //            if the counter extends to other bytes.
         // ?? = unknown bytes that appear to have a fixed/constant value
 
-        heatpumpStatus receivedStatus;
+        heatpumpStatus receivedStatus{};
         receivedStatus.operating = packet[4];
-        receivedStatus.compressorFrequency = packet[3];
+        receivedStatus.compressorFrequency = receivedStatus.operating ? packet[3] : 0;
         receivedStatus.inputPower = (packet[5] << 8) | packet[6];
         receivedStatus.kWh = float((packet[7] << 8) | packet[8]) / 10.0;
 
