@@ -15,21 +15,43 @@ uart:
   baud_rate: 2400
 
 sensor:
+  - platform: template
+    id: room_temperature
+    name: "Room temperature"
+    unit_of_measurement: "°C"
+    device_class: temperature
+    update_interval: 10s
+    lambda: return 21.0;
 
 external_components:
   - source: components
 
 climate:
-  - platform: mitsubishi_heatpump
-    name: "Test Heatpump"
+  - platform: mitsubishi_cn105
+    id: cn105_device
     uart_id: hp_uart
+    internal: true
+    remote_temperature_sensor: room_temperature
     visual:
       min_temperature: 16
       max_temperature: 31
       temperature_step:
         target_temperature: 0.5
         current_temperature: 0.1
-    control_parameters:
+  - platform: workflow_climate
+    id: heat_pump
+    name: "Test Heatpump"
+    climate_id: cn105_device
+    temperature_sensor: room_temperature
+    update_interval: 2s
+    command_ack_timeout: 30s
+    pid:
       kp: 0.0
       ki: 0.0
       kd: 0.0
+      max_adjustment_under: 2.0
+      max_adjustment_over: 2.0
+    hysteresis:
+      on_threshold: 0.25
+      off_threshold: 0.25
+      min_cycle_duration: 60s

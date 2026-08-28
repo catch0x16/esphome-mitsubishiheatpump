@@ -91,29 +91,4 @@ namespace devicestate {
 
   void log_device_state(const DeviceState& state);
 
-  class IDeviceStateManager {
-    public:
-        virtual DeviceStatus getDeviceStatus() = 0;
-        virtual DeviceState getDeviceState() = 0;
-
-        virtual float getTargetTemperature() = 0;
-        virtual bool getOffsetDirection() = 0;
-
-        virtual void commit() = 0;
-        virtual bool internalTurnOn() = 0;
-        virtual bool internalTurnOff() = 0;
-        virtual bool isInternalPowerOn() = 0;
-
-        virtual bool internalSetCorrectedTemperature(const float value) = 0;
-
-        virtual ~IDeviceStateManager() = default;    // Virtual destructor for safety
-  };
-
-  class WorkflowStep {
-    public:
-        WorkflowStep(){}
-    
-        virtual void run(const float currentTemperature, IDeviceStateManager* deviceManager) = 0;
-  };
-
 }

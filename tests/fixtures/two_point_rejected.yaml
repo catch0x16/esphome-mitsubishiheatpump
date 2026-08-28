@@ -1,0 +1,32 @@
+esphome:
+  name: two-point-rejected
+
+host:
+
+logger:
+
+external_components:
+  - source: ../../components
+
+demo:
+  climates:
+    - id: two_point_inner
+      name: "Two Point Inner"
+      type: 3
+
+sensor:
+  - platform: template
+    id: room_temperature
+    update_interval: 10s
+    lambda: return 21.0;
+
+climate:
+  - platform: workflow_climate
+    id: rejected_outer
+    name: "Rejected Outer"
+    climate_id: two_point_inner
+    temperature_sensor: room_temperature
+    hysteresis: {}
+
+# At runtime WorkflowClimate::setup marks the wrapper failed before initialization.
+# Its callbacks remain inert, so no call can be issued to the two-point inner climate.

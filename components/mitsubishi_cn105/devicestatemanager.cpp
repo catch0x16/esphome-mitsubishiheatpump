@@ -1,6 +1,6 @@
 #include "devicestatemanager.h"
 
-#include "espmhp.h"
+#include "mitsubishi_cn105.h"
 using namespace esphome;
 
 #include "floats.h"
@@ -15,11 +15,9 @@ namespace devicestate {
     static const char* TAG = "DeviceStateManager"; // Logging tag
 
     DeviceStateManager::DeviceStateManager(
-      IIODevice* io_device,
       CN105State* hpState,
       const float minTemp,
       const float maxTemp,
-      esphome::binary_sensor::BinarySensor* internal_power_on,
       esphome::binary_sensor::BinarySensor* device_state_active,
       esphome::sensor::Sensor* device_set_point,
       esphome::binary_sensor::BinarySensor* device_status_operating,
@@ -28,15 +26,13 @@ namespace devicestate {
       esphome::sensor::Sensor* device_status_compressor_frequency,
       esphome::sensor::Sensor* device_status_input_power,
       esphome::sensor::Sensor* device_status_kwh,
-      esphome::sensor::Sensor* device_status_runtime_hours,
-      esphome::sensor::Sensor* pid_set_point_correction
+      esphome::sensor::Sensor* device_status_runtime_hours
     ) {
         this->hpState = hpState;
 
         this->minTemp = minTemp;
         this->maxTemp = maxTemp;
 
-        this->internal_power_on = internal_power_on;
         this->device_state_active = device_state_active;
         this->device_set_point = device_set_point;
         this->device_status_operating = device_status_operating;
@@ -46,7 +42,6 @@ namespace devicestate {
         this->device_status_input_power = device_status_input_power;
         this->device_status_kwh = device_status_kwh;
         this->device_status_runtime_hours = device_status_runtime_hours;
-        this->pid_set_point_correction = pid_set_point_correction;
 
         ESP_LOGCONFIG(TAG, "Initializing new HeatPump object.");
     }
@@ -62,10 +57,6 @@ namespace devicestate {
 
         const DeviceState deviceState = devicestate::toDeviceState(currentSettings);
         if (!this->settingsInitialized) {
-            ESP_LOGW(TAG, "Initializing internalPowerOn state to %s", ONOFF(deviceState.active));
-            ESP_LOGW(TAG, "Initializing targetTemperature state from %f to %f", this->targetTemperature, deviceState.targetTemperature);
-            this->internalPowerOn = deviceState.active;
-            this->targetTemperature = deviceState.targetTemperature;
             this->deviceState = deviceState;
             this->settingsInitialized = true;
             return;
@@ -73,10 +64,6 @@ namespace devicestate {
 
         if (deviceStateEqual(this->deviceState, deviceState)) {
             return;
-        }
-
-        if (this->internalPowerOn != deviceState.active) {
-            ESP_LOGI(TAG, "Device active on change: deviceState.active={%s} internalPowerOn={%s}", YESNO(deviceState.active), YESNO(this->internalPowerOn));
         }
 
         this->deviceState = deviceState;
@@ -118,6 +105,11 @@ namespace devicestate {
         return this->settingsInitialized && this->statusInitialized;
     }
 
+    void DeviceStateManager::reset() {
+        this->settingsInitialized = false;
+        this->statusInitialized = false;
+    }
+
     DeviceStatus DeviceStateManager::getDeviceStatus() {
         return this->deviceStatus;
     }
@@ -138,10 +130,6 @@ namespace devicestate {
 
     void DeviceStateManager::commit() {
         this->hpState->onSettingsChanged();
-    }
-
-    bool DeviceStateManager::isInternalPowerOn() {
-        return this->internalPowerOn;
     }
 
     void DeviceStateManager::setCool() {
@@ -169,64 +157,10 @@ namespace devicestate {
 
         this->hpState->setModeSetting(deviceMode);
         this->hpState->setPowerSetting("ON");
-        this->internalPowerOn = true;
     }
 
     void DeviceStateManager::turnOff() {
         this->hpState->setPowerSetting("OFF");
-        this->internalPowerOn = false;
-    }
-
-    bool DeviceStateManager::shouldThrottle(uint32_t end) {
-        const int durationInMilliseconds = end - this->lastInternalPowerUpdate;
-        const int durationInSeconds = durationInMilliseconds / 1000;
-        const int remaining = 60 - durationInSeconds; 
-        return remaining > 0;
-    }
-
-    bool DeviceStateManager::internalTurnOn() {
-        if (!this->isInitialized()) {
-            ESP_LOGW(TAG, "Cannot change internal power on until initialized");
-            return false;
-        }
-
-        const uint32_t end = esphome::millis();
-        if (this->shouldThrottle(end)) {
-            ESP_LOGD(TAG, "Throttling internal turn on");
-            return false;
-        }
-
-        const char* deviceMode = deviceModeToString(this->deviceState.mode);
-        this->hpState->setModeSetting(deviceMode);
-        this->hpState->setPowerSetting("ON");
-        this->internalSetCorrectedTemperature(this->getTargetTemperature());
-        this->commit();
-        this->lastInternalPowerUpdate = end;
-        this->internalPowerOn = true;
-        return true;
-    }
-
-    bool DeviceStateManager::internalTurnOff() {
-        ESP_LOGW(TAG, "Turning off");
-        if (!this->isInitialized()) {
-            ESP_LOGW(TAG, "Cannot change internal power off until initialized");
-            return false;
-        }
-
-        ESP_LOGW(TAG, "Check throttle");
-        const uint32_t end = esphome::millis();
-        if (this->shouldThrottle(end)) {
-            ESP_LOGW(TAG, "Throttling internal turn off");
-            return false;
-        }
-
-        ESP_LOGW(TAG, "Set power OFF");
-        this->hpState->setPowerSetting("OFF");
-        ESP_LOGW(TAG, "Commit change");
-        this->commit();
-        this->lastInternalPowerUpdate = end;
-        this->internalPowerOn = false;
-        return true;
     }
 
     bool DeviceStateManager::setFanMode(FanMode mode) {
@@ -288,66 +222,12 @@ namespace devicestate {
     }
 
     float DeviceStateManager::getTargetTemperature() {
-        return this->targetTemperature;
-    }
-
-    float DeviceStateManager::getCorrectedTargetTemperature() {
-        return this->correctedTargetTemperature;
-    }
-
-    bool DeviceStateManager::getOffsetDirection() {
-        const DeviceState deviceState = this->getDeviceState();
-        return this->getOffsetDirection(deviceState);
-    }
-
-    bool DeviceStateManager::getOffsetDirection(const DeviceState& deviceState) {
-        switch(deviceState.mode) {
-            case devicestate::DeviceMode::DeviceMode_Heat: {
-                return true;
-            }
-            case devicestate::DeviceMode::DeviceMode_Cool: {
-                return false;
-            }
-            default: {
-                ESP_LOGE(TAG, "Unexpected state for offset direction: %s", deviceModeToString(deviceState.mode));
-                return false;
-            }
-        }
-    }
-
-    float DeviceStateManager::getRoundedTemp(float value) {
-        value = value * 2;
-        value = round(value);
-        return value / 2;
-    }
-
-    bool DeviceStateManager::internalSetCorrectedTemperature(const float setPointCorrection) {
-        const DeviceState deviceState = this->getDeviceState();
-        const bool direction = this->getOffsetDirection(deviceState);
-
-        const float adjustedCorrectedTemperature = devicestate::clamp(setPointCorrection, this->minTemp, this->maxTemp);
-        const float roundedAdjustedCorrectedTemperature = this->getRoundedTemp(adjustedCorrectedTemperature);
-        if (devicestate::same_float(this->correctedTargetTemperature, adjustedCorrectedTemperature, 0.01f) &&
-            devicestate::same_float(roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, 0.01f)) {
-            ESP_LOGD(TAG, "internalSetCorrectedTemperature: Adjustment unchanged: oldCorrection={%f} newCorrection={%f} roundedNewCorrection={%f} deviceTarget={%f} componentTarget={%f}", this->correctedTargetTemperature, adjustedCorrectedTemperature, roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, this->getTargetTemperature());
-            return false;
-        }
-
-        const float oldCorrectedTargetTemperature = this->correctedTargetTemperature;
-        this->correctedTargetTemperature = adjustedCorrectedTemperature;
-        this->hpState->setTemperature(this->correctedTargetTemperature);
-
-        ESP_LOGW(TAG, "internalSetCorrectedTemperature: Adjusted corrected temperature: oldCorrection={%f} newCorrection={%f} roundedNewCorrection={%f} deviceTarget={%f} componentTarget={%f}", oldCorrectedTargetTemperature, adjustedCorrectedTemperature, roundedAdjustedCorrectedTemperature, deviceState.targetTemperature, this->getTargetTemperature());
-        return true;
+        return this->deviceState.targetTemperature;
     }
 
     void DeviceStateManager::setTargetTemperature(const float value) {
         const float adjustedTargetTemperature = devicestate::clamp(value, this->minTemp, this->maxTemp);
-
-        const float oldTargetTemperature = this->targetTemperature;
-        this->targetTemperature = adjustedTargetTemperature;
-        ESP_LOGW(TAG, "setTargetTemperature: Device target temp changing from %f to %f", oldTargetTemperature, this->targetTemperature);
-        this->hpState->setTemperature(this->targetTemperature);
+        this->hpState->setTemperature(adjustedTargetTemperature);
     }
 
     void DeviceStateManager::log_heatpump_settings(heatpumpSettings& currentSettings) {
@@ -371,8 +251,6 @@ namespace devicestate {
 
     void DeviceStateManager::dump_state() {
         ESP_LOGI(TAG, "Internal State");
-        ESP_LOGI(TAG, "  powerOn: %s", TRUEFALSE(this->isInternalPowerOn()));
-
         log_device_state(this->deviceState);
 
         ESP_LOGI(TAG, "Heatpump Status");
@@ -419,17 +297,11 @@ namespace devicestate {
         }
 
         // Publish device state (with null checks)
-        if (this->internal_power_on) {
-            this->internal_power_on->publish_state(this->internalPowerOn);
-        }
         if (this->device_state_active) {
             this->device_state_active->publish_state(this->deviceState.active);
         }
         if (this->device_set_point) {
             this->device_set_point->publish_state(this->deviceState.targetTemperature);
-        }
-        if (this->pid_set_point_correction) {
-            this->pid_set_point_correction->publish_state(this->correctedTargetTemperature);
         }
     }
 

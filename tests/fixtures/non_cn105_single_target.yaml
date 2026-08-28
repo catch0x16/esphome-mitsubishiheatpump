@@ -1,0 +1,30 @@
+esphome:
+  name: generic-workflow
+
+host:
+
+logger:
+
+external_components:
+  - source: ../../components
+
+demo:
+  climates:
+    - id: generic_inner
+      name: "Generic Inner"
+      type: 2
+
+sensor:
+  - platform: template
+    id: room_temperature
+    update_interval: 10s
+    lambda: return 21.0;
+
+climate:
+  - platform: workflow_climate
+    id: generic_outer
+    name: "Generic Outer"
+    climate_id: generic_inner
+    temperature_sensor: room_temperature
+    pid: {}
+

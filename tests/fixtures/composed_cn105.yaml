@@ -1,0 +1,39 @@
+esphome:
+  name: composed-cn105
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+
+external_components:
+  - source: ../../components
+
+uart:
+  id: hp_uart
+  tx_pin: 17
+  rx_pin: 16
+  baud_rate: 2400
+
+sensor:
+  - platform: template
+    id: room_temperature
+    update_interval: 10s
+    lambda: return 21.0;
+
+climate:
+  - platform: mitsubishi_cn105
+    id: cn105_device
+    uart_id: hp_uart
+    remote_temperature_sensor: room_temperature
+
+  - platform: workflow_climate
+    id: heat_pump
+    name: "Heat Pump"
+    climate_id: cn105_device
+    temperature_sensor: room_temperature
+    pid: {}
+    hysteresis: {}
+
