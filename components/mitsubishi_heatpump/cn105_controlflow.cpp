@@ -13,12 +13,10 @@ namespace devicestate {
             CN105State* hpState,
             RequestScheduler::TimeoutCallback timeoutCallback,
             RequestScheduler::TerminateCallback terminateCallback,
-            RetryCallback retryCallback,
             uint32_t debounce_delay,
             uint32_t remote_temp_timeout
         ): connection_{connection},
             timeoutCallback_{timeoutCallback},
-            retryCallback_{retryCallback},
             debounce_delay_{debounce_delay},
             remote_temp_timeout_{remote_temp_timeout},
             scheduler_(
@@ -49,27 +47,33 @@ namespace devicestate {
      * This methode emulates the esp32 lock_guard feature with a boolean variable
      *
     */
-    void CN105ControlFlow::emulateMutex(const char* retryName, std::function<void()>&& f) {
-        retryCallback_(retryName, 100, 10, [this, f, retryName](uint8_t retry_count) {
-            if (this->wantedSettingsMutex) {
-                if (retry_count < 1) {
-                    ESP_LOGW(retryName, "10 retry calls failed because mutex was locked, forcing unlock...");
-                    this->wantedSettingsMutex = false;  // Fixed: was incorrectly set to true
-                    f();
-                    this->wantedSettingsMutex = false;
-                    return esphome::RetryResult::DONE;
-                }
-                ESP_LOGI(retryName, "wantedSettingsMutex is already locked, defferring...");
-                return esphome::RetryResult::RETRY;
-            } else {
-                this->wantedSettingsMutex = true;
-                ESP_LOGD(retryName, "emulateMutex normal behaviour, locking...");
-                f();
-                ESP_LOGD(retryName, "emulateMutex unlocking...");
+    void CN105ControlFlow::emulateMutex(const char* retryName, std::function<void()>&& f,
+                                        uint8_t attempts_remaining, uint32_t retry_interval) {
+        if (this->wantedSettingsMutex) {
+            if (attempts_remaining <= 1) {
+                ESP_LOGW(retryName, "10 retry calls failed because mutex was locked, forcing unlock...");
                 this->wantedSettingsMutex = false;
-                return esphome::RetryResult::DONE;
+                f();
+                this->wantedSettingsMutex = false;
+                return;
             }
-            });
+
+            ESP_LOGI(retryName, "wantedSettingsMutex is already locked, deferring...");
+            const uint32_t next_interval = static_cast<uint32_t>(retry_interval * 1.2f);
+            this->timeoutCallback_(retryName, retry_interval,
+                                   [this, retryName, f = std::move(f), attempts_remaining,
+                                    next_interval]() mutable {
+                                       this->emulateMutex(retryName, std::move(f), attempts_remaining - 1,
+                                                          next_interval);
+                                   });
+            return;
+        }
+
+        this->wantedSettingsMutex = true;
+        ESP_LOGD(retryName, "emulateMutex normal behaviour, locking...");
+        f();
+        ESP_LOGD(retryName, "emulateMutex unlocking...");
+        this->wantedSettingsMutex = false;
     }
 #endif
 

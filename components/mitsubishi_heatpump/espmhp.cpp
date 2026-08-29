@@ -192,7 +192,7 @@ void MitsubishiHeatPump::on_vertical_swing_change(const std::string &swing) {
     } else if (swing == "down") {
         updated = this->dsm->setVerticalSwingMode(devicestate::VerticalSwingMode::VerticalSwingMode_Down);
     } else {
-        ESP_LOGW(TAG, "Invalid vertical vane position %s", swing);
+        ESP_LOGW(TAG, "Invalid vertical vane position %s", swing.c_str());
     }
 
     ESP_LOGD(TAG, "Vertical vane - Was HeatPump updated? %s", YESNO(updated));
@@ -217,7 +217,7 @@ void MitsubishiHeatPump::on_horizontal_swing_change(const std::string &swing) {
     } else if (swing == "right") {
         updated = this->dsm->setHorizontalSwingMode(devicestate::HorizontalSwingMode::HorizontalSwingMode_Right);
     } else {
-        ESP_LOGW(TAG, "Invalid horizontal vane position %s", swing);
+        ESP_LOGW(TAG, "Invalid horizontal vane position %s", swing.c_str());
     }
 
     ESP_LOGD(TAG, "Horizontal vane - Was HeatPump updated? %s", YESNO(updated));
@@ -326,7 +326,7 @@ void MitsubishiHeatPump::on_horizontal_swing_change(const std::string &swing) {
 
     if (call.get_fan_mode().has_value()) {
         ESP_LOGW("control", "Requested fan mode is %s",
-                 climate::climate_fan_mode_to_string(*call.get_fan_mode()));
+                 LOG_STR_ARG(climate::climate_fan_mode_to_string(*call.get_fan_mode())));
         this->fan_mode = *call.get_fan_mode();
 
         switch(*call.get_fan_mode()) {
@@ -365,7 +365,7 @@ void MitsubishiHeatPump::on_horizontal_swing_change(const std::string &swing) {
 
     if (call.get_swing_mode().has_value()) {
         ESP_LOGI(TAG, "control - requested swing mode is %s",
-                climate::climate_swing_mode_to_string(*call.get_swing_mode()));
+                 LOG_STR_ARG(climate::climate_swing_mode_to_string(*call.get_swing_mode())));
 
         this->swing_mode = *call.get_swing_mode();
         switch(*call.get_swing_mode()) {
@@ -749,35 +749,6 @@ void MitsubishiHeatPump::setup() {
         this->set_timeout(name.c_str(), timeout_ms, std::move(callback));
     };
 
-    auto retryCallback = [this](const std::string& name, uint32_t initial_wait_time, uint8_t max_attempts, std::function<esphome::RetryResult(uint8_t)> callback) {
-        // set_retry was deprecated in ESPHome 2026.2.0 (removed in 2026.8.0).
-        // Reimplement its semantics with chained set_timeout + 1.2x exponential
-        // backoff (see esphome blog 2026/02/12): the first attempt runs
-        // immediately, the callback receives the remaining attempt countdown,
-        // and we stop on RetryResult::DONE or when the countdown reaches 0.
-        struct RetryState {
-            std::function<esphome::RetryResult(uint8_t)> func;
-            uint8_t countdown;
-            uint32_t interval;
-        };
-        auto state = std::make_shared<RetryState>(
-            RetryState{std::move(callback), max_attempts, initial_wait_time});
-        auto handler = std::make_shared<std::function<void()>>();
-        *handler = [this, name, state, handler]() {
-            if (state->countdown == 0) {
-                return;
-            }
-            esphome::RetryResult result = state->func(--state->countdown);
-            if (result == esphome::RetryResult::DONE || state->countdown == 0) {
-                return;
-            }
-            this->set_timeout(name.c_str(), state->interval, [handler]() { (*handler)(); });
-            state->interval = static_cast<uint32_t>(state->interval * 1.2f);
-        };
-        // First execution immediately, matching the old set_retry behavior.
-        this->set_timeout(name.c_str(), 0, [handler]() { (*handler)(); });
-    };
-
     auto terminateCallback = [this]() {
         this->terminateCycle();
     };
@@ -816,7 +787,6 @@ void MitsubishiHeatPump::setup() {
         this->hpState_,
         timeoutCallback,
         terminateCallback,
-        retryCallback,
         this->debounce_delay_,
         this->remote_temp_timeout_
     );
@@ -908,7 +878,7 @@ void MitsubishiHeatPump::dump_config() {
     ESP_LOGI(TAG, "  Saved heat: %.1f", heat_setpoint.value_or(-1));
     ESP_LOGI(TAG, "  Saved cool: %.1f", cool_setpoint.value_or(-1));
     ESP_LOGI(TAG, "  Saved auto: %.1f", auto_setpoint.value_or(-1));
-    ESP_LOGI(TAG, "  Update interval: %d", this->get_update_interval());
+    ESP_LOGI(TAG, "  Update interval: %u", static_cast<unsigned int>(this->get_update_interval()));
 }
 
 void MitsubishiHeatPump::dump_state() {

@@ -166,7 +166,8 @@ namespace devicestate {
                 if (req.log_tag) {
                     ESP_LOGD(req.log_tag, "Skipping %s (0x%02X) - interval not elapsed (elapsed: %lu, interval: %u)",
                         req.description, req.code,
-                        (unsigned long)(CUSTOM_MILLIS - req.last_request_time), req.interval_ms);
+                        (unsigned long)(CUSTOM_MILLIS - req.last_request_time),
+                        static_cast<unsigned int>(req.interval_ms));
                 }
                 continue;
             }

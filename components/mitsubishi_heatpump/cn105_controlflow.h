@@ -21,7 +21,6 @@ namespace devicestate {
 
     class CN105ControlFlow {
         public:
-            using RetryCallback = std::function<void(const std::string&, uint32_t, uint8_t, std::function<esphome::RetryResult(uint8_t)>)>;
             using AcquireCallback = std::function<void()>;
 
             CN105ControlFlow(
@@ -29,7 +28,6 @@ namespace devicestate {
                 CN105State* hpState,
                 RequestScheduler::TimeoutCallback timeoutCallback,
                 RequestScheduler::TerminateCallback terminateCallback,
-                RetryCallback retryCallback,
                 uint32_t debounce_delay = 0,
                 uint32_t remote_temp_timeout = 4294967295
             );
@@ -50,7 +48,6 @@ namespace devicestate {
             CN105Connection* connection_;
             CN105State* hpState_;
             RequestScheduler::TimeoutCallback timeoutCallback_;
-            RetryCallback retryCallback_;
             uint32_t debounce_delay_;
             uint32_t remote_temp_timeout_;
             RequestScheduler scheduler_;
@@ -62,7 +59,8 @@ namespace devicestate {
 #ifdef USE_ESP32
             std::mutex wantedSettingsMutex;
 #else
-            void emulateMutex(const char* retryName, std::function<void()>&& f);
+            void emulateMutex(const char* retryName, std::function<void()>&& f,
+                              uint8_t attempts_remaining = 10, uint32_t retry_interval = 100);
             volatile bool wantedSettingsMutex = false;
 #endif
 

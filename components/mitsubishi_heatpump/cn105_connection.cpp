@@ -68,7 +68,8 @@ namespace devicestate {
         if (elapsed < grace_ms) {
             if (!this->conn_grace_logged_) {
                 this->conn_grace_logged_ = true;
-                ESP_LOGI(LOG_CONN_TAG, "Bootstrap connection: grace delay %ums for OTA logs", grace_ms);
+                ESP_LOGI(LOG_CONN_TAG, "Bootstrap connection: grace delay %ums for OTA logs",
+                         static_cast<unsigned int>(grace_ms));
             }
             return;
         }

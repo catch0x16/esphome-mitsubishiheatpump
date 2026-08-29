@@ -22,7 +22,8 @@ namespace devicestate {
         }
 
         bool begin() override {
-            ESP_LOGD(TAG, "setupUART() with baudrate %d", uart_->get_baud_rate());
+            ESP_LOGD(TAG, "setupUART() with baudrate %u",
+                     static_cast<unsigned int>(uart_->get_baud_rate()));
 
             if (uart_->get_data_bits() == 8 &&
                     uart_->get_parity() == esphome::uart::UART_CONFIG_PARITY_EVEN &&
