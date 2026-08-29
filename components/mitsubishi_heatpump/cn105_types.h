@@ -134,24 +134,7 @@ namespace devicestate {
             wideVane = nullptr;
         }
 
-        heatpumpSettings& operator=(const heatpumpSettings& other) {
-            if (this != &other) {
-                power = other.power;
-                mode = other.mode;
-                temperature = other.temperature;
-                dual_low_target = other.dual_low_target;
-                dual_high_target = other.dual_high_target;
-                fan = other.fan;
-                vane = other.vane;
-                wideVane = other.wideVane;
-                iSee = other.iSee;
-                connected = other.connected;
-                stage = other.stage;
-                sub_mode = other.sub_mode;
-                auto_sub_mode = other.auto_sub_mode;
-            }
-            return *this;
-        }
+        heatpumpSettings& operator=(const heatpumpSettings&) = default;
 
         bool operator==(const heatpumpSettings& other) const {
             return power == other.power &&
@@ -168,6 +151,9 @@ namespace devicestate {
     };
 
     struct wantedHeatpumpSettings : heatpumpSettings {
+        wantedHeatpumpSettings() = default;
+        wantedHeatpumpSettings(const wantedHeatpumpSettings&) = default;
+
         bool hasChanged;
         bool hasBeenSent;
         uint8_t nb_deffered_requests;
@@ -207,16 +193,7 @@ namespace devicestate {
         int offMinutesSet;
         int offMinutesRemaining;
 
-        heatpumpTimers& operator=(const heatpumpTimers& other) {
-            if (this != &other) {
-                mode = other.mode;
-                onMinutesSet = other.onMinutesSet;
-                onMinutesRemaining = other.onMinutesRemaining;
-                offMinutesSet = other.offMinutesSet;
-                offMinutesRemaining = other.offMinutesRemaining;
-            }
-            return *this;
-        }
+        heatpumpTimers& operator=(const heatpumpTimers&) = default;
         bool operator==(const heatpumpTimers& other) const {
             return
                 mode == other.mode &&
@@ -268,15 +245,7 @@ namespace devicestate {
             airflow_control = nullptr;
         }
 
-        heatpumpRunStates& operator=(const heatpumpRunStates& other) {
-            if (this != &other) {
-                air_purifier = other.air_purifier;
-                night_mode = other.night_mode;
-                circulator = other.circulator;
-                airflow_control = other.airflow_control;
-            }
-            return *this;
-        }
+        heatpumpRunStates& operator=(const heatpumpRunStates&) = default;
 
         bool operator==(const heatpumpRunStates& other) const {
             return air_purifier == other.air_purifier &&
@@ -291,6 +260,9 @@ namespace devicestate {
     };
 
     struct wantedHeatpumpRunStates : heatpumpRunStates {
+        wantedHeatpumpRunStates() = default;
+        wantedHeatpumpRunStates(const wantedHeatpumpRunStates&) = default;
+
         bool hasChanged;
         bool hasBeenSent;
         long lastChange;

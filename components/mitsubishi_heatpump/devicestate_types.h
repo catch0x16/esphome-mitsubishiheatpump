@@ -84,7 +84,7 @@ namespace devicestate {
     HorizontalSwingMode horizontalSwingMode;
     float targetTemperature;
 
-    DeviceState& operator=(const DeviceState& other);
+    DeviceState& operator=(const DeviceState&) = default;
   };
   bool deviceStateEqual(const DeviceState& left, const DeviceState& right);
   DeviceState toDeviceState(heatpumpSettings& currentSettings);

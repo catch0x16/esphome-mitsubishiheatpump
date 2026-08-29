@@ -280,17 +280,4 @@ namespace devicestate {
         ESP_LOGI(TAG, "  targetTemperature: %f", state.targetTemperature);
     }
 
-    DeviceState& DeviceState::operator=(const DeviceState& other) {
-        if (this != &other) {
-            active = other.active;
-            fanMode = other.fanMode;
-            horizontalSwingMode = other.horizontalSwingMode;
-            mode = other.mode;
-            swingMode = other.swingMode;
-            targetTemperature = other.targetTemperature;
-            verticalSwingMode = other.verticalSwingMode;
-        }
-        return *this;
-    }
-
 }
