@@ -11,6 +11,8 @@ AdaptivePID::AdaptivePID(float kp_init, float ki_init, float kd_init,
       _kd_min(0.0f), _kd_max(50.0f),
       _integral(0.0f), _prev_error(0.0f), _prev_temp(0.0f),
       _last_update_ms(0), _last_adapt_ms(0),
+      _was_power_on(false),
+      _p_term(0.0f), _i_term(0.0f), _d_term(0.0f),
       _lr_kp(0.02f), _lr_ki(0.005f), _lr_kd(0.005f),
       _plant_sensitivity(1.0f),
       _adapt_interval_ms(15000), // adapt every 15 seconds by default
@@ -80,8 +82,9 @@ void AdaptivePID::log_state(char *buf, size_t buflen) const {
 // Core update loop
 // -----------------------------
 float AdaptivePID::update(float current_temp, uint32_t current_time_ms, bool system_power_on) {
-    // Guard against zero-time initial calls: initialize last_update
-    if (_last_update_ms == 0) {
+    // Start a fresh time base on startup and after every disabled interval.
+    // No integration or derivative is attributed to time spent disabled.
+    if (!_was_power_on) {
         _last_update_ms = current_time_ms;
         _last_adapt_ms = current_time_ms;
         _prev_temp = current_temp;
@@ -91,13 +94,20 @@ float AdaptivePID::update(float current_temp, uint32_t current_time_ms, bool sys
     // If system is off, reset integrator (anti-windup) and return neutral setpoint
     if (!system_power_on) {
         _integral = 0.0f;
+        _p_term = _i_term = _d_term = 0.0f;
+        _last_update_ms = current_time_ms;
+        _last_adapt_ms = current_time_ms;
+        _prev_temp = current_temp;
+        _prev_error = _target - current_temp;
+        _smoothed_dkp = _smoothed_dki = _smoothed_dkd = 0.0f;
+        _was_power_on = false;
         // Neutral behavior: return target to avoid aggressive moves
         return _target;
     }
+    _was_power_on = true;
 
     // dt for PID calculation (seconds)
     uint32_t dt_ms = current_time_ms - _last_update_ms;
-    if (dt_ms == 0) dt_ms = 1;
     float dt = dt_ms / 1000.0f;
 
     // Error (target - measured)
@@ -144,10 +154,10 @@ float AdaptivePID::update(float current_temp, uint32_t current_time_ms, bool sys
 // -----------------------------
 float AdaptivePID::compute_pid_output(float error, float derivative) {
     // Basic PID output composition
-    float p = _kp * error;
-    float i = _ki * _integral;
-    float d = _kd * derivative;
-    float out = p + i + d;
+    _p_term = _kp * error;
+    _i_term = _ki * _integral;
+    _d_term = _kd * derivative;
+    float out = _p_term + _i_term + _d_term;
     // No additional clamping here; convert_output_to_setpoint will clamp setpoint
     return out;
 }

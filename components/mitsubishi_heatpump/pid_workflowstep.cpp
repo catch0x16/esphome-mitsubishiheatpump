@@ -54,15 +54,36 @@ namespace workflow {
             return true;
         }
 
-        void PidWorkflowStep::run(const float currentTemperature, devicestate::IDeviceStateManager* deviceManager) {
+        void PidWorkflowStep::publish_diagnostics(float kp, float ki, float kd) {
+            const float values[] = {kp, ki, kd, adaptivePID->p_term(), adaptivePID->i_term(), adaptivePID->d_term()};
+            for (size_t index = 0; index < diagnostic_sensors_.size(); ++index) {
+                if (diagnostic_sensors_[index] != nullptr) {
+                    diagnostic_sensors_[index]->publish_state(values[index]);
+                }
+            }
+        }
+
+        void PidWorkflowStep::run(const float currentTemperature, devicestate::IDeviceStateManager* deviceManager,
+                                  bool enabled) {
             if (deviceManager == nullptr) {
                 ESP_LOGW(TAG, "run: deviceManager is null");
                 return;
             }
             const bool updatedPidTarget = this->ensurePIDTarget(deviceManager);
 
-            // if pid target is not updated and internal power is not on
-            if (updatedPidTarget || deviceManager->isInternalPowerOn()) {
+            // Snapshot the gains used for this output: adaptation runs afterward
+            // and its new gains take effect on the next update.
+            const float kp = adaptivePID->kp();
+            const float ki = adaptivePID->ki();
+            const float kd = adaptivePID->kd();
+            const bool powerOn = enabled && deviceManager->isInternalPowerOn();
+            const float setPointCorrectionSimple = this->adaptivePID->update(
+                currentTemperature, esphome::millis(), powerOn);
+            this->publish_diagnostics(kp, ki, kd);
+
+            // Keep PID timing/reset state current while disabled, without sending
+            // a new unit setpoint on each disabled update.
+            if (enabled && (updatedPidTarget || powerOn)) {
                 const float adjustMinOffset = deviceManager->getOffsetDirection()
                     ? this->maxAdjustmentUnder
                     : this->maxAdjustmentOver;
@@ -75,10 +96,6 @@ namespace workflow {
                 ESP_LOGI(TAG, "PidWorkflowStep (Device) target={%.2f} adjustedMin={%.2f} adjustedMax={%.2f} powerOn={%s}",
                     this->adaptivePID->get_target(), adjustedMinTemp, adjustedMaxTemp, YESNO(deviceManager->isInternalPowerOn()));
 
-                unsigned long now = esphome::millis();
-
-                const float setPointCorrectionSimple =
-                    this->adaptivePID->update(currentTemperature, now, deviceManager->isInternalPowerOn());
                 const float adjustedSetPointCorrectionSimple = devicestate::clamp(setPointCorrectionSimple, adjustedMinTemp, adjustedMaxTemp);
                 ESP_LOGI(TAG, "PidWorkflowStep [Simple] setPointCorrection={%.2f} adjustedSetPoint={%.2f} kp={%.3f} ki={%.3f} kd={%.3f}",
                     setPointCorrectionSimple, adjustedSetPointCorrectionSimple,

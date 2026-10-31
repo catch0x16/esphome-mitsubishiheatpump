@@ -40,6 +40,11 @@ public:
     float ki() const { return _ki; }
     float kd() const { return _kd; }
 
+    // Contributions used for the latest output, before setpoint mapping/clamping.
+    float p_term() const { return _p_term; }
+    float i_term() const { return _i_term; }
+    float d_term() const { return _d_term; }
+
     // Optional: quickly enable/disable adaptation (true = enabled)
     void enable_adaptation(bool enabled) { _adapt_enabled = enabled; }
 
@@ -58,6 +63,8 @@ private:
     float _prev_temp;
     uint32_t _last_update_ms;
     uint32_t _last_adapt_ms;
+    bool _was_power_on;
+    float _p_term, _i_term, _d_term;
 
     // Adaptation parameters
     float _lr_kp, _lr_ki, _lr_kd;    // learning rate multipliers (applied per adapt interval)

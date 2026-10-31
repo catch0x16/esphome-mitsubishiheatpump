@@ -735,6 +735,7 @@ void MitsubishiHeatPump::setup() {
         this->mark_failed();
         return;
     }
+    this->pidWorkflowStep->set_diagnostic_sensors(this->pid_diagnostic_sensors_);
 
     IIODevice* io_device = new (std::nothrow) UARTIODevice(
         this->get_hw_serial_()
@@ -917,6 +918,7 @@ void MitsubishiHeatPump::update_setpoint(const float value) {
 
 void MitsubishiHeatPump::run_workflows() {
     if (!this->isComponentActive()) {
+        this->pidWorkflowStep->run(this->current_temperature, this->dsm, false);
         ESP_LOGW(TAG, "Skipping run workflow due to inactive state.");
         return;
     }

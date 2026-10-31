@@ -19,6 +19,7 @@
 #define ESPMHP_H
 
 #include <chrono>
+#include <array>
 
 #include "cycle_management.h"
 #include "logging.h"
@@ -36,6 +37,8 @@
 namespace devicestate {
     class CN105ControlFlow;
 }
+
+namespace workflow { namespace pid { class PidWorkflowStep; } }
 
 static const char* ESPMHP_VERSION = "4.5.0";
 
@@ -188,6 +191,12 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
             this->pid_set_point_correction = pid_set_point_correction;
         }
 
+        void set_pid_diagnostic_sensor(uint8_t index, esphome::sensor::Sensor* diagnostic_sensor) {
+            if (index < this->pid_diagnostic_sensors_.size()) {
+                this->pid_diagnostic_sensors_[index] = diagnostic_sensor;
+            }
+        }
+
         void set_device_set_point_sensor(esphome::sensor::Sensor* device_set_point) {
             this->device_set_point = device_set_point;
         }
@@ -197,7 +206,8 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         devicestate::DeviceStateManager* dsm{nullptr};
 
         WorkflowStep* hysterisisWorkflowStep;
-        WorkflowStep* pidWorkflowStep;
+        workflow::pid::PidWorkflowStep* pidWorkflowStep;
+        std::array<esphome::sensor::Sensor*, 6> pid_diagnostic_sensors_{};
 
         // The ClimateTraits supported by this HeatPump.
         esphome::climate::ClimateTraits traits_;

@@ -44,7 +44,7 @@ from esphome.core import CORE, coroutine
 sensor_ns = cg.esphome_ns.namespace("sensor")
 StateClasses = sensor_ns.enum("StateClass")
 
-AUTO_LOAD = ["climate", "select", "binary_sensor", "uart"]
+AUTO_LOAD = ["climate", "select", "binary_sensor", "sensor", "uart"]
 DEPENDENCIES = ["uart"]
 
 CONF_SUPPORTS = "supports"
@@ -383,6 +383,24 @@ def to_code(config):
         CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
     })
     cg.add(var.set_pid_set_point_correction_sensor(pid_set_point_correction_sensor_var))
+
+    # Gains and contributions from the same PID calculation. Contributions are
+    # raw control-output values, before tanh mapping and setpoint limits, not °C.
+    for index, (key, name) in enumerate((
+        ("kp", "Kp"), ("ki", "Ki"), ("kd", "Kd"),
+        ("p_term", "P Term"), ("i_term", "I Term"), ("d_term", "D Term"),
+    )):
+        diagnostic_sensor = yield sensor.new_sensor({
+            CONF_ID: cv.declare_id(sensor.Sensor)(f"pid_{key}"),
+            CONF_NAME: f"PID {name}",
+            CONF_STATE_CLASS: StateClasses.STATE_CLASS_MEASUREMENT,
+            CONF_ACCURACY_DECIMALS: 6,
+            CONF_FORCE_UPDATE: False,
+            CONF_DISABLED_BY_DEFAULT: False,
+            CONF_INTERNAL: False,
+            CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+        })
+        cg.add(var.set_pid_diagnostic_sensor(index, diagnostic_sensor))
 
     device_set_point_sensor_var = yield sensor.new_sensor({
         CONF_ID: cv.declare_id(sensor.Sensor)("device_set_point"),
