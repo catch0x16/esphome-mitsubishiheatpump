@@ -2,7 +2,9 @@
 #define PID_WORKFLOWSTEP_H
 
 #include "esphome.h"
+#include "esphome/components/text_sensor/text_sensor.h"
 #include <array>
+#include <cmath>
 
 #include "devicestate_types.h"
 using namespace devicestate;
@@ -22,7 +24,8 @@ namespace workflow {
             float maxAdjustmentOver;
             float maxAdjustmentUnder;
             // Kp, Ki, Kd, P term, I term, D term (same order as climate.py).
-            std::array<esphome::sensor::Sensor*, 6> diagnostic_sensors_{};
+            std::array<esphome::sensor::Sensor*, 10> diagnostic_sensors_{};
+            esphome::text_sensor::TextSensor* tuning_state_sensor_{nullptr};
 
             void publish_diagnostics(float kp, float ki, float kd);
 
@@ -37,11 +40,15 @@ namespace workflow {
                 const float i,
                 const float d,
                 const float maxAdjustmentUnder,
-                const float maxAdjustmentOver
+                const float maxAdjustmentOver,
+                const bool autotuneEnabled = true
             );
         
-            void set_diagnostic_sensors(const std::array<esphome::sensor::Sensor*, 6>& sensors) {
+            void set_diagnostic_sensors(const std::array<esphome::sensor::Sensor*, 10>& sensors) {
                 diagnostic_sensors_ = sensors;
+            }
+            void set_tuning_state_sensor(esphome::text_sensor::TextSensor* sensor) {
+                tuning_state_sensor_ = sensor;
             }
 
             void run(const float currentTemperature, devicestate::IDeviceStateManager* deviceManager) override {

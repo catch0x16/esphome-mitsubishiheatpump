@@ -728,7 +728,8 @@ void MitsubishiHeatPump::setup() {
         this->ki_,
         this->kd_,
         this->maxAdjustmentUnder_,
-        this->maxAdjustmentOver_
+        this->maxAdjustmentOver_,
+        this->autotune_enabled_
     );
     if (this->pidWorkflowStep == nullptr) {
         ESP_LOGE(TAG, "Failed to allocate PidWorkflowStep");
@@ -736,6 +737,7 @@ void MitsubishiHeatPump::setup() {
         return;
     }
     this->pidWorkflowStep->set_diagnostic_sensors(this->pid_diagnostic_sensors_);
+    this->pidWorkflowStep->set_tuning_state_sensor(this->pid_tuning_state_sensor_);
 
     IIODevice* io_device = new (std::nothrow) UARTIODevice(
         this->get_hw_serial_()

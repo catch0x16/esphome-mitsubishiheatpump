@@ -5,6 +5,7 @@ from esphome.components import (
     select,
     binary_sensor,
     sensor,
+    text_sensor,
     uart,
 )
 from esphome.components.uart import UARTParityOptions
@@ -44,7 +45,7 @@ from esphome.core import CORE, coroutine
 sensor_ns = cg.esphome_ns.namespace("sensor")
 StateClasses = sensor_ns.enum("StateClass")
 
-AUTO_LOAD = ["climate", "select", "binary_sensor", "sensor", "uart"]
+AUTO_LOAD = ["climate", "select", "binary_sensor", "sensor", "text_sensor", "uart"]
 DEPENDENCIES = ["uart"]
 
 CONF_SUPPORTS = "supports"
@@ -56,6 +57,7 @@ CONF_CONTROL_PARAMETERS = "control_parameters"
 CONF_KP = "kp"
 CONF_KI = "ki"
 CONF_KD = "kd"
+CONF_AUTOTUNE = "autotune"
 CONF_MAX_ADJUSTMENT_UNDER = "maxAdjustmentUnder"
 CONF_MAX_ADJUSTMENT_OVER = "maxAdjustmentOver"
 CONF_HYSTERISIS_OFF = "hysterisisOff"
@@ -132,9 +134,10 @@ CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
         cv.Optional(CONF_VERTICAL_SWING_SELECT): SELECT_SCHEMA,
         cv.Required(CONF_CONTROL_PARAMETERS): cv.Schema(
             {
-                cv.Optional(CONF_KP, default=0.0): cv.float_,
-                cv.Optional(CONF_KI, default=0.0): cv.float_,
-                cv.Optional(CONF_KD, default=0.0): cv.float_,
+                cv.Optional(CONF_KP, default=0.0): cv.positive_float,
+                cv.Optional(CONF_KI, default=0.0): cv.positive_float,
+                cv.Optional(CONF_KD, default=0.0): cv.positive_float,
+                cv.Optional(CONF_AUTOTUNE, default=True): cv.boolean,
                 cv.Optional(CONF_MAX_ADJUSTMENT_UNDER, default=2.0): cv.float_,
                 cv.Optional(CONF_MAX_ADJUSTMENT_OVER, default=2.0): cv.float_,
                 cv.Optional(CONF_HYSTERISIS_OFF, default=0.25): cv.float_,
@@ -389,6 +392,8 @@ def to_code(config):
     for index, (key, name) in enumerate((
         ("kp", "Kp"), ("ki", "Ki"), ("kd", "Kd"),
         ("p_term", "P Term"), ("i_term", "I Term"), ("d_term", "D Term"),
+        ("baseline_score", "Baseline Score"), ("trial_score", "Trial Score"),
+        ("accepted_trials", "Accepted Trials"), ("rejected_trials", "Rejected Trials"),
     )):
         diagnostic_sensor = yield sensor.new_sensor({
             CONF_ID: cv.declare_id(sensor.Sensor)(f"pid_{key}"),
@@ -401,6 +406,15 @@ def to_code(config):
             CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
         })
         cg.add(var.set_pid_diagnostic_sensor(index, diagnostic_sensor))
+
+    tuning_state_sensor = yield text_sensor.new_text_sensor({
+        CONF_ID: cv.declare_id(text_sensor.TextSensor)("pid_tuning_state"),
+        CONF_NAME: "PID Tuning State",
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_INTERNAL: False,
+        CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+    })
+    cg.add(var.set_pid_tuning_state_sensor(tuning_state_sensor))
 
     device_set_point_sensor_var = yield sensor.new_sensor({
         CONF_ID: cv.declare_id(sensor.Sensor)("device_set_point"),
@@ -423,6 +437,7 @@ def to_code(config):
     cg.add(var.set_kp(params[CONF_KP]))
     cg.add(var.set_ki(params[CONF_KI]))
     cg.add(var.set_kd(params[CONF_KD]))
+    cg.add(var.set_autotune_enabled(params[CONF_AUTOTUNE]))
     cg.add(var.set_max_adjustment_under(params[CONF_MAX_ADJUSTMENT_UNDER]))
     cg.add(var.set_max_adjustment_over(params[CONF_MAX_ADJUSTMENT_OVER]))
     cg.add(var.set_hysterisis_off(params[CONF_HYSTERISIS_OFF]))

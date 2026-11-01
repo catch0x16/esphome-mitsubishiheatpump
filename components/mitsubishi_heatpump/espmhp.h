@@ -30,6 +30,7 @@
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/select/select.h"
 #include "esphome/components/sensor/sensor.h"
+#include "esphome/components/text_sensor/text_sensor.h"
 #include "esphome/core/preferences.h"
 #include "esphome/components/uart/uart.h"
 
@@ -90,6 +91,7 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         void set_kp(float kp) { this->kp_ = kp; }
         void set_ki(float ki) { this->ki_ = ki; }
         void set_kd(float kd) { this->kd_ = kd; }
+        void set_autotune_enabled(bool enabled) { this->autotune_enabled_ = enabled; }
         void set_max_adjustment_under(float maxAdjustmentUnder) { this->maxAdjustmentUnder_ = maxAdjustmentUnder; }
         void set_max_adjustment_over(float maxAdjustmentOver) { this->maxAdjustmentOver_ = maxAdjustmentOver; }
         void set_hysterisis_off(float hysterisisOff) { this->hysterisisOff_ = hysterisisOff; }
@@ -196,6 +198,9 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
                 this->pid_diagnostic_sensors_[index] = diagnostic_sensor;
             }
         }
+        void set_pid_tuning_state_sensor(esphome::text_sensor::TextSensor* sensor) {
+            this->pid_tuning_state_sensor_ = sensor;
+        }
 
         void set_device_set_point_sensor(esphome::sensor::Sensor* device_set_point) {
             this->device_set_point = device_set_point;
@@ -207,7 +212,9 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
 
         WorkflowStep* hysterisisWorkflowStep;
         workflow::pid::PidWorkflowStep* pidWorkflowStep;
-        std::array<esphome::sensor::Sensor*, 6> pid_diagnostic_sensors_{};
+        std::array<esphome::sensor::Sensor*, 10> pid_diagnostic_sensors_{};
+        esphome::text_sensor::TextSensor* pid_tuning_state_sensor_{nullptr};
+        bool autotune_enabled_{true};
 
         // The ClimateTraits supported by this HeatPump.
         esphome::climate::ClimateTraits traits_;
