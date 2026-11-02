@@ -10,12 +10,19 @@ force relay oscillations, change the requested temperature, or bypass the
 existing correction limits or hysteresis.
 
 Each scored window lasts one hour after ten minutes of settling. At least fifteen
-minutes must be internally powered on during scoring; hysteresis-off/coasting
-periods are still included in the temperature score. A full successful comparison
+minutes must be internally powered on during scoring, or the scored window must
+contain at least two complete on/off cycles with five minutes of total enabled
+time. Cycles beginning during settling do not count toward that alternative.
+This allows low-duty-cycle operation to qualify without treating passive drift
+or brief enable pulses as useful evidence. Hysteresis-off/coasting periods are
+still included in the temperature score. A full successful comparison
 is baseline → candidate → baseline recheck → candidate confirmation, normally
 at least four hours forty minutes of sufficiently comparable operation.
 Inconclusive comparisons are discarded automatically, so real learning can take
 several nights. A window cannot be completed by replaying old history after a gap.
+An inconclusive candidate is skipped until a later search; it does not repeatedly
+send the search back to Ki-down. A fresh qualifying baseline is still required
+before the next candidate. Target/direction changes start a new search.
 
 The search tests Ki down/up, Kp down/up, then Kd down/up, changing one gain at a
 time. Steps are 10% with output-aware absolute floors so probes do not disappear in
@@ -80,6 +87,7 @@ The component automatically creates these enabled diagnostic entities:
 | PID Baseline Score | Last completed baseline score; unavailable until measured |
 | PID Trial Score | Last completed candidate score; unavailable until measured |
 | PID Accepted Trials / PID Rejected Trials | Successful trials and rejected trials since boot |
+| PID Discarded Windows | Windows discarded for insufficient activity, inconsistent references, or sample gaps/jumps |
 
 The terms are raw controller-output values, before the nonlinear `tanh` mapping
 to a temperature correction and before setpoint limits and device rounding.

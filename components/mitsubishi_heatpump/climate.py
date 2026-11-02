@@ -394,6 +394,7 @@ def to_code(config):
         ("p_term", "P Term"), ("i_term", "I Term"), ("d_term", "D Term"),
         ("baseline_score", "Baseline Score"), ("trial_score", "Trial Score"),
         ("accepted_trials", "Accepted Trials"), ("rejected_trials", "Rejected Trials"),
+        ("discarded_windows", "Discarded Windows"),
     )):
         diagnostic_sensor = yield sensor.new_sensor({
             CONF_ID: cv.declare_id(sensor.Sensor)(f"pid_{key}"),

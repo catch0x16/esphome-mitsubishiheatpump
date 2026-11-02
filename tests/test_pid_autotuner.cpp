@@ -242,6 +242,71 @@ void test_closed_loop_simulation_preserves_limits_and_finite_state() {
         static_cast<unsigned>(pid.tuner().accepted()), static_cast<unsigned>(pid.tuner().rejected()),
         pid.kp(), pid.ki(), pid.kd());
 }
+
+void test_low_duty_cycles_complete_trials() {
+    PidAutoTuner tuner{{{1.25f, 0.015f, 0}}};
+    tuner.observe(19.5f, 20, true, false, true, 0, 20);
+    // Reproduce the field pattern: 70-minute phases (10 settling + 60 scoring)
+    // with two full cycles totaling 13 minutes of enabled heating per phase.
+    const uint32_t phase_ms = 70 * 60000;
+    for (uint32_t t = 2000; t <= 3 * phase_ms; t += 2000) {
+        const uint32_t minute = (t % phase_ms) / 60000;
+        const bool power = (minute >= 20 && minute < 27) || (minute >= 50 && minute < 56);
+        tuner.observe(19.5f, 20, true, power, true, t, 20);
+        if (t == phase_ms) {
+            assert(tuner.stage() == Stage::TRIAL);
+            assert(tuner.gains()[1] == 0);
+        }
+        if (t == 2 * phase_ms) {
+            assert(tuner.stage() == Stage::BASELINE);
+            assert(tuner.rejected() == 1);  // Scored, rather than discarded.
+        }
+    }
+    assert(std::strcmp(tuner.status(), "testing_ki_up") == 0);
+    assert(tuner.discarded() == 0);
+}
+
+void test_inconclusive_trial_does_not_repeat_first_probe() {
+    Fixture f;
+    f.window(19.5f);  // Baseline qualifies, Ki-down starts.
+    f.window(19.5f, false);  // Candidate has insufficient activity.
+    assert(f.tuner.discarded() == 1);
+    assert(f.tuner.accepted() == 0 && f.tuner.rejected() == 0);
+    assert(f.tuner.gains()[1] == 2);
+    f.sample(19.5f);
+    f.window(19.5f);
+    assert(std::strcmp(f.tuner.status(), "testing_ki_up") == 0);
+}
+
+void test_idle_or_incomplete_cycles_do_not_qualify() {
+    PidAutoTuner tuner{{{20, 2, 0}}};
+    PidAutoTuner::Config config;
+    config.window_ms = 10000;
+    config.settling_ms = 5000;
+    config.minimum_active_ms = 9000;
+    config.minimum_cycling_active_ms = 1000;
+    tuner.configure(config);
+    // First on/off cycle starts in settling, so it cannot count as a complete
+    // scored cycle. The single full scored cycle is not sufficient evidence.
+    for (uint32_t t = 0; t <= 15000; t += 1000) {
+        const bool power = (t >= 1000 && t < 6000) || (t >= 8000 && t < 10000);
+        tuner.observe(19.5f, 20, true, power, true, t, 20);
+    }
+    assert(tuner.stage() == Stage::BASELINE);
+    assert(tuner.discarded() == 1);
+
+    // Two brief pulses also must not bypass the minimum enabled-time guard.
+    PidAutoTuner pulses{{{20, 2, 0}}};
+    config.settling_ms = 0;
+    config.minimum_cycling_active_ms = 5000;
+    pulses.configure(config);
+    for (uint32_t t = 0; t <= 10000; t += 1000) {
+        const bool power = (t >= 1000 && t < 3000) || (t >= 5000 && t < 7000);
+        pulses.observe(19.5f, 20, true, power, true, t, 20);
+    }
+    assert(pulses.stage() == Stage::BASELINE);
+    assert(pulses.discarded() == 1);
+}
 }  // namespace
 
 int main() {
@@ -256,5 +321,8 @@ int main() {
     test_small_and_zero_gains_receive_observable_probes();
     test_settling_peak_is_retained_and_uncomparable_trial_not_accepted();
     test_closed_loop_simulation_preserves_limits_and_finite_state();
+    test_low_duty_cycles_complete_trials();
+    test_inconclusive_trial_does_not_repeat_first_probe();
+    test_idle_or_incomplete_cycles_do_not_qualify();
     std::puts("Automatic PID tuner tests passed");
 }

@@ -59,7 +59,7 @@ namespace workflow {
             const auto& tuner = adaptivePID->tuner();
             const float values[] = {kp, ki, kd, adaptivePID->p_term(), adaptivePID->i_term(), adaptivePID->d_term(),
                 tuner.baseline_score(), tuner.trial_score(), static_cast<float>(tuner.accepted()),
-                static_cast<float>(tuner.rejected())};
+                static_cast<float>(tuner.rejected()), static_cast<float>(tuner.discarded())};
             for (size_t index = 0; index < diagnostic_sensors_.size(); ++index) {
                 if (diagnostic_sensors_[index] != nullptr) {
                     diagnostic_sensors_[index]->publish_state(values[index]);

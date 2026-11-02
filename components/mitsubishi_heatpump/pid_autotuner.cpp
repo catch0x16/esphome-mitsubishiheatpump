@@ -20,6 +20,7 @@ void PidAutoTuner::configure(const Config& config) {
     config_ = config;
     config_.window_ms = std::max<uint32_t>(1, config_.window_ms);
     config_.minimum_active_ms = std::min(config_.minimum_active_ms, config_.window_ms);
+    config_.minimum_cycling_active_ms = std::min(config_.minimum_cycling_active_ms, config_.window_ms);
     config_.improvement = std::max(0.01f, std::min(0.5f, config_.improvement));
     restart();
 }
@@ -69,14 +70,24 @@ void PidAutoTuner::begin(Stage stage) {
     window_ = Window{};
     settling_left_ms_ = config_.settling_ms;
     have_command_ = false;
+    cycle_started_ = false;
 }
 
-void PidAutoTuner::restart() {
+void PidAutoTuner::restart(bool reset_search) {
     gains_ = best_;
     baseline_ = trial_ = reference_ = Window{};
-    probe_ = 0;
+    if (reset_search) probe_ = 0;
     begin(Stage::BASELINE);
     have_sample_ = false;
+}
+
+void PidAutoTuner::discard_window() {
+    ++discarded_;
+    if (stage_ == Stage::TRIAL || stage_ == Stage::REFERENCE || stage_ == Stage::CONFIRM)
+        ++probe_;
+    // Inconclusive data must restore the accepted gains without repeatedly
+    // sending the search back to its first Ki-down candidate.
+    restart(false);
 }
 
 bool PidAutoTuner::comparable(const Window& a, const Window& b) const {
@@ -115,9 +126,13 @@ void PidAutoTuner::next_candidate(uint32_t now_ms) {
 }
 
 void PidAutoTuner::finish(uint32_t now_ms) {
-    if (window_.active_ms < config_.minimum_active_ms) {
-        // Passive warming/cooling alone cannot identify a better controller.
-        restart();
+    const bool continuous_evidence = window_.active_ms >= config_.minimum_active_ms;
+    const bool cycling_evidence = window_.active_ms >= config_.minimum_cycling_active_ms &&
+                                  window_.complete_cycles >= 2;
+    if (!continuous_evidence && !cycling_evidence) {
+        // Low duty cycles are informative too: require two entire on/off runs
+        // and five minutes of actual enabled time, rather than passive drift.
+        discard_window();
         return;
     }
     switch (stage_) {
@@ -144,7 +159,7 @@ void PidAutoTuner::finish(uint32_t now_ms) {
             const float allowed = std::max(0.05f, baseline_.score() * 0.2f);
             if (!comparable(reference_, baseline_) || drift > allowed ||
                 !improved(trial_, reference_)) {
-                restart();  // Inconclusive, not evidence for accepting a gain.
+                discard_window();  // Inconclusive, not evidence for accepting a gain.
             } else {
                 gains_ = candidate_;
                 begin(Stage::CONFIRM);
@@ -181,10 +196,12 @@ void PidAutoTuner::observe(float temperature, float target, bool heating, bool p
         stage_ = enabled ? Stage::BASELINE : Stage::DISABLED;
         return;
     }
-    if (!have_sample_ || target != target_ || heating != heating_) {
+    if (stage_ == Stage::DISABLED || target != target_ || heating != heating_) {
         restart();
         target_ = target;
         heating_ = heating;
+    }
+    if (!have_sample_) {
         have_sample_ = true;
         last_ms_ = now_ms;
         last_temperature_ = temperature;
@@ -199,7 +216,7 @@ void PidAutoTuner::observe(float temperature, float target, bool heating, bool p
     last_power_ = power_on;
     if (dt_ms == 0) return;
     if (dt_ms > 30000 || jump > 1.0f) {
-        restart();
+        discard_window();
         return;
     }
     if (stage_ == Stage::HOLD) {
@@ -229,7 +246,12 @@ void PidAutoTuner::observe(float temperature, float target, bool heating, bool p
     // Attribute an interval only when the enable state stayed on throughout.
     if (power_on && was_power_on) window_.active_ms += measured_ms;
     window_.cost += (std::max(0.0f, error) + 3.0f * over) * measured_ms / 1000.0f;
-    if (!power_on && was_power_on) ++window_.shutdowns;
+    if (power_on && !was_power_on) cycle_started_ = true;
+    if (!power_on && was_power_on) {
+        ++window_.shutdowns;
+        if (cycle_started_) ++window_.complete_cycles;
+        cycle_started_ = false;
+    }
     if (power_on && have_command_) window_.movement += std::fabs(applied_setpoint - last_command_);
     if (power_on) {
         last_command_ = applied_setpoint;

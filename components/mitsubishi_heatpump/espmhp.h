@@ -212,7 +212,7 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
 
         WorkflowStep* hysterisisWorkflowStep;
         workflow::pid::PidWorkflowStep* pidWorkflowStep;
-        std::array<esphome::sensor::Sensor*, 10> pid_diagnostic_sensors_{};
+        std::array<esphome::sensor::Sensor*, 11> pid_diagnostic_sensors_{};
         esphome::text_sensor::TextSensor* pid_tuning_state_sensor_{nullptr};
         bool autotune_enabled_{true};
 

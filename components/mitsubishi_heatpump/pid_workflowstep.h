@@ -24,7 +24,7 @@ namespace workflow {
             float maxAdjustmentOver;
             float maxAdjustmentUnder;
             // Kp, Ki, Kd, P term, I term, D term (same order as climate.py).
-            std::array<esphome::sensor::Sensor*, 10> diagnostic_sensors_{};
+            std::array<esphome::sensor::Sensor*, 11> diagnostic_sensors_{};
             esphome::text_sensor::TextSensor* tuning_state_sensor_{nullptr};
 
             void publish_diagnostics(float kp, float ki, float kd);
@@ -44,7 +44,7 @@ namespace workflow {
                 const bool autotuneEnabled = true
             );
         
-            void set_diagnostic_sensors(const std::array<esphome::sensor::Sensor*, 10>& sensors) {
+            void set_diagnostic_sensors(const std::array<esphome::sensor::Sensor*, 11>& sensors) {
                 diagnostic_sensors_ = sensors;
             }
             void set_tuning_state_sensor(esphome::text_sensor::TextSensor* sensor) {

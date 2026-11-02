@@ -14,6 +14,7 @@ public:
         uint32_t window_ms = 3600000;
         uint32_t settling_ms = 600000;
         uint32_t minimum_active_ms = 900000;
+        uint32_t minimum_cycling_active_ms = 300000;
         uint32_t hold_ms = 21600000;
         float improvement = 0.05f;
     };
@@ -31,12 +32,13 @@ public:
     float trial_score() const;
     uint32_t accepted() const { return accepted_; }
     uint32_t rejected() const { return rejected_; }
+    uint32_t discarded() const { return discarded_; }
 
 private:
     struct Window {
         uint32_t elapsed_ms = 0, active_ms = 0;
         float cost = 0, peak_over = 0, start_error = 0, movement = 0;
-        uint32_t shutdowns = 0;
+        uint32_t shutdowns = 0, complete_cycles = 0;
         float score() const;
     };
     Config config_;
@@ -45,7 +47,8 @@ private:
     Stage stage_ = Stage::DISABLED;
     Window window_, baseline_, trial_, reference_;
     uint32_t last_ms_ = 0, settling_left_ms_ = 0, hold_start_ms_ = 0;
-    uint32_t accepted_ = 0, rejected_ = 0;
+    uint32_t accepted_ = 0, rejected_ = 0, discarded_ = 0;
+    bool cycle_started_ = false;
     bool have_sample_ = false, last_power_ = false, have_command_ = false;
     float last_temperature_ = 0, target_ = 0, last_command_ = 0;
     bool heating_ = true;
@@ -54,7 +57,8 @@ private:
     std::array<float, 3> step_scale_{{1, 1, 1}};
 
     void begin(Stage stage);
-    void restart();
+    void restart(bool reset_search = true);
+    void discard_window();
     void next_candidate(uint32_t now_ms);
     void finish(uint32_t now_ms);
     bool comparable(const Window& a, const Window& b) const;
