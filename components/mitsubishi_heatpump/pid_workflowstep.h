@@ -27,7 +27,7 @@ namespace workflow {
             std::array<esphome::sensor::Sensor*, 11> diagnostic_sensors_{};
             esphome::text_sensor::TextSensor* tuning_state_sensor_{nullptr};
 
-            void publish_diagnostics(float kp, float ki, float kd);
+            void publish_diagnostics();
 
             bool ensurePIDTarget(devicestate::IDeviceStateManager* deviceManager);
         

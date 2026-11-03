@@ -55,9 +55,10 @@ namespace workflow {
             return true;
         }
 
-        void PidWorkflowStep::publish_diagnostics(float kp, float ki, float kd) {
+        void PidWorkflowStep::publish_diagnostics() {
             const auto& tuner = adaptivePID->tuner();
-            const float values[] = {kp, ki, kd, adaptivePID->p_term(), adaptivePID->i_term(), adaptivePID->d_term(),
+            const auto gains = tuner.accepted_gains();
+            const float values[] = {gains[0], gains[1], gains[2], adaptivePID->p_term(), adaptivePID->i_term(), adaptivePID->d_term(),
                 tuner.baseline_score(), tuner.trial_score(), static_cast<float>(tuner.accepted()),
                 static_cast<float>(tuner.rejected()), static_cast<float>(tuner.discarded())};
             for (size_t index = 0; index < diagnostic_sensors_.size(); ++index) {
@@ -84,15 +85,18 @@ namespace workflow {
             const float adjustedMaxTemp = devicestate::clamp(deviceManager->getTargetTemperature() + adjustMaxOffset, this->minTemp, this->maxTemp);
             this->adaptivePID->set_output_limits(adjustedMinTemp, adjustedMaxTemp);
 
-            // Snapshot the gains used for this output: adaptation runs afterward
-            // and its new gains take effect on the next update.
+            // Capture active (possibly trial) gains for debug logs. The gain
+            // sensors publish the accepted set for copying into YAML instead.
             const float kp = adaptivePID->kp();
             const float ki = adaptivePID->ki();
             const float kd = adaptivePID->kd();
             const bool powerOn = enabled && deviceManager->isInternalPowerOn();
             const float setPointCorrectionSimple = this->adaptivePID->update(
                 currentTemperature, esphome::millis(), powerOn, enabled && conditioning);
-            this->publish_diagnostics(kp, ki, kd);
+            this->publish_diagnostics();
+            ESP_LOGD(TAG, "PID calculation: kp=%.6f ki=%.6f kd=%.6f P=%.6f I=%.6f D=%.6f tuning=%s",
+                kp, ki, kd, adaptivePID->p_term(), adaptivePID->i_term(), adaptivePID->d_term(),
+                adaptivePID->tuner().status());
 
             // Keep PID timing/reset state current while disabled, without sending
             // a new unit setpoint on each disabled update.
@@ -102,9 +106,8 @@ namespace workflow {
                     this->adaptivePID->get_target(), adjustedMinTemp, adjustedMaxTemp, YESNO(deviceManager->isInternalPowerOn()));
 
                 const float adjustedSetPointCorrectionSimple = devicestate::clamp(setPointCorrectionSimple, adjustedMinTemp, adjustedMaxTemp);
-                ESP_LOGI(TAG, "PidWorkflowStep [Simple] setPointCorrection={%.2f} adjustedSetPoint={%.2f} kp={%.3f} ki={%.3f} kd={%.3f}",
-                    setPointCorrectionSimple, adjustedSetPointCorrectionSimple,
-                    this->adaptivePID->kp(), this->adaptivePID->ki(), this->adaptivePID->kd());
+                ESP_LOGI(TAG, "PidWorkflowStep [Simple] setPointCorrection={%.2f} adjustedSetPoint={%.2f}",
+                    setPointCorrectionSimple, adjustedSetPointCorrectionSimple);
 
                 if (deviceManager->internalSetCorrectedTemperature(adjustedSetPointCorrectionSimple)) {
                     deviceManager->commit();

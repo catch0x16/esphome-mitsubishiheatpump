@@ -387,8 +387,8 @@ def to_code(config):
     })
     cg.add(var.set_pid_set_point_correction_sensor(pid_set_point_correction_sensor_var))
 
-    # Gains and contributions from the same PID calculation. Contributions are
-    # raw control-output values, before tanh mapping and setpoint limits, not °C.
+    # Gains are the accepted set for saving to YAML; terms reflect the actual
+    # calculation (including trials), before output mapping/limits, not °C.
     for index, (key, name) in enumerate((
         ("kp", "Kp"), ("ki", "Ki"), ("kd", "Kd"),
         ("p_term", "P Term"), ("i_term", "I Term"), ("d_term", "D Term"),

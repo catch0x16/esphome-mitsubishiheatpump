@@ -79,11 +79,11 @@ The component automatically creates these enabled diagnostic entities:
 
 | Entity | Meaning |
 | --- | --- |
-| PID Kp / PID Ki / PID Kd | Gains used for the latest PID calculation |
+| PID Kp / PID Ki / PID Kd | Accepted gains to copy into YAML; initially the configured gains, never temporary trial values |
 | PID P Term | Kp × temperature error |
 | PID I Term | Ki × accumulated error |
 | PID D Term | Kd × filtered negative temperature rate |
-| PID Tuning State | baseline, testing_ki/kp/kd_down/up, rechecking_baseline, confirming_trial, holding_best, or disabled |
+| PID Tuning State | baseline, testing_ki/kp/kd_down/up, rechecking_baseline, confirming_trial, holding_best, ready_to_save, or disabled |
 | PID Baseline Score | Last completed baseline score; unavailable until measured |
 | PID Trial Score | Last completed candidate score; unavailable until measured |
 | PID Accepted Trials / PID Rejected Trials | Successful trials and rejected trials since boot |
@@ -91,10 +91,29 @@ The component automatically creates these enabled diagnostic entities:
 
 The terms are raw controller-output values, before the nonlinear `tanh` mapping
 to a temperature correction and before setpoint limits and device rounding.
-They are not temperatures or power percentages. Gains and terms are published
-from the same calculation; tuning changes take effect on the next calculation.
+They are not temperatures or power percentages. Terms reflect the actual gains
+used for the calculation, including temporary trials; the Kp/Ki/Kd sensors instead
+show the retained accepted set. Active calculation gains are available in DEBUG
+logs alongside their P/I/D contributions. Tuning changes take effect on the next calculation.
 Scores refer to completed windows; the tuning state describes the current window.
 Context changes discard scores. Inconclusive windows are not counted as rejects.
+
+When **PID Tuning State** becomes `ready_to_save`, copy the displayed PID Kp, Ki,
+and Kd into `control_parameters.kp`, `ki`, and `kd` in that device's ESPHome YAML.
+This state requires at least one accepted improvement, gains different from the
+YAML starting values, and a subsequent full search with no further accepted
+improvement. Each direction must have a comparable scored rejection or no available
+candidate at its gain bound. Discarded or inconclusive directions do not establish
+that the search has settled. An accepted trial alone updates the gain sensors
+but does not trigger `ready_to_save`.
+
+`ready_to_save` replaces `holding_best` during the normal six-hour hold; tuning
+can resume afterward. Target/context changes clear the ready state pending a new
+search, while accepted gains remain visible. This is a practical save checkpoint,
+not a guarantee of globally optimal gains. No new entities are added for this
+feature. A Home Assistant state trigger on `PID Tuning State` entering
+`ready_to_save` can send a notification; the component does not create that
+automation or edit your YAML automatically. Reboot still resets gains to YAML.
 
 During hysteresis-off and climate-off periods, PID terms are zero and the integral
 is reset. On re-enable, the first calculation has no derivative or elapsed-time

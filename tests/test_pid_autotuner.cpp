@@ -307,6 +307,77 @@ void test_idle_or_incomplete_cycles_do_not_qualify() {
     assert(pulses.stage() == Stage::BASELINE);
     assert(pulses.discarded() == 1);
 }
+
+void accept_lower_ki(Fixture& f) {
+    f.window(19.5f);
+    f.window(19.6f);
+    f.window(19.5f);
+    f.window(19.6f);
+    assert(f.tuner.accepted() == 1);
+}
+
+void finish_search_without_improvement(Fixture& f) {
+    for (unsigned i = 0; i < 300 && f.tuner.stage() != Stage::HOLD; ++i)
+        f.sample(19.5f);
+    assert(f.tuner.stage() == Stage::HOLD);
+}
+
+void test_accepted_gains_do_not_expose_trials() {
+    Fixture f;
+    f.window(19.5f);
+    assert(f.tuner.gains()[1] == 0);  // Active trial.
+    assert(f.tuner.accepted_gains()[1] == 2);  // YAML/accepted value stays visible.
+    f.window(19.6f); f.window(19.5f);
+    assert(f.tuner.stage() == Stage::CONFIRM);
+    assert(f.tuner.accepted_gains()[1] == 2);
+    f.window(19.6f);
+    assert(f.tuner.accepted_gains()[1] == 0);
+    assert(std::strcmp(f.tuner.status(), "ready_to_save") != 0);
+    f.window(19.5f);
+    assert(f.tuner.gains()[1] > 0);
+    assert(f.tuner.accepted_gains()[1] == 0);
+}
+
+void test_ready_to_save_requires_changed_gains_and_complete_search() {
+    Fixture unchanged;
+    finish_search_without_improvement(unchanged);
+    assert(std::strcmp(unchanged.tuner.status(), "holding_best") == 0);
+
+    Fixture improved;
+    accept_lower_ki(improved);
+    finish_search_without_improvement(improved);
+    assert(std::strcmp(improved.tuner.status(), "ready_to_save") == 0);
+    const auto saved = improved.tuner.accepted_gains();
+    assert(saved[0] == 20 && saved[1] == 0 && saved[2] == 0);
+    improved.sample(19.5f);
+    assert(std::strcmp(improved.tuner.status(), "ready_to_save") == 0);
+    // A target change invalidates search completeness, but keeps accepted gains.
+    improved.sample(19.5f, true, true, 21);
+    assert(improved.tuner.stage() == Stage::BASELINE);
+    assert(improved.tuner.accepted_gains() == saved);
+    assert(std::strcmp(improved.tuner.status(), "ready_to_save") != 0);
+
+    Fixture saved_yaml;
+    accept_lower_ki(saved_yaml);
+    saved_yaml.tuner.set_bounds({{20, 2, 0}}, {{20, 2, 0}});
+    // Returning to the YAML values must not prompt the user to save them again.
+    saved_yaml.sample(19.5f);
+    saved_yaml.window(19.5f);
+    assert(saved_yaml.tuner.stage() == Stage::HOLD);
+    assert(std::strcmp(saved_yaml.tuner.status(), "holding_best") == 0);
+}
+
+void test_inconclusive_search_does_not_claim_ready_to_save() {
+    Fixture f;
+    accept_lower_ki(f);
+    f.window(19.5f);  // First remaining candidate is Ki-up.
+    assert(f.tuner.stage() == Stage::TRIAL);
+    f.window(19.5f, false);  // Insufficient activity: direction was not evaluated.
+    f.sample(19.5f);
+    finish_search_without_improvement(f);
+    assert(f.tuner.discarded() > 0);
+    assert(std::strcmp(f.tuner.status(), "holding_best") == 0);
+}
 }  // namespace
 
 int main() {
@@ -324,5 +395,8 @@ int main() {
     test_low_duty_cycles_complete_trials();
     test_inconclusive_trial_does_not_repeat_first_probe();
     test_idle_or_incomplete_cycles_do_not_qualify();
+    test_accepted_gains_do_not_expose_trials();
+    test_ready_to_save_requires_changed_gains_and_complete_search();
+    test_inconclusive_search_does_not_claim_ready_to_save();
     std::puts("Automatic PID tuner tests passed");
 }

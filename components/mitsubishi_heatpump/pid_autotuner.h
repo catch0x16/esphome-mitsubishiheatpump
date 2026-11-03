@@ -26,6 +26,7 @@ public:
     void observe(float temperature, float target, bool heating, bool power_on,
                  bool enabled, uint32_t now_ms, float applied_setpoint);
     Gains gains() const { return gains_; }
+    Gains accepted_gains() const { return best_; }
     Stage stage() const { return stage_; }
     const char* status() const;
     float baseline_score() const;
@@ -43,6 +44,7 @@ private:
     };
     Config config_;
     Gains gains_, best_, candidate_;
+    const Gains initial_;
     Gains minimum_{{0, 0, 0}}, maximum_{{126, 10, 7200}};
     Stage stage_ = Stage::DISABLED;
     Window window_, baseline_, trial_, reference_;
@@ -53,6 +55,8 @@ private:
     float last_temperature_ = 0, target_ = 0, last_command_ = 0;
     bool heating_ = true;
     unsigned probe_ = 0;  // Ki down/up, Kp down/up, Kd down/up
+    uint8_t evaluated_probes_ = 0;
+    bool ready_to_save_ = false;
     float probe_output_ = 0;
     std::array<float, 3> step_scale_{{1, 1, 1}};
 

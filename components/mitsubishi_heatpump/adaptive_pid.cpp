@@ -89,8 +89,8 @@ float AdaptivePID::update(float current_temp, uint32_t now_ms, bool system_power
     _prev_temp = current_temp;
     _last_update_ms = now_ms;
     _was_power_on = true;
-    // New gains apply on the next calculation; diagnostics snapshot gains before
-    // calling update so the reported gains and contributions remain consistent.
+    // New gains apply on the next calculation. The workflow snapshots active
+    // gains for debug logs; gain sensors separately publish the accepted set.
     observe_tuning(current_temp, now_ms, true, climate_enabled);
     return output;
 }

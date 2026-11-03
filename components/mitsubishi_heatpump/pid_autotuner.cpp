@@ -5,7 +5,7 @@
 #include <limits>
 
 PidAutoTuner::PidAutoTuner(Gains initial, float output_half_span)
-    : gains_(initial), best_(initial), candidate_(initial) {
+    : gains_(initial), best_(initial), candidate_(initial), initial_(initial) {
     maximum_[0] = std::max(100.0f, initial[0] * 100.0f + 1.0f);
     // A configured starting gain must remain representable.
     for (unsigned i = 0; i < 3; ++i) maximum_[i] = std::max(maximum_[i], initial[i]);
@@ -55,7 +55,7 @@ const char* PidAutoTuner::status() const {
         case Stage::BASELINE: return "baseline";
         case Stage::REFERENCE: return "rechecking_baseline";
         case Stage::CONFIRM: return "confirming_trial";
-        case Stage::HOLD: return "holding_best";
+        case Stage::HOLD: return ready_to_save_ ? "ready_to_save" : "holding_best";
         case Stage::TRIAL: {
             static const char* names[] = {"testing_ki_down", "testing_ki_up", "testing_kp_down",
                                           "testing_kp_up", "testing_kd_down", "testing_kd_up"};
@@ -71,12 +71,16 @@ void PidAutoTuner::begin(Stage stage) {
     settling_left_ms_ = config_.settling_ms;
     have_command_ = false;
     cycle_started_ = false;
+    ready_to_save_ = false;
 }
 
 void PidAutoTuner::restart(bool reset_search) {
     gains_ = best_;
     baseline_ = trial_ = reference_ = Window{};
-    if (reset_search) probe_ = 0;
+    if (reset_search) {
+        probe_ = 0;
+        evaluated_probes_ = 0;
+    }
     begin(Stage::BASELINE);
     have_sample_ = false;
 }
@@ -119,9 +123,18 @@ void PidAutoTuner::next_candidate(uint32_t now_ms) {
             begin(Stage::TRIAL);
             return;
         }
+        // There is no candidate to test in this direction at the gain bound.
+        evaluated_probes_ |= static_cast<uint8_t>(1u << probe_);
     }
     gains_ = best_;
     begin(Stage::HOLD);
+    bool differs_from_yaml = false;
+    for (unsigned i = 0; i < 3; ++i) {
+        const float tolerance = 1e-6f * std::max(1.0f, std::fabs(initial_[i]));
+        differs_from_yaml |= std::fabs(best_[i] - initial_[i]) > tolerance;
+    }
+    // A discarded direction is not proof that no further improvement exists.
+    ready_to_save_ = evaluated_probes_ == 0x3f && accepted_ > 0 && differs_from_yaml;
     hold_start_ms_ = now_ms;
 }
 
@@ -147,6 +160,8 @@ void PidAutoTuner::finish(uint32_t now_ms) {
                 begin(Stage::REFERENCE);
             } else {
                 ++rejected_;
+                if (comparable(trial_, baseline_))
+                    evaluated_probes_ |= static_cast<uint8_t>(1u << probe_);
                 ++probe_;
                 // Refresh baseline between candidates instead of comparing
                 // tonight's trial with yesterday's conditions.
@@ -176,8 +191,13 @@ void PidAutoTuner::finish(uint32_t now_ms) {
                 const unsigned coordinate = coordinates[probe_];
                 step_scale_[coordinate] = std::max(0.125f, step_scale_[coordinate] * 0.5f);
                 probe_ = 0;  // Revisit every coordinate around the new best.
+                evaluated_probes_ = 0;
             } else {
                 ++rejected_;
+                if (comparable(window_, baseline_) && comparable(window_, reference_) &&
+                    comparable(window_, trial_) &&
+                    std::fabs(window_.score() - trial_.score()) <= std::max(0.05f, trial_.score() * 0.2f))
+                    evaluated_probes_ |= static_cast<uint8_t>(1u << probe_);
                 ++probe_;
             }
             gains_ = best_;
