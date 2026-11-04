@@ -9,13 +9,19 @@ trial, and repeats promising trials before accepting new gains. It does not
 force relay oscillations, change the requested temperature, or bypass the
 existing correction limits or hysteresis.
 
-Each scored window lasts one hour after ten minutes of settling. At least fifteen
+Each scored window lasts at least one hour after ten minutes of settling. At least fifteen
 minutes must be internally powered on during scoring, or the scored window must
 contain at least two complete on/off cycles with five minutes of total enabled
 time. Cycles beginning during settling do not count toward that alternative.
 This allows low-duty-cycle operation to qualify without treating passive drift
 or brief enable pulses as useful evidence. Hysteresis-off/coasting periods are
-still included in the temperature score. A full successful comparison
+still included in the temperature score. If the minimum evidence is missing at
+one hour, the same window extends until sufficient activity is observed, up to
+four scored hours. Its accumulated evidence and completed comparison phases are
+retained; settling is not repeated. The existing tuning-state entity adds
+`_waiting_for_activity` to the current phase while extending. Fully idle periods
+still cannot complete a window; the four-hour limit discards them eventually.
+A full successful comparison
 is baseline → candidate → baseline recheck → candidate confirmation, normally
 at least four hours forty minutes of sufficiently comparable operation.
 Inconclusive comparisons are discarded automatically, so real learning can take
@@ -47,6 +53,10 @@ during settling too. Both candidate runs must improve by at least 5%, without
 increasing peak overshoot by more than 0.1°C. Their starting directional errors
 must be within 0.5°C of the reference windows. Repeated baseline scores and repeated
 candidate scores must agree within 20% (or 0.05 score units, whichever is larger).
+Trials with mismatched starting conditions or inconsistent confirmations are
+counted as discarded comparisons, rather than rejected gains. Scores normalize
+mean errors and event rates by the actual observation duration; peak penalties
+and reference/confirmation checks remain active during extended observations.
 A complete unsuccessful search holds the accepted gains for six hours, then
 starts a new search. Successful trials restart the search around the new gains.
 
@@ -97,6 +107,10 @@ show the retained accepted set. Active calculation gains are available in DEBUG
 logs alongside their P/I/D contributions. Tuning changes take effect on the next calculation.
 Scores refer to completed windows; the tuning state describes the current window.
 Context changes discard scores. Inconclusive windows are not counted as rejects.
+INFO logs report phase transitions and decision reasons, including
+`insufficient_activity`, `incomparable_start`, `inconsistent_reference`,
+`inconsistent_confirmation`, `rejected_score`, and `accepted`. This uses the
+existing counters and tuning-state entity; no new diagnostic entities are needed.
 
 When **PID Tuning State** becomes `ready_to_save`, copy the displayed PID Kp, Ki,
 and Kd into `control_parameters.kp`, `ki`, and `kd` in that device's ESPHome YAML.

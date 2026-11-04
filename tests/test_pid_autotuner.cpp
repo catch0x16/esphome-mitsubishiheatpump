@@ -17,6 +17,7 @@ struct Fixture {
     Fixture() {
         PidAutoTuner::Config config;
         config.window_ms = 10000;
+        config.maximum_window_ms = config.window_ms;
         config.settling_ms = 0;
         config.minimum_active_ms = 5000;
         config.hold_ms = 10000;
@@ -212,6 +213,9 @@ void test_settling_peak_is_retained_and_uncomparable_trial_not_accepted() {
     f.window(19.8f);  // Better score but a different starting condition.
     assert(f.tuner.accepted() == 0);
     assert(f.tuner.stage() == Stage::BASELINE);
+    assert(f.tuner.rejected() == 0);
+    assert(f.tuner.discarded() == 1);
+    assert(std::strcmp(f.tuner.last_result(), "incomparable_start") == 0);
 }
 
 void test_closed_loop_simulation_preserves_limits_and_finite_state() {
@@ -282,6 +286,7 @@ void test_idle_or_incomplete_cycles_do_not_qualify() {
     PidAutoTuner tuner{{{20, 2, 0}}};
     PidAutoTuner::Config config;
     config.window_ms = 10000;
+    config.maximum_window_ms = config.window_ms;
     config.settling_ms = 5000;
     config.minimum_active_ms = 9000;
     config.minimum_cycling_active_ms = 1000;
@@ -378,6 +383,81 @@ void test_inconclusive_search_does_not_claim_ready_to_save() {
     assert(f.tuner.discarded() > 0);
     assert(std::strcmp(f.tuner.status(), "holding_best") == 0);
 }
+
+void test_window_extends_until_activity_without_restarting_settling() {
+    PidAutoTuner tuner{{{20, 2, 0}}};
+    PidAutoTuner::Config config;
+    config.window_ms = 10000;
+    config.maximum_window_ms = 20000;
+    config.settling_ms = 0;
+    config.minimum_active_ms = 5000;
+    tuner.configure(config);
+    tuner.observe(19.5f, 20, true, false, true, 0, 20);
+    for (uint32_t t = 1000; t <= 10000; t += 1000)
+        tuner.observe(19.5f, 20, true, false, true, t, 20);
+    assert(std::strcmp(tuner.status(), "baseline_waiting_for_activity") == 0);
+    assert(tuner.discarded() == 0);
+    for (uint32_t t = 11000; t <= 16000; t += 1000)
+        tuner.observe(19.5f, 20, true, true, true, t, 20);
+    assert(tuner.stage() == Stage::TRIAL);
+    assert(tuner.discarded() == 0);
+    assert(std::isfinite(tuner.baseline_score()));
+}
+
+void test_primary_confirmation_with_fourteen_minutes_finishes_after_extension() {
+    PidAutoTuner tuner{{{20, 2, 0}}};
+    PidAutoTuner::Config config;
+    config.settling_ms = 0;
+    tuner.configure(config);
+    uint32_t now = 0;
+    tuner.observe(19.5f, 20, true, false, true, now, 20);
+    // Baseline, candidate, reference: each has one 20-minute heating cycle.
+    // Matching shutdown counts keep this a test of evidence qualification.
+    for (unsigned phase = 0; phase < 3; ++phase) {
+        const float temperature = phase == 1 ? 19.6f : 19.5f;
+        for (unsigned i = 0; i < 360; ++i) {
+            now += 10000;
+            tuner.observe(temperature, 20, true, i < 120, true, now, 20);
+        }
+    }
+    assert(tuner.stage() == Stage::CONFIRM);
+    for (unsigned i = 0; i < 360; ++i) {
+        now += 10000;
+        tuner.observe(19.6f, 20, true, i < 84, true, now, 20);
+    }
+    assert(std::strcmp(tuner.status(), "confirming_trial_waiting_for_activity") == 0);
+    assert(tuner.discarded() == 0);
+    // The next heating run supplies the missing minute, without throwing away
+    // the completed baseline/trial/reference observations.
+    for (unsigned i = 0; i < 9; ++i) {
+        now += 10000;
+        tuner.observe(19.6f, 20, true, true, true, now, 20);
+    }
+    assert(tuner.accepted() == 1);
+    assert(tuner.discarded() == 0);
+    assert(tuner.accepted_gains()[1] == 0);
+}
+
+void test_idle_extension_times_out_and_context_change_aborts() {
+    PidAutoTuner tuner{{{20, 2, 0}}};
+    PidAutoTuner::Config config;
+    config.window_ms = 10000;
+    config.maximum_window_ms = 20000;
+    config.settling_ms = 0;
+    config.minimum_active_ms = 5000;
+    tuner.configure(config);
+    for (uint32_t t = 0; t <= 20000; t += 1000)
+        tuner.observe(19.5f, 20, true, false, true, t, 20);
+    assert(tuner.discarded() == 1);
+    assert(std::strcmp(tuner.last_result(), "insufficient_activity") == 0);
+    assert(tuner.accepted() == 0);
+    for (uint32_t t = 21000; t <= 32000; t += 1000)
+        tuner.observe(19.5f, 20, true, false, true, t, 20);
+    assert(std::strcmp(tuner.status(), "baseline_waiting_for_activity") == 0);
+    tuner.observe(19.5f, 21, true, false, true, 33000, 21);
+    assert(std::strcmp(tuner.status(), "baseline") == 0);
+    assert(tuner.gains()[1] == 2);
+}
 }  // namespace
 
 int main() {
@@ -398,5 +478,8 @@ int main() {
     test_accepted_gains_do_not_expose_trials();
     test_ready_to_save_requires_changed_gains_and_complete_search();
     test_inconclusive_search_does_not_claim_ready_to_save();
+    test_window_extends_until_activity_without_restarting_settling();
+    test_primary_confirmation_with_fourteen_minutes_finishes_after_extension();
+    test_idle_extension_times_out_and_context_change_aborts();
     std::puts("Automatic PID tuner tests passed");
 }

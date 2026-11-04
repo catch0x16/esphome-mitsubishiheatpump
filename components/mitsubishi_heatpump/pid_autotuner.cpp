@@ -19,6 +19,7 @@ PidAutoTuner::PidAutoTuner(Gains initial, float output_half_span)
 void PidAutoTuner::configure(const Config& config) {
     config_ = config;
     config_.window_ms = std::max<uint32_t>(1, config_.window_ms);
+    config_.maximum_window_ms = std::max(config_.window_ms, config_.maximum_window_ms);
     config_.minimum_active_ms = std::min(config_.minimum_active_ms, config_.window_ms);
     config_.minimum_cycling_active_ms = std::min(config_.minimum_cycling_active_ms, config_.window_ms);
     config_.improvement = std::max(0.01f, std::min(0.5f, config_.improvement));
@@ -50,16 +51,20 @@ float PidAutoTuner::baseline_score() const { return baseline_.score(); }
 float PidAutoTuner::trial_score() const { return trial_.score(); }
 
 const char* PidAutoTuner::status() const {
+    const bool waiting = window_.elapsed_ms >= config_.window_ms && !sufficient_activity();
     switch (stage_) {
         case Stage::DISABLED: return "disabled";
-        case Stage::BASELINE: return "baseline";
-        case Stage::REFERENCE: return "rechecking_baseline";
-        case Stage::CONFIRM: return "confirming_trial";
+        case Stage::BASELINE: return waiting ? "baseline_waiting_for_activity" : "baseline";
+        case Stage::REFERENCE: return waiting ? "rechecking_baseline_waiting_for_activity" : "rechecking_baseline";
+        case Stage::CONFIRM: return waiting ? "confirming_trial_waiting_for_activity" : "confirming_trial";
         case Stage::HOLD: return ready_to_save_ ? "ready_to_save" : "holding_best";
         case Stage::TRIAL: {
             static const char* names[] = {"testing_ki_down", "testing_ki_up", "testing_kp_down",
                                           "testing_kp_up", "testing_kd_down", "testing_kd_up"};
-            return names[probe_];
+            static const char* waiting_names[] = {"testing_ki_down_waiting_for_activity", "testing_ki_up_waiting_for_activity",
+                "testing_kp_down_waiting_for_activity", "testing_kp_up_waiting_for_activity",
+                "testing_kd_down_waiting_for_activity", "testing_kd_up_waiting_for_activity"};
+            return waiting ? waiting_names[probe_] : names[probe_];
         }
     }
     return "disabled";
@@ -85,7 +90,8 @@ void PidAutoTuner::restart(bool reset_search) {
     have_sample_ = false;
 }
 
-void PidAutoTuner::discard_window() {
+void PidAutoTuner::discard_window(const char* reason) {
+    last_result_ = reason;
     ++discarded_;
     if (stage_ == Stage::TRIAL || stage_ == Stage::REFERENCE || stage_ == Stage::CONFIRM)
         ++probe_;
@@ -138,14 +144,18 @@ void PidAutoTuner::next_candidate(uint32_t now_ms) {
     hold_start_ms_ = now_ms;
 }
 
-void PidAutoTuner::finish(uint32_t now_ms) {
+bool PidAutoTuner::sufficient_activity() const {
     const bool continuous_evidence = window_.active_ms >= config_.minimum_active_ms;
     const bool cycling_evidence = window_.active_ms >= config_.minimum_cycling_active_ms &&
                                   window_.complete_cycles >= 2;
-    if (!continuous_evidence && !cycling_evidence) {
+    return continuous_evidence || cycling_evidence;
+}
+
+void PidAutoTuner::finish(uint32_t now_ms) {
+    if (!sufficient_activity()) {
         // Low duty cycles are informative too: require two entire on/off runs
         // and five minutes of actual enabled time, rather than passive drift.
-        discard_window();
+        discard_window("insufficient_activity");
         return;
     }
     switch (stage_) {
@@ -156,12 +166,17 @@ void PidAutoTuner::finish(uint32_t now_ms) {
         case Stage::TRIAL:
             trial_ = window_;
             gains_ = best_;
+            if (!comparable(trial_, baseline_)) {
+                discard_window("incomparable_start");
+                break;
+            }
             if (improved(trial_, baseline_)) {
+                last_result_ = "trial_improved";
                 begin(Stage::REFERENCE);
             } else {
                 ++rejected_;
-                if (comparable(trial_, baseline_))
-                    evaluated_probes_ |= static_cast<uint8_t>(1u << probe_);
+                last_result_ = "rejected_score";
+                evaluated_probes_ |= static_cast<uint8_t>(1u << probe_);
                 ++probe_;
                 // Refresh baseline between candidates instead of comparing
                 // tonight's trial with yesterday's conditions.
@@ -174,7 +189,7 @@ void PidAutoTuner::finish(uint32_t now_ms) {
             const float allowed = std::max(0.05f, baseline_.score() * 0.2f);
             if (!comparable(reference_, baseline_) || drift > allowed ||
                 !improved(trial_, reference_)) {
-                discard_window();  // Inconclusive, not evidence for accepting a gain.
+                discard_window("inconsistent_reference");
             } else {
                 gains_ = candidate_;
                 begin(Stage::CONFIRM);
@@ -182,11 +197,16 @@ void PidAutoTuner::finish(uint32_t now_ms) {
             break;
         }
         case Stage::CONFIRM:
-            if (improved(window_, baseline_) && improved(window_, reference_) &&
-                comparable(window_, trial_) &&
-                std::fabs(window_.score() - trial_.score()) <= std::max(0.05f, trial_.score() * 0.2f)) {
+            if (!comparable(window_, baseline_) || !comparable(window_, reference_) ||
+                !comparable(window_, trial_) ||
+                std::fabs(window_.score() - trial_.score()) > std::max(0.05f, trial_.score() * 0.2f)) {
+                discard_window("inconsistent_confirmation");
+                break;
+            }
+            if (improved(window_, baseline_) && improved(window_, reference_)) {
                 best_ = candidate_;
                 ++accepted_;
+                last_result_ = "accepted";
                 const unsigned coordinates[] = {1, 1, 0, 0, 2, 2};
                 const unsigned coordinate = coordinates[probe_];
                 step_scale_[coordinate] = std::max(0.125f, step_scale_[coordinate] * 0.5f);
@@ -194,10 +214,8 @@ void PidAutoTuner::finish(uint32_t now_ms) {
                 evaluated_probes_ = 0;
             } else {
                 ++rejected_;
-                if (comparable(window_, baseline_) && comparable(window_, reference_) &&
-                    comparable(window_, trial_) &&
-                    std::fabs(window_.score() - trial_.score()) <= std::max(0.05f, trial_.score() * 0.2f))
-                    evaluated_probes_ |= static_cast<uint8_t>(1u << probe_);
+                last_result_ = "rejected_score";
+                evaluated_probes_ |= static_cast<uint8_t>(1u << probe_);
                 ++probe_;
             }
             gains_ = best_;
@@ -236,7 +254,7 @@ void PidAutoTuner::observe(float temperature, float target, bool heating, bool p
     last_power_ = power_on;
     if (dt_ms == 0) return;
     if (dt_ms > 30000 || jump > 1.0f) {
-        discard_window();
+        discard_window(dt_ms > 30000 ? "sample_gap" : "measurement_jump");
         return;
     }
     if (stage_ == Stage::HOLD) {
@@ -249,6 +267,7 @@ void PidAutoTuner::observe(float temperature, float target, bool heating, bool p
     if (testing && (over > std::max(1.25f, baseline_.peak_over + 0.25f) || error > 3.0f)) {
         gains_ = best_;
         ++rejected_;
+        last_result_ = "trial_limit_exceeded";
         ++probe_;
         begin(Stage::BASELINE);
         return;
@@ -261,7 +280,7 @@ void PidAutoTuner::observe(float temperature, float target, bool heating, bool p
         return;
     }
     if (window_.elapsed_ms == 0) window_.start_error = error;
-    const uint32_t measured_ms = std::min(dt_ms, config_.window_ms - window_.elapsed_ms);
+    const uint32_t measured_ms = std::min(dt_ms, config_.maximum_window_ms - window_.elapsed_ms);
     window_.elapsed_ms += measured_ms;
     // Attribute an interval only when the enable state stayed on throughout.
     if (power_on && was_power_on) window_.active_ms += measured_ms;
@@ -277,5 +296,8 @@ void PidAutoTuner::observe(float temperature, float target, bool heating, bool p
         last_command_ = applied_setpoint;
         have_command_ = true;
     }
-    if (window_.elapsed_ms >= config_.window_ms) finish(now_ms);
+    // Keep evidence from low-duty operation instead of discarding the hour and
+    // repeating settling. Never complete a window on passive drift alone.
+    if (window_.elapsed_ms >= config_.window_ms &&
+        (sufficient_activity() || window_.elapsed_ms >= config_.maximum_window_ms)) finish(now_ms);
 }

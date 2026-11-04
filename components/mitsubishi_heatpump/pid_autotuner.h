@@ -12,6 +12,7 @@ public:
     enum class Stage { DISABLED, BASELINE, TRIAL, REFERENCE, CONFIRM, HOLD };
     struct Config {
         uint32_t window_ms = 3600000;
+        uint32_t maximum_window_ms = 14400000;
         uint32_t settling_ms = 600000;
         uint32_t minimum_active_ms = 900000;
         uint32_t minimum_cycling_active_ms = 300000;
@@ -29,6 +30,7 @@ public:
     Gains accepted_gains() const { return best_; }
     Stage stage() const { return stage_; }
     const char* status() const;
+    const char* last_result() const { return last_result_; }
     float baseline_score() const;
     float trial_score() const;
     uint32_t accepted() const { return accepted_; }
@@ -57,16 +59,18 @@ private:
     unsigned probe_ = 0;  // Ki down/up, Kp down/up, Kd down/up
     uint8_t evaluated_probes_ = 0;
     bool ready_to_save_ = false;
+    const char* last_result_ = "startup";
     float probe_output_ = 0;
     std::array<float, 3> step_scale_{{1, 1, 1}};
 
     void begin(Stage stage);
     void restart(bool reset_search = true);
-    void discard_window();
+    void discard_window(const char* reason);
     void next_candidate(uint32_t now_ms);
     void finish(uint32_t now_ms);
     bool comparable(const Window& a, const Window& b) const;
     bool improved(const Window& candidate, const Window& baseline) const;
+    bool sufficient_activity() const;
 };
 
 #endif

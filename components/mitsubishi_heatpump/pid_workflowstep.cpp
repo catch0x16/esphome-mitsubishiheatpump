@@ -4,6 +4,7 @@
 using namespace esphome;
 
 #include "devicestatemanager.h"
+#include <cstring>
 using namespace devicestate;
 
 namespace workflow {
@@ -90,10 +91,20 @@ namespace workflow {
             const float kp = adaptivePID->kp();
             const float ki = adaptivePID->ki();
             const float kd = adaptivePID->kd();
+            const auto& tuner = adaptivePID->tuner();
+            const char* previous_status = tuner.status();
+            const uint32_t previous_decisions = tuner.accepted() + tuner.rejected() + tuner.discarded();
             const bool powerOn = enabled && deviceManager->isInternalPowerOn();
             const float setPointCorrectionSimple = this->adaptivePID->update(
                 currentTemperature, esphome::millis(), powerOn, enabled && conditioning);
             this->publish_diagnostics();
+            if (std::strcmp(previous_status, tuner.status()) != 0 ||
+                previous_decisions != tuner.accepted() + tuner.rejected() + tuner.discarded()) {
+                ESP_LOGI(TAG, "PID tuning: state=%s result=%s baseline=%.4f trial=%.4f accepted=%u rejected=%u discarded=%u",
+                    tuner.status(), tuner.last_result(), tuner.baseline_score(), tuner.trial_score(),
+                    static_cast<unsigned>(tuner.accepted()), static_cast<unsigned>(tuner.rejected()),
+                    static_cast<unsigned>(tuner.discarded()));
+            }
             ESP_LOGD(TAG, "PID calculation: kp=%.6f ki=%.6f kd=%.6f P=%.6f I=%.6f D=%.6f tuning=%s",
                 kp, ki, kd, adaptivePID->p_term(), adaptivePID->i_term(), adaptivePID->d_term(),
                 adaptivePID->tuner().status());
