@@ -22,6 +22,7 @@ namespace workflow {
             const float maxAdjustmentUnder,
             const float maxAdjustmentOver
         ) {
+            configured_ = {{p, i, d}};
             this->minTemp = minTemp;
             this->maxTemp = maxTemp;
             this->maxAdjustmentUnder = maxAdjustmentUnder;
@@ -45,7 +46,8 @@ namespace workflow {
                 ESP_LOGW(TAG, "ensurePIDTarget: null parameter");
                 return false;
             }
-            if (devicestate::same_float(deviceManager->getTargetTemperature(), this->adaptivePID->get_target(), 0.01f)) {
+            if (devicestate::same_float(deviceManager->getTargetTemperature(), this->adaptivePID->get_target(), 0.01f) &&
+                deviceManager->getOffsetDirection() == this->adaptivePID->heating()) {
                 return false;
             }
 
@@ -61,7 +63,45 @@ namespace workflow {
             }
             const bool updatedPidTarget = this->ensurePIDTarget(deviceManager);
 
-            // if pid target is not updated and internal power is not on
+            if (learner_) {
+                const bool direction = deviceManager->getOffsetDirection();
+                auto g = (direction == learning_heating_ && learning_mode_selected_) ? learner_->gains() : configured_;
+                adaptivePID->set_gains(g[0], g[1], g[2]);
+                const float low = devicestate::clamp(deviceManager->getTargetTemperature() -
+                    (direction ? maxAdjustmentUnder : maxAdjustmentOver), minTemp, maxTemp);
+                const float high = devicestate::clamp(deviceManager->getTargetTemperature() +
+                    (direction ? maxAdjustmentOver : maxAdjustmentUnder), minTemp, maxTemp);
+                const uint32_t now = esphome::millis();
+                adaptivePID->update(currentTemperature, now, deviceManager->isInternalPowerOn());
+                auto a = learner_->accepted_gains(), b = learner_->candidate_gains();
+                auto command = [&](const PidGainLearner::Gains &x) {
+                    return std::round(devicestate::clamp(adaptivePID->preview(x[0],x[1],x[2]), low, high)*2.f)/2.f;
+                };
+                auto sample = learning_sample_;
+                sample.temperature = currentTemperature;
+                sample.target = deviceManager->getTargetTemperature();
+                sample.heating = direction;
+                sample.power = deviceManager->isInternalPowerOn();
+                sample.operating = deviceManager->getDeviceStatus().operating;
+                sample.unit_setpoint = deviceManager->getDeviceState().targetTemperature;
+                sample.command_a = command(a); sample.command_b = command(b);
+                sample.enabled &= direction == learning_heating_ && learning_mode_selected_;
+                learner_->observe(sample, now);
+                if (learner_->testing_candidate()) {
+                    const auto accepted = learner_->accepted_gains();
+                    const auto trial = learner_->gains();
+                    if (std::fabs(command(accepted)-command(trial)) > learner_->command_limit()+.001f)
+                        learner_->abort("inconclusive_command_bound");
+                }
+                g = (direction == learning_heating_ && learning_mode_selected_) ? learner_->gains() : configured_;
+                adaptivePID->set_gains(g[0],g[1],g[2]);
+                const float setpoint = devicestate::clamp(adaptivePID->preview(g[0],g[1],g[2]), low, high);
+                if (sample.power || updatedPidTarget) {
+                    if (deviceManager->internalSetCorrectedTemperature(setpoint)) deviceManager->commit();
+                }
+                return;
+            }
+            // Legacy path remains unchanged for installations without gain_learning.
             if (updatedPidTarget || deviceManager->isInternalPowerOn()) {
                 const float adjustMinOffset = deviceManager->getOffsetDirection()
                     ? this->maxAdjustmentUnder
@@ -91,4 +131,17 @@ namespace workflow {
         }
 
     }
+}
+void workflow::pid::PidWorkflowStep::attach_learner(PidGainLearner *learner, bool heating) {
+    learner_ = learner;
+    learning_heating_ = heating;
+    adaptivePID->enable_adaptation(false);
+    adaptivePID->set_bounds(0, 250, 0, 10, 0, 7200);
+    adaptivePID->set_derivative_filter_seconds(30.f);
+    adaptivePID->reset_history();
+}
+
+void workflow::pid::PidWorkflowStep::pause_learning() {
+    if (learner_) learner_->pause();
+    adaptivePID->reset_history();
 }

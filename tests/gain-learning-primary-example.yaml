@@ -1,0 +1,11 @@
+packages:
+  fixture: !include component-base.yaml
+  overlay: !include ../examples/primary-bedroom-gain-learning.yaml
+esphome:
+  name: gain-learning-example-test
+esp32:
+  board: esp32-c6-devkitm-1
+globals:
+  - id: fusion_wall_weight_g
+    type: float
+    initial_value: "0.75"

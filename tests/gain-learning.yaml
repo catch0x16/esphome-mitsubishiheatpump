@@ -1,0 +1,10 @@
+packages:
+  base: !include component-base.yaml
+climate:
+  - id: !extend hvac
+    gain_learning:
+      outdoor_temperature: test_outdoor
+      external_heat: test_fireplace
+      context_valid: test_context
+      fusion_weight: test_fusion
+      other_units_operating: [test_other_a, test_other_b]

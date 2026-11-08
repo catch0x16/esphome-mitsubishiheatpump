@@ -2,6 +2,8 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import (
     climate,
+    text_sensor,
+    button,
     select,
     binary_sensor,
     sensor,
@@ -44,7 +46,7 @@ from esphome.core import CORE, coroutine
 sensor_ns = cg.esphome_ns.namespace("sensor")
 StateClasses = sensor_ns.enum("StateClass")
 
-AUTO_LOAD = ["climate", "select", "binary_sensor", "uart"]
+AUTO_LOAD = ["climate", "select", "binary_sensor", "sensor", "text_sensor", "button", "uart"]
 DEPENDENCIES = ["uart"]
 
 CONF_SUPPORTS = "supports"
@@ -106,6 +108,65 @@ SELECT_SCHEMA = select.select_schema(MitsubishiACSelect).extend(
     {cv.GenerateID(CONF_ID): cv.declare_id(MitsubishiACSelect)}
 )
 
+# Explicit opt-in: without this block the legacy adaptive controller remains.
+CONF_GAIN_LEARNING = "gain_learning"
+PidLearningButton = cg.global_ns.class_("PidLearningButton", button.Button)
+
+def validate_learning(config):
+    import math
+    for value in config.values():
+        if isinstance(value,float) and not math.isfinite(value):
+            raise cv.Invalid("learning settings must be finite")
+    for value in config["minimum_gains"] + config["maximum_gains"]:
+        if not math.isfinite(value):
+            raise cv.Invalid("gain bounds must be finite")
+    if config["maximum_gains"][0] > 250 or config["maximum_gains"][1] > 10 or config["maximum_gains"][2] > 7200:
+        raise cv.Invalid("maximum_gains must not exceed [250, 10, 7200]")
+    if config["confirmation_pairs"] < 12:
+        raise cv.Invalid("confirmation_pairs must be at least 12 for a useful fixed-look sign test")
+    if config["max_pair_attempts"] < max(config["discovery_pairs"], config["confirmation_pairs"]):
+        raise cv.Invalid("max_pair_attempts must cover both discovery and confirmation pairs")
+    if config["observable_time"].total_milliseconds > config["period"].total_milliseconds:
+        raise cv.Invalid("observable_time must not exceed period")
+    for low, high in zip(config["minimum_gains"], config["maximum_gains"]):
+        if low > high:
+            raise cv.Invalid("minimum_gains must not exceed maximum_gains")
+    return config
+
+def bounded_duration(value):
+    value = cv.positive_time_period_milliseconds(value)
+    if value.total_milliseconds > 604800000:
+        raise cv.Invalid("learning durations must not exceed seven days")
+    return value
+
+GAIN_LEARNING_SCHEMA = cv.All(cv.Schema({
+    cv.Optional("enabled", default=True): cv.boolean,
+    cv.Optional("mode", default="heat"): cv.one_of("heat", "cool", lower=True),
+    cv.Required("outdoor_temperature"): cv.use_id(sensor.Sensor),
+    cv.Required("external_heat"): cv.use_id(binary_sensor.BinarySensor),
+    cv.Required("context_valid"): cv.use_id(binary_sensor.BinarySensor),
+    cv.Required("other_units_operating"): cv.All(cv.ensure_list(cv.use_id(binary_sensor.BinarySensor)), cv.Length(min=2, max=2)),
+    cv.Optional("fusion_weight"): cv.use_id(sensor.Sensor),
+    cv.Optional("period", default="2h"): bounded_duration,
+    cv.Optional("settling_time", default="30min"): bounded_duration,
+    cv.Optional("hold_time", default="24h"): bounded_duration,
+    cv.Optional("observable_time", default="2min"): bounded_duration,
+    cv.Optional("discovery_pairs", default=4): cv.int_range(min=4, max=32),
+    cv.Optional("confirmation_pairs", default=24): cv.int_range(min=12, max=64),
+    cv.Optional("max_pair_attempts", default=48): cv.int_range(min=12, max=256),
+    cv.Optional("local_step", default=.1): cv.float_range(min=.01, max=.25),
+    cv.Optional("wider_step", default=.5): cv.float_range(min=.25, max=1),
+    cv.Optional("minimum_improvement", default=.05): cv.float_range(min=.01, max=.5),
+    cv.Optional("guard_relative", default=.05): cv.float_range(min=0, max=.25),
+    cv.Optional("guard_absolute", default=.02): cv.float_range(min=0, max=.1),
+    cv.Optional("peak_guard", default=.1): cv.float_range(min=0, max=.25),
+    cv.Optional("max_command_difference", default=.5): cv.float_range(min=.5, max=1),
+    cv.Optional("outdoor_pair_difference", default=3): cv.float_range(min=.1, max=5),
+    cv.Optional("context_pair_difference", default=.25): cv.float_range(min=0, max=.5),
+    cv.Optional("minimum_gains", default=[0,0,0]): cv.All(cv.ensure_list(cv.float_range(min=0)), cv.Length(min=3,max=3)),
+    cv.Optional("maximum_gains", default=[250,10,7200]): cv.All(cv.ensure_list(cv.float_range(min=0)), cv.Length(min=3,max=3)),
+}), validate_learning)
+
 CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
     {
         cv.GenerateID(): cv.declare_id(MitsubishiHeatPump),
@@ -130,6 +191,7 @@ CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
         # Add selects for vertical and horizontal vane positions
         cv.Optional(CONF_HORIZONTAL_SWING_SELECT): SELECT_SCHEMA,
         cv.Optional(CONF_VERTICAL_SWING_SELECT): SELECT_SCHEMA,
+        cv.Optional(CONF_GAIN_LEARNING): GAIN_LEARNING_SCHEMA,
         cv.Required(CONF_CONTROL_PARAMETERS): cv.Schema(
             {
                 cv.Optional(CONF_KP, default=0.0): cv.float_,
@@ -397,6 +459,77 @@ def to_code(config):
         CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
     })
     cg.add(var.set_device_set_point_sensor(device_set_point_sensor_var))
+
+    if CONF_GAIN_LEARNING in config:
+        import hashlib
+        import json
+        from pathlib import Path
+        if not CORE.is_esp32:
+            raise cv.Invalid("gain_learning currently requires ESP32 flash preferences")
+        learning = config[CONF_GAIN_LEARNING]
+        for gain, low, high in zip((config[CONF_CONTROL_PARAMETERS][k] for k in (CONF_KP,CONF_KI,CONF_KD)), learning["minimum_gains"],learning["maximum_gains"]):
+            if not low <= gain <= high:
+                raise cv.Invalid("configured PID gains must lie within gain_learning bounds")
+        fields = {
+            "period_ms": "period", "settling_ms": "settling_time", "hold_ms": "hold_time", "observable_ms": "observable_time",
+            "discovery_pairs": "discovery_pairs", "confirmation_pairs": "confirmation_pairs", "max_pair_attempts": "max_pair_attempts",
+            "step": "local_step", "wider_step": "wider_step", "improvement": "minimum_improvement",
+            "guard_relative": "guard_relative", "guard_absolute": "guard_absolute", "peak_guard": "peak_guard",
+            "max_command_difference": "max_command_difference", "outdoor_pair_difference": "outdoor_pair_difference",
+            "context_pair_difference": "context_pair_difference",
+        }
+        assignments = []
+        for cpp, yaml in fields.items():
+            value = learning[yaml]
+            if hasattr(value,"total_milliseconds"):
+                value = value.total_milliseconds
+            assignments.append(f"c.{cpp} = {value};")
+        for cpp, yaml in (("minimum","minimum_gains"),("maximum","maximum_gains")):
+            for i, value in enumerate(learning[yaml]):
+                assignments.append(f"c.{cpp}[{i}] = {value};")
+        expression = "[](){ PidGainLearner::Config c; " + " ".join(assignments) + " return c; }()"
+        # Exclude enabled and initial gains so freezing and copying a verified
+        # triplet to YAML preserve compatible records. Record restore separately
+        # rejects an unrelated change of YAML starting gains.
+        identity = {k: str(v) for k,v in learning.items() if k != "enabled"}
+        identity["control_limits"] = {k: str(v) for k,v in config[CONF_CONTROL_PARAMETERS].items() if k not in (CONF_KP,CONF_KI,CONF_KD)}
+        identity["visual"] = str(config.get("visual",{}))
+        digest = hashlib.sha256(json.dumps(identity,sort_keys=True).encode())
+        for source in ("pid_gain_learner.cpp","pid_gain_learner.h","adaptive_pid.cpp","pid_workflowstep.cpp"):
+            digest.update((Path(__file__).parent/source).read_bytes())
+        fingerprint = int.from_bytes(digest.digest()[:4],"little")
+        cg.add(var.configure_gain_learning(cg.RawExpression(expression), learning["enabled"], learning["mode"] == "heat", fingerprint))
+        for key, method in (("outdoor_temperature","set_learning_outdoor_sensor"),("external_heat","set_learning_external_heat_sensor"),("context_valid","set_learning_context_sensor"),("fusion_weight","set_learning_fusion_sensor")):
+            if key in learning:
+                source = yield cg.get_variable(learning[key])
+                cg.add(getattr(var,method)(source))
+        for key in learning["other_units_operating"]:
+            source = yield cg.get_variable(key)
+            cg.add(var.add_learning_other_sensor(source))
+        for i,name in enumerate(("Kp","Ki","Kd","Revision")):
+            diagnostic = yield sensor.new_sensor({
+                CONF_ID: cv.declare_id(sensor.Sensor)(f"pid_learning_{name.lower()}"),
+                CONF_NAME: f"PID {name}" if i < 3 else "PID Verified Revision",
+                CONF_STATE_CLASS: StateClasses.STATE_CLASS_MEASUREMENT,
+                CONF_ACCURACY_DECIMALS: 9 if i < 3 else 0,
+                CONF_FORCE_UPDATE: False,
+                CONF_DISABLED_BY_DEFAULT: False, CONF_INTERNAL: False,
+                CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+            })
+            cg.add(var.set_learning_diagnostic(i,diagnostic))
+        status = yield text_sensor.new_text_sensor({
+            CONF_ID: cv.declare_id(text_sensor.TextSensor)("pid_learning_status"),
+            CONF_NAME: "PID Tuning State", CONF_INTERNAL: False, CONF_DISABLED_BY_DEFAULT: False,
+            CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_DIAGNOSTIC,
+        })
+        cg.add(var.set_learning_status(status))
+        for rollback,label in ((False,"Reset Learned PID Gains"),(True,"Rollback PID Gains")):
+            control = yield button.new_button({
+                CONF_ID: cv.declare_id(PidLearningButton)("pid_rollback" if rollback else "pid_reset"),
+                CONF_NAME: label, CONF_INTERNAL: False, CONF_DISABLED_BY_DEFAULT: False,
+                CONF_ENTITY_CATEGORY: cg.EntityCategory.ENTITY_CATEGORY_CONFIG,
+            })
+            cg.add(control.set_parent(var)); cg.add(control.set_rollback(rollback))
 
     yield cg.register_component(var, config)
     yield climate.register_climate(var, config)

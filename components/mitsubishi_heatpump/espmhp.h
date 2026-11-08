@@ -19,6 +19,9 @@
 #define ESPMHP_H
 
 #include <chrono>
+#include <array>
+#include <vector>
+#include "pid_gain_learner.h"
 
 #include "cycle_management.h"
 #include "logging.h"
@@ -31,6 +34,10 @@
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/core/preferences.h"
 #include "esphome/components/uart/uart.h"
+#include "esphome/components/text_sensor/text_sensor.h"
+#include "esphome/components/button/button.h"
+
+namespace workflow { namespace pid { class PidWorkflowStep; } }
 
 // Forward declaration to break circular dependency
 namespace devicestate {
@@ -83,6 +90,21 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
 
         // Print a banner with library information.
         void banner();
+
+        void configure_gain_learning(PidGainLearner::Config config, bool enabled, bool heating, uint32_t fingerprint) {
+            gain_learning_config_ = config; gain_learning_enabled_ = enabled;
+            gain_learning_heating_ = heating; gain_learning_fingerprint_ = fingerprint;
+            gain_learning_configured_ = true;
+        }
+        void set_learning_outdoor_sensor(esphome::sensor::Sensor *s) { learning_outdoor_ = s; }
+        void set_learning_fusion_sensor(esphome::sensor::Sensor *s) { learning_fusion_ = s; }
+        void set_learning_external_heat_sensor(esphome::binary_sensor::BinarySensor *s) { learning_external_heat_ = s; }
+        void set_learning_context_sensor(esphome::binary_sensor::BinarySensor *s) { learning_context_ = s; }
+        void add_learning_other_sensor(esphome::binary_sensor::BinarySensor *s) { learning_others_.push_back(s); }
+        void set_learning_diagnostic(unsigned index, esphome::sensor::Sensor *s) { learning_diagnostics_[index] = s; }
+        void set_learning_status(esphome::text_sensor::TextSensor *s) { learning_status_ = s; }
+        void reset_pid_learning();
+        void rollback_pid_learning();
 
         void set_kp(float kp) { this->kp_ = kp; }
         void set_ki(float ki) { this->ki_ = ki; }
@@ -197,7 +219,7 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         devicestate::DeviceStateManager* dsm{nullptr};
 
         WorkflowStep* hysterisisWorkflowStep;
-        WorkflowStep* pidWorkflowStep;
+        workflow::pid::PidWorkflowStep* pidWorkflowStep;
 
         // The ClimateTraits supported by this HeatPump.
         esphome::climate::ClimateTraits traits_;
@@ -215,6 +237,21 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         esphome::uart::UARTComponent* get_hw_serial_() {
             return this->hw_serial_;
         }
+
+        bool gain_learning_configured_ = false, gain_learning_enabled_ = false, gain_learning_heating_ = true;
+        uint32_t gain_learning_fingerprint_ = 0, learning_last_publish_ = 0, learning_last_save_ = 0;
+        unsigned learning_last_period_ = 0;
+        bool learning_save_attempted_ = false;
+        PidGainLearner::Config gain_learning_config_{};
+        PidGainLearner *gain_learner_ = nullptr;
+        esphome::sensor::Sensor *learning_outdoor_ = nullptr, *learning_fusion_ = nullptr;
+        esphome::binary_sensor::BinarySensor *learning_external_heat_ = nullptr, *learning_context_ = nullptr;
+        std::vector<esphome::binary_sensor::BinarySensor *> learning_others_;
+        std::array<esphome::sensor::Sensor *, 4> learning_diagnostics_{{nullptr,nullptr,nullptr,nullptr}};
+        esphome::text_sensor::TextSensor *learning_status_ = nullptr;
+        esphome::ESPPreferenceObject learning_storage_;
+        PidGainLearner::Sample learning_sample_();
+        void service_gain_learning_();
 
         // various prefs to save mode-specific temperatures, akin to how the IR
         // remote works.
@@ -292,4 +329,17 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         float max_temp;
 };
 
-#endif
+class PidLearningButton : public esphome::button::Button {
+ public:
+    void set_parent(MitsubishiHeatPump *parent) { parent_ = parent; }
+    void set_rollback(bool rollback) { rollback_ = rollback; }
+ protected:
+    MitsubishiHeatPump *parent_ = nullptr;
+    bool rollback_ = false;
+    void press_action() override {
+        if (!parent_) return;
+        if (rollback_) parent_->rollback_pid_learning(); else parent_->reset_pid_learning();
+    }
+};
+
+#endif  // ESPMHP_H

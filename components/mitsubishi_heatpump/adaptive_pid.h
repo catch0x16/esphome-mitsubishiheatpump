@@ -22,6 +22,7 @@ public:
     // Configure target and direction (heating=true means setpoint increases with positive output)
     void set_target(float target, bool heating);
     float get_target();
+    bool heating() const { return _heating; }
 
     // Configuration setters
     void set_learning_rates(float lr_kp, float lr_ki, float lr_kd); // per-adapt-step multipliers
@@ -39,6 +40,10 @@ public:
     float kp() const { return _kp; }
     float ki() const { return _ki; }
     float kd() const { return _kd; }
+    void set_gains(float kp, float ki, float kd);
+    float preview(float kp, float ki, float kd) const;
+    void set_derivative_filter_seconds(float seconds) { _derivative_filter_seconds = std::max(0.0f, seconds); }
+    void reset_history();
 
     // Optional: quickly enable/disable adaptation (true = enabled)
     void enable_adaptation(bool enabled) { _adapt_enabled = enabled; }
@@ -53,6 +58,9 @@ private:
     float _kd_min, _kd_max;
 
     // Internal state
+    bool _initialized = false;
+    float _last_error = 0.0f, _last_derivative = 0.0f;
+    float _derivative_filter_seconds = 0.0f;
     float _integral;
     float _prev_error;
     float _prev_temp;

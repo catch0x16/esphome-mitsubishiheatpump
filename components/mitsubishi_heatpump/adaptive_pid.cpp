@@ -34,7 +34,7 @@ void AdaptivePID::set_target(float target, bool heating) {
     _target = target;
     _heating = heating;
     // Reset internal integrator on target change to avoid windup
-    _integral = 0.0f;
+    reset_history();
 }
 
 float AdaptivePID::get_target() {
@@ -80,24 +80,21 @@ void AdaptivePID::log_state(char *buf, size_t buflen) const {
 // Core update loop
 // -----------------------------
 float AdaptivePID::update(float current_temp, uint32_t current_time_ms, bool system_power_on) {
-    // Guard against zero-time initial calls: initialize last_update
-    if (_last_update_ms == 0) {
+    if (!system_power_on || !std::isfinite(current_temp)) {
+        reset_history();
         _last_update_ms = current_time_ms;
         _last_adapt_ms = current_time_ms;
-        _prev_temp = current_temp;
-        _prev_error = _target - current_temp;
-    }
-
-    // If system is off, reset integrator (anti-windup) and return neutral setpoint
-    if (!system_power_on) {
-        _integral = 0.0f;
-        // Neutral behavior: return target to avoid aggressive moves
         return _target;
     }
-
-    // dt for PID calculation (seconds)
+    if (!_initialized) {
+        _initialized = true;
+        _last_update_ms = _last_adapt_ms = current_time_ms;
+        _prev_temp = current_temp;
+        _prev_error = _last_error = _target - current_temp;
+        return preview(_kp, _ki, _kd);
+    }
     uint32_t dt_ms = current_time_ms - _last_update_ms;
-    if (dt_ms == 0) dt_ms = 1;
+    if (dt_ms == 0) return preview(_kp, _ki, _kd);
     float dt = dt_ms / 1000.0f;
 
     // Error (target - measured)
@@ -117,7 +114,17 @@ float AdaptivePID::update(float current_temp, uint32_t current_time_ms, bool sys
     if (std::fabs(_integral) > i_cap) _integral = ( _integral > 0 ? i_cap : -i_cap );
 
     // Derivative
-    float derivative = (dt > 0.0f) ? (error - _prev_error) / dt : 0.0f;
+    float derivative;
+    if (_derivative_filter_seconds > 0.0f) {
+        const float raw = -(current_temp - _prev_temp) / dt;
+        const float alpha = dt / (_derivative_filter_seconds + dt);
+        _last_derivative += alpha * (raw - _last_derivative);
+        derivative = _last_derivative;
+    } else {
+        derivative = (error - _prev_error) / dt;
+        _last_derivative = derivative;
+    }
+    _last_error = error;
 
     // Compute control output u = Kp*e + Ki*integral + Kd*derivative
     float control_output = compute_pid_output(error, derivative);
@@ -152,7 +159,7 @@ float AdaptivePID::compute_pid_output(float error, float derivative) {
     return out;
 }
 
-float AdaptivePID::convert_output_to_setpoint(float control_output, float current_temp) const {
+float AdaptivePID::convert_output_to_setpoint(float control_output, float /*current_temp*/) const {
     // Map control output to a setpoint range around target; here control_output is unbounded,
     // but we'll project it to a ±span and clamp to output limits.
     // Choose a mapping span: 100 units of control_output maps to full range by default.
@@ -220,4 +227,21 @@ void AdaptivePID::run_gradient_adaptation(float error, float integral, float der
     if (!std::isfinite(_kp)) _kp = (_kp_min + _kp_max) * 0.5f;
     if (!std::isfinite(_ki)) _ki = (_ki_min + _ki_max) * 0.5f;
     if (!std::isfinite(_kd)) _kd = (_kd_min + _kd_max) * 0.5f;
+}
+
+void AdaptivePID::reset_history() {
+    _initialized = false;
+    _integral = _last_error = _last_derivative = 0.0f;
+    _smoothed_dkp = _smoothed_dki = _smoothed_dkd = 0.0f;
+}
+
+void AdaptivePID::set_gains(float kp, float ki, float kd) {
+    if (!std::isfinite(kp) || !std::isfinite(ki) || !std::isfinite(kd)) return;
+    _kp = std::max(_kp_min, std::min(_kp_max, kp));
+    _ki = std::max(_ki_min, std::min(_ki_max, ki));
+    _kd = std::max(_kd_min, std::min(_kd_max, kd));
+}
+
+float AdaptivePID::preview(float kp, float ki, float kd) const {
+    return convert_output_to_setpoint(kp*_last_error + ki*_integral + kd*_last_derivative, _prev_temp);
 }

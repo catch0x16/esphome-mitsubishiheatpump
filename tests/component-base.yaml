@@ -1,0 +1,68 @@
+esphome:
+  name: gain-learning-test
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+wifi:
+  ssid: gain-learning-test
+  password: test-only-password
+api:
+
+uart:
+  id: hp_uart
+  tx_pin: 17
+  rx_pin: 16
+  baud_rate: 2400
+
+external_components:
+  - source: ../components
+
+sensor:
+  - platform: template
+    id: test_outdoor
+    internal: true
+    lambda: return 10.0f;
+  - platform: template
+    id: test_fusion
+    internal: true
+    lambda: return 75.0f;
+
+binary_sensor:
+  - platform: template
+    id: test_fireplace
+    internal: true
+    lambda: return false;
+  - platform: template
+    id: test_context
+    internal: true
+    lambda: return true;
+  - platform: template
+    id: test_other_a
+    internal: true
+    lambda: return false;
+  - platform: template
+    id: test_other_b
+    internal: true
+    lambda: return false;
+
+climate:
+  - platform: mitsubishi_heatpump
+    id: hvac
+    name: Test Heatpump
+    uart_id: hp_uart
+    visual:
+      min_temperature: 18
+      max_temperature: 25.5
+      temperature_step:
+        target_temperature: 0.5
+        current_temperature: 0.1
+    control_parameters:
+      kp: 1.25
+      ki: 0.015
+      kd: 0
+      maxAdjustmentOver: 0.25
+      hysterisisOff: 0.75
