@@ -91,15 +91,18 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
         // Print a banner with library information.
         void banner();
 
-        void configure_gain_learning(PidGainLearner::Config config, bool enabled, bool heating, uint32_t fingerprint) {
+        void configure_gain_learning(PidGainLearner::Config config, bool enabled, uint32_t fingerprint) {
             gain_learning_config_ = config; gain_learning_enabled_ = enabled;
-            gain_learning_heating_ = heating; gain_learning_fingerprint_ = fingerprint;
+            gain_learning_fingerprint_ = fingerprint;
             gain_learning_configured_ = true;
+        }
+        void set_learning_initial(unsigned index, float kp, float ki, float kd) {
+            learning_initial_[index] = {{kp,ki,kd}};
         }
         void set_learning_outdoor_sensor(esphome::sensor::Sensor *s) { learning_outdoor_ = s; }
         void set_learning_fusion_sensor(esphome::sensor::Sensor *s) { learning_fusion_ = s; }
-        void set_learning_external_heat_sensor(esphome::binary_sensor::BinarySensor *s) { learning_external_heat_ = s; }
-        void set_learning_context_sensor(esphome::binary_sensor::BinarySensor *s) { learning_context_ = s; }
+        void set_learning_fireplace_sensor(esphome::binary_sensor::BinarySensor *s) { learning_fireplace_ = s; }
+        void set_learning_fireplace_valid_sensor(esphome::binary_sensor::BinarySensor *s) { learning_fireplace_valid_ = s; }
         void add_learning_other_sensor(esphome::binary_sensor::BinarySensor *s) { learning_others_.push_back(s); }
         void set_learning_diagnostic(unsigned index, esphome::sensor::Sensor *s) { learning_diagnostics_[index] = s; }
         void set_learning_status(esphome::text_sensor::TextSensor *s) { learning_status_ = s; }
@@ -238,20 +241,25 @@ class MitsubishiHeatPump : public esphome::Component, public esphome::climate::C
             return this->hw_serial_;
         }
 
-        bool gain_learning_configured_ = false, gain_learning_enabled_ = false, gain_learning_heating_ = true;
-        uint32_t gain_learning_fingerprint_ = 0, learning_last_publish_ = 0, learning_last_save_ = 0;
-        unsigned learning_last_period_ = 0;
-        bool learning_save_attempted_ = false;
+        bool gain_learning_configured_ = false, gain_learning_enabled_ = false;
+        uint32_t gain_learning_fingerprint_ = 0, learning_last_publish_ = 0;
+        std::array<uint32_t,2> learning_last_save_{{0,0}};
+        std::array<unsigned,2> learning_last_period_{{0,0}};
+        std::array<bool,2> learning_save_attempted_{{false,false}};
         PidGainLearner::Config gain_learning_config_{};
+        PidGainProfiles *gain_profiles_ = nullptr;
         PidGainLearner *gain_learner_ = nullptr;
+        std::array<PidGainLearner::Gains,2> learning_initial_{};
         esphome::sensor::Sensor *learning_outdoor_ = nullptr, *learning_fusion_ = nullptr;
-        esphome::binary_sensor::BinarySensor *learning_external_heat_ = nullptr, *learning_context_ = nullptr;
+        esphome::binary_sensor::BinarySensor *learning_fireplace_ = nullptr, *learning_fireplace_valid_ = nullptr;
         std::vector<esphome::binary_sensor::BinarySensor *> learning_others_;
         std::array<esphome::sensor::Sensor *, 4> learning_diagnostics_{{nullptr,nullptr,nullptr,nullptr}};
         esphome::text_sensor::TextSensor *learning_status_ = nullptr;
-        esphome::ESPPreferenceObject learning_storage_;
+        std::array<esphome::ESPPreferenceObject,2> learning_storage_;
         PidGainLearner::Sample learning_sample_();
         void service_gain_learning_();
+        void select_gain_learning_profile_();
+        const char *learning_input_problem_() const;
 
         // various prefs to save mode-specific temperatures, akin to how the IR
         // remote works.

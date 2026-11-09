@@ -112,6 +112,25 @@ SELECT_SCHEMA = select.select_schema(MitsubishiACSelect).extend(
 CONF_GAIN_LEARNING = "gain_learning"
 PidLearningButton = cg.global_ns.class_("PidLearningButton", button.Button)
 
+def normalize_learning_inputs(config):
+    import logging
+    if not isinstance(config, dict):
+        raise cv.Invalid("gain_learning must be a mapping of settings and ESPHome sensor IDs")
+    config = dict(config)
+    for old, new in (("outdoor_temperature", "outdoor_temperature_sensor"),
+                     ("external_heat", "fireplace_active_sensor"),
+                     ("context_valid", "fireplace_state_valid_sensor"),
+                     ("fusion_weight", "fusion_wall_weight_sensor")):
+        if old in config:
+            if new in config:
+                raise cv.Invalid(f"Use only {new}, not both {old} and {new}")
+            config[new] = config.pop(old)
+            logging.getLogger(__name__).warning("gain_learning.%s is deprecated; use %s (an ESPHome sensor ID)", old, new)
+    if "mode" in config:
+        cv.one_of("heat", "cool", lower=True)(config.pop("mode"))
+        logging.getLogger(__name__).warning("Remove gain_learning.mode: heating/cooling are now detected automatically")
+    return config
+
 def validate_learning(config):
     import math
     for value in config.values():
@@ -131,6 +150,8 @@ def validate_learning(config):
     for low, high in zip(config["minimum_gains"], config["maximum_gains"]):
         if low > high:
             raise cv.Invalid("minimum_gains must not exceed maximum_gains")
+    if "fireplace_state_valid_sensor" in config and "fireplace_active_sensor" not in config:
+        raise cv.Invalid("fireplace_state_valid_sensor requires fireplace_active_sensor")
     return config
 
 def bounded_duration(value):
@@ -139,14 +160,13 @@ def bounded_duration(value):
         raise cv.Invalid("learning durations must not exceed seven days")
     return value
 
-GAIN_LEARNING_SCHEMA = cv.All(cv.Schema({
+GAIN_LEARNING_SCHEMA = cv.All(normalize_learning_inputs, cv.Schema({
     cv.Optional("enabled", default=True): cv.boolean,
-    cv.Optional("mode", default="heat"): cv.one_of("heat", "cool", lower=True),
-    cv.Required("outdoor_temperature"): cv.use_id(sensor.Sensor),
-    cv.Required("external_heat"): cv.use_id(binary_sensor.BinarySensor),
-    cv.Required("context_valid"): cv.use_id(binary_sensor.BinarySensor),
+    cv.Optional("outdoor_temperature_sensor"): cv.use_id(sensor.Sensor),
+    cv.Optional("fireplace_active_sensor"): cv.use_id(binary_sensor.BinarySensor),
+    cv.Optional("fireplace_state_valid_sensor"): cv.use_id(binary_sensor.BinarySensor),
     cv.Required("other_units_operating"): cv.All(cv.ensure_list(cv.use_id(binary_sensor.BinarySensor)), cv.Length(min=2, max=2)),
-    cv.Optional("fusion_weight"): cv.use_id(sensor.Sensor),
+    cv.Optional("fusion_wall_weight_sensor"): cv.use_id(sensor.Sensor),
     cv.Optional("period", default="2h"): bounded_duration,
     cv.Optional("settling_time", default="30min"): bounded_duration,
     cv.Optional("hold_time", default="24h"): bounded_duration,
@@ -197,6 +217,8 @@ CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
                 cv.Optional(CONF_KP, default=0.0): cv.float_,
                 cv.Optional(CONF_KI, default=0.0): cv.float_,
                 cv.Optional(CONF_KD, default=0.0): cv.float_,
+                cv.Optional("heat"): cv.Schema({cv.Required(k): cv.float_range(min=0) for k in (CONF_KP,CONF_KI,CONF_KD)}),
+                cv.Optional("cool"): cv.Schema({cv.Required(k): cv.float_range(min=0) for k in (CONF_KP,CONF_KI,CONF_KD)}),
                 cv.Optional(CONF_MAX_ADJUSTMENT_UNDER, default=2.0): cv.float_,
                 cv.Optional(CONF_MAX_ADJUSTMENT_OVER, default=2.0): cv.float_,
                 cv.Optional(CONF_HYSTERISIS_OFF, default=0.25): cv.float_,
@@ -219,6 +241,14 @@ CONFIG_SCHEMA = climate.climate_schema(MitsubishiHeatPump).extend(
         ),
     }
 ).extend(cv.COMPONENT_SCHEMA)
+
+def validate_profile_configuration(config):
+    params = config[CONF_CONTROL_PARAMETERS]
+    if ("heat" in params or "cool" in params) and CONF_GAIN_LEARNING not in config:
+        raise cv.Invalid("per-mode PID gains require gain_learning (enabled: false is allowed)")
+    return config
+
+CONFIG_SCHEMA = cv.All(CONFIG_SCHEMA, validate_profile_configuration)
 
 @coroutine
 def to_code(config):
@@ -492,14 +522,20 @@ def to_code(config):
         # triplet to YAML preserve compatible records. Record restore separately
         # rejects an unrelated change of YAML starting gains.
         identity = {k: str(v) for k,v in learning.items() if k != "enabled"}
-        identity["control_limits"] = {k: str(v) for k,v in config[CONF_CONTROL_PARAMETERS].items() if k not in (CONF_KP,CONF_KI,CONF_KD)}
+        identity["control_limits"] = {k: str(v) for k,v in config[CONF_CONTROL_PARAMETERS].items() if k not in (CONF_KP,CONF_KI,CONF_KD,"heat","cool")}
         identity["visual"] = str(config.get("visual",{}))
         digest = hashlib.sha256(json.dumps(identity,sort_keys=True).encode())
-        for source in ("pid_gain_learner.cpp","pid_gain_learner.h","adaptive_pid.cpp","pid_workflowstep.cpp"):
+        for source in ("pid_gain_learner.cpp","pid_gain_learner.h","adaptive_pid.cpp","adaptive_pid.h","pid_workflowstep.cpp","pid_workflowstep.h"):
             digest.update((Path(__file__).parent/source).read_bytes())
         fingerprint = int.from_bytes(digest.digest()[:4],"little")
-        cg.add(var.configure_gain_learning(cg.RawExpression(expression), learning["enabled"], learning["mode"] == "heat", fingerprint))
-        for key, method in (("outdoor_temperature","set_learning_outdoor_sensor"),("external_heat","set_learning_external_heat_sensor"),("context_valid","set_learning_context_sensor"),("fusion_weight","set_learning_fusion_sensor")):
+        cg.add(var.configure_gain_learning(cg.RawExpression(expression), learning["enabled"], fingerprint))
+        for index, mode in enumerate(("heat","cool")):
+            params = config[CONF_CONTROL_PARAMETERS]
+            values = [params.get(mode, params)[key] for key in (CONF_KP,CONF_KI,CONF_KD)]
+            if not all(low <= gain <= high for gain,low,high in zip(values,learning["minimum_gains"],learning["maximum_gains"])):
+                raise cv.Invalid(f"control_parameters.{mode} gains must lie within gain_learning bounds")
+            cg.add(var.set_learning_initial(index,*values))
+        for key, method in (("outdoor_temperature_sensor","set_learning_outdoor_sensor"),("fireplace_active_sensor","set_learning_fireplace_sensor"),("fireplace_state_valid_sensor","set_learning_fireplace_valid_sensor"),("fusion_wall_weight_sensor","set_learning_fusion_sensor")):
             if key in learning:
                 source = yield cg.get_variable(learning[key])
                 cg.add(getattr(var,method)(source))

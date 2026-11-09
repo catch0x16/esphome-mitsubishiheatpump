@@ -2,9 +2,12 @@ packages:
   base: !include component-base.yaml
 climate:
   - id: !extend hvac
+    control_parameters:
+      heat: {kp: 20, ki: 0.015, kd: 0}
+      cool: {kp: 10, ki: 0.04, kd: 0.1}
     gain_learning:
-      outdoor_temperature: test_outdoor
-      external_heat: test_fireplace
-      context_valid: test_context
-      fusion_weight: test_fusion
+      outdoor_temperature_sensor: test_outdoor
+      fireplace_active_sensor: test_fireplace
+      fireplace_state_valid_sensor: test_context
+      fusion_wall_weight_sensor: test_fusion
       other_units_operating: [test_other_a, test_other_b]

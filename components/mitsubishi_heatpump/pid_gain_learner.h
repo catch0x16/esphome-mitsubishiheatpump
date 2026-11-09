@@ -22,6 +22,7 @@ class PidGainLearner {
     float temperature = 0, target = 0, outdoor = 0, fusion_weight = 100;
     float other_duty = 0, other_0 = 0, other_1 = 0, unit_setpoint = 0, command_a = 0, command_b = 0;
     bool power = false, operating = false, external_heat = false;
+    bool fireplace_context = false, fusion_context = false, others_context = false;
     bool valid = false, enabled = false;
     // positive means past target in the conditioning direction.
     bool heating = true;
@@ -33,6 +34,7 @@ class PidGainLearner {
     double observable_seconds = 0, operating_seconds = 0;
     float peak = 0, start_error = 0;
     unsigned shutdowns = 0;
+    bool fireplace_context = false, fusion_context = false, others_context = false;
   };
   enum class Stage { IDLE, DISCOVERY, SAVE_BUDGET, CONFIRMATION,
                      SAVE_PROMOTION, HOLD, SAVE_RESET, SAVE_ROLLBACK };
@@ -111,4 +113,20 @@ class PidGainLearner {
   bool guards(const Evidence &e) const;
   bool improved(const Outcome &a, const Outcome &b) const;
   static void add(Outcome &a, const Outcome &b);
+};
+
+// Heating and cooling are distinct experiments, with distinct accepted gains.
+// Selection never carries an incomplete pair or trial command across modes.
+class PidGainProfiles {
+ public:
+  enum class Mode { HEAT, COOL, OTHER };
+  PidGainProfiles(PidGainLearner::Gains heat, PidGainLearner::Gains cool,
+                 const PidGainLearner::Config &config, uint32_t fingerprint,
+                 uint32_t seed = 1, float output_half_span = 3.75f);
+  PidGainLearner *select(Mode mode);
+  PidGainLearner &at(unsigned index) { return learners_[index]; }
+  int selected_index() const { return selected_; }
+ private:
+  std::array<PidGainLearner, 2> learners_;
+  int selected_ = -1;
 };

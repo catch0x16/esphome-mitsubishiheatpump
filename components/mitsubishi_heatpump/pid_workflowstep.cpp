@@ -132,11 +132,14 @@ namespace workflow {
 
     }
 }
-void workflow::pid::PidWorkflowStep::attach_learner(PidGainLearner *learner, bool heating) {
+void workflow::pid::PidWorkflowStep::attach_learner(PidGainLearner *learner, bool heating, PidGainLearner::Gains configured) {
+    configured_ = configured;
     learner_ = learner;
     learning_heating_ = heating;
     adaptivePID->enable_adaptation(false);
     adaptivePID->set_bounds(0, 250, 0, 10, 0, 7200);
+    const auto gains = learner ? learner->accepted_gains() : configured_;
+    adaptivePID->set_gains(gains[0],gains[1],gains[2]);
     adaptivePID->set_derivative_filter_seconds(30.f);
     adaptivePID->reset_history();
 }

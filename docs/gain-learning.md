@@ -17,10 +17,11 @@ multiple heads of this shared outdoor system.
    contain this feature. For local validation, use an external component source
    with `type: local` and the absolute path to this checkout's `components` directory.
    For a deployed build, pin a reviewed commit containing these changes.
-2. Copy `examples/primary-bedroom-gain-learning.yaml` into your ESPHome packages
-   directory and include it as a package from Primary Bedroom's YAML. It extends
-   the existing `hvac` climate ID and uses `fusion_wall_weight_g` from the bedroom
-   fusion package. The example's Home Assistant entity names were checked against
+2. Copy the matching overlay from `examples/primary-bedroom-gain-learning.yaml`,
+   `examples/hailees-bedroom-gain-learning.yaml`, or
+   `examples/main-floor-gain-learning.yaml` into your ESPHome packages directory
+   and include it from that room's YAML. It extends the existing `hvac` climate ID.
+   The component already receives the room/fused temperature; it is not wired again. The example's Home Assistant entity names were checked against
    Prometheus, but confirm them again if entities have been renamed.
 3. Record the deployment time and starting gains. Existing runtime gains may have
    grown away from their YAML starting values; consider that when selecting the
@@ -35,26 +36,71 @@ remains enabled for compatibility; its one-way proportional-gain growth is not
 corrected in that path. Set `gain_learning.enabled: false` to freeze the new
 learner at its restored accepted gains, rather than deleting the block.
 
-## Inputs
+## Inputs and automatic mode selection
 
-Required references are `outdoor_temperature` (Celsius), `external_heat` (binary
-fireplace command), `context_valid` (binary validity of that external context), and
-exactly two `other_units_operating` binary sensors. Supply `fusion_weight` (wall
-percentage, 0–100) for a fusion-controlled room. Omit it only for a room without
-fusion; the learner then records a constant weight of 100.
+The climate's current mode selects heating or cooling automatically. Each has its
+own learner, accepted gains, evidence, confirmation budget and persistent record.
+Switching modes pauses the old learner and cancels its incomplete pair; heating
+and cooling observations are never mixed. Off, fan-only, dry and AUTO operation
+pause gain trials. AUTO's heating/cooling action in this component is inferred from
+temperature error, not reliable native direction feedback, so it is not used for
+learning.
+
+All references below are **local ESPHome sensor IDs**, not Home Assistant entity
+IDs or climate-component references. A Home Assistant reading must first be
+imported through a `platform: homeassistant` sensor. The example supplies those
+adapters.
+
+| Setting | Type and meaning |
+|---|---|
+| `outdoor_temperature_sensor` | Optional temperature-sensor ID in Celsius. Overrides the climate's own outdoor-temperature report; use this for the household aggregate. |
+| `fireplace_active_sensor` | Optional binary-sensor ID for reported fireplace on/off state. |
+| `fireplace_state_valid_sensor` | Optional binary-sensor ID asserting that the fireplace's reported state is known. Requires `fireplace_active_sensor`; useful for the RF receiver's State Valid signal. |
+| `fusion_wall_weight_sensor` | Optional sensor ID reporting the wall sensor's contribution to the fused temperature, 0–100 percent. Analysis metadata; it does not configure or alter fusion. |
+| `other_units_operating` | IDs of the two other heads' operating binary sensors in this installation. |
+
+For example, the minimal shared-system configuration can use the unit's native
+outdoor report:
+
+```yaml
+gain_learning:
+  enabled: true
+  other_units_operating: [other_head_a, other_head_b]
+```
+
+For the supplied aggregate and fireplace context:
+
+```yaml
+gain_learning:
+  enabled: true
+  outdoor_temperature_sensor: learning_outdoor_celsius
+  fireplace_active_sensor: learning_fireplace
+  other_units_operating: [other_head_a, other_head_b]
+```
+
+The fireplace-validity signal belongs specifically to the fireplace, not to the
+climate as a whole. Omitted fireplace/fusion metadata is recorded as unavailable
+and is not used for matching comparisons; it is not asserted to mean fireplace
+off or a measured wall weight. Supplied but unavailable inputs pause learning,
+with statuses identifying the missing input. The controller continues using its
+accepted gains. Raw fused and bedroom sensor temperatures remain available for
+interpreting measurement changes; the component cannot infer changing weights
+from the fused temperature alone.
 
 The Primary overlay imports the aggregate outdoor reading and its unit attribute,
-converting Fahrenheit to Celsius explicitly. Unknown units and missing values
-produce NaN, not zero. No new public weather or fusion entities are created by
-these internal adapters. The existing raw bedroom measurements remain available
-in Home Assistant/Prometheus for diagnosing apparent improvements.
+converting Fahrenheit to Celsius explicitly. Unknown units produce NaN, not zero.
+Its internal adapters create no additional public weather or fusion entities.
+Fireplace signals describe remote settings, not independently measured combustion
+or watts. The optional RF-validity flag and an active Home Assistant state
+subscription provide connection/context checks, not proof of physical freshness.
 
-The fireplace inputs describe received/sent remote settings, not independently
-verified combustion or measured heat output. State Valid and a connected API state
-subscriber are required. A source that remains unchanged is not automatically
-classified as stale. The subscriber check is a connection check, not proof of each
-source's physical freshness. Residual fireplace heat and unmeasured disturbances
-remain limitations of the comparison.
+The first experimental names `outdoor_temperature`, `external_heat`, `context_valid`
+and `fusion_weight` are accepted with deprecation warnings and normalized to the
+names above. An old `mode` setting is removed with a warning: it no longer restricts
+learning to that mode. Updating the implementation changes record fingerprints;
+old experimental records are not silently treated as verified under this revision.
+Copy any previously verified values into the appropriate mode's YAML starting
+gains before upgrading if they need to be preserved.
 
 ## Controller behavior
 
@@ -154,7 +200,7 @@ For confirmation, make one decision at the fixed number of comparable pairs.
 Use a one-sided exact sign probability over meaningful wins/losses; ties do not
 count as wins. Before collecting confirmation data, reserve confirmation index k
 in flash and allocate alpha `0.05 / (k * (k + 1))`. These allocations sum to at most
-0.05 under the test assumptions. Repeated peeking cannot trigger promotion, and
+0.05 per device and conditioning-mode profile under the test assumptions. Repeated peeking cannot trigger promotion, and
 reboots/manual gain reset do not replenish the persisted budget. A newly
 incompatible configuration starts a new evidence family. There is no global
 optimum certificate and no unqualified real-world 95% guarantee: these calculations
@@ -190,28 +236,45 @@ The record contains configured, accepted and previous gains, revision, proposal
 and confirmation counters, PRNG state and the last accepted evidence summary.
 Restore checks schema, finite/bounded gains and a fingerprint of the learner/PID
 implementation, input identities, learning settings, mode and control limits.
-An incompatible record falls back to YAML. Learned evidence is scoped to the
-configured heating or cooling mode; outside that mode, use configured gains and
-pause learning. v1 supports ESP32 flash storage.
+Heating and cooling have separate records and mode-specific fingerprints; a record
+from one mode cannot be restored into the other. An incompatible record falls back
+to that mode's YAML starting gains. This implementation supports ESP32 flash storage.
 
-Changing YAML starting gains to a different triplet intentionally establishes a
-new baseline. Copying the exact accepted triplet into YAML preserves compatible
+The existing flat `control_parameters.kp`, `ki`, and `kd` remain shared starting
+defaults. Optional `control_parameters.heat` and `control_parameters.cool` triplets
+override them for each learning profile, so copying heating gains need not alter
+the cooling baseline. These overrides require a `gain_learning` block (which may
+be frozen with `enabled: false`). For example:
+
+```yaml
+control_parameters:
+  kp: 1.25
+  ki: 0.015
+  kd: 0
+  heat: {kp: 1.5, ki: 0.012, kd: 0}
+  cool: {kp: 1.2, ki: 0.015, kd: 0}
+  # Keep your existing hysteresis and adjustment limits here.
+```
+
+Changing a mode's YAML starting gains to a different triplet intentionally
+establishes a new baseline for that mode. Copying the exact accepted triplet into YAML preserves compatible
 saved history. Use the copyable nine-significant-digit values in `PID Tuning State`
 for float round-trip precision. Disabling learning preserves compatible storage.
 
 - `PID Kp`, `PID Ki`, `PID Kd`: **currently applied gains**, including temporary
   trials, for Prometheus history. Do not copy an arbitrary trial into YAML.
-- `PID Verified Revision`: persisted revision; promotions, reset and rollback
-  advance it. A revision alone is not proof of improvement; inspect the status.
-- `PID Tuning State`: progress/reason, accepted YAML values and a compact summary
-  of the last verification. `verified_saved_copy_to_yaml` identifies a promotion.
-- `Reset Learned PID Gains`: save configured gains as the baseline; preserve the
-  spent confirmation budget.
-- `Rollback PID Gains`: save the previous accepted triplet. This is an explicit
-  user action, not a new successful trial.
+- `PID Verified Revision`: persisted revision of the current heating/cooling
+  profile (unavailable outside those modes); promotions, reset and rollback advance it. A revision alone is not proof of improvement; inspect the status.
+- `PID Tuning State`: current mode, progress/reason, both modes' accepted YAML
+  values and separate revisions. `verified_saved_copy_to_yaml` identifies a promotion.
+- `Reset Learned PID Gains`: reset both profiles to their configured starting
+  gains; preserve each spent confirmation budget.
+- `Rollback PID Gains`: restore the current heating/cooling profile's previous
+  accepted triplet. Outside those modes, no profile is selected for rollback.
+  This is an explicit user action, not a new successful trial.
 
-The last verification status summarizes sign probability plus A/B shutdown counts,
-mean overshoot, mean absolute error and large unmet demand. Detailed `PID_GAIN_PERIOD`,
+The saved evidence retains sign probability and A/B shutdown counts, mean
+overshoot, mean absolute error and large unmet demand. Detailed `PID_GAIN_PERIOD`,
 `PID_GAIN_COMPARISON`, `PID_GAIN_SAVE` and `PID_GAIN_CONFIG` log lines retain trial
 parameters, context, provenance and outcomes. Log retention must be configured by
 the collector; Prometheus does not retain these text log lines. Intermediate

@@ -1,0 +1,51 @@
+# Opt-in overlay for main-floor-hvac.yaml. Load this repository's NEW
+# component code first; the old pinned component does not support gain_learning.
+# This overlay extends the existing `hvac` climate ID.
+# The component already receives the room/fused temperature; do not wire it again.
+
+sensor:
+  - platform: homeassistant
+    id: learning_outdoor_raw
+    entity_id: sensor.outside_temperature
+    internal: true
+  - platform: template
+    id: learning_outdoor_celsius
+    internal: true
+    unit_of_measurement: "°C"
+    update_interval: 10s
+    lambda: |-
+      const float value = id(learning_outdoor_raw).state;
+      const auto &unit = id(learning_outdoor_unit).state;
+      if (!std::isfinite(value)) return NAN;
+      if (unit == "°C") return value;
+      if (unit == "°F") return (value - 32.f) * (5.f / 9.f);
+      return NAN;  // Never guess units or substitute zero for missing weather.
+
+text_sensor:
+  - platform: homeassistant
+    id: learning_outdoor_unit
+    entity_id: sensor.outside_temperature
+    attribute: unit_of_measurement
+    internal: true
+
+binary_sensor:
+  - platform: homeassistant
+    id: learning_fireplace
+    entity_id: binary_sensor.living_room_living_room_fireplace_power
+    internal: true
+  - platform: homeassistant
+    id: learning_hailee_operating
+    entity_id: binary_sensor.hailee_s_bedroom_operating
+    internal: true
+  - platform: homeassistant
+    id: learning_primary_operating
+    entity_id: binary_sensor.primary_bedroom_operating
+    internal: true
+
+climate:
+  - id: !extend hvac
+    gain_learning:
+      enabled: true
+      outdoor_temperature_sensor: learning_outdoor_celsius
+      fireplace_active_sensor: learning_fireplace
+      other_units_operating: [learning_hailee_operating, learning_primary_operating]

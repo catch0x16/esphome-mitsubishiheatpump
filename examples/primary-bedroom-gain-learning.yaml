@@ -1,7 +1,7 @@
 # Opt-in overlay for primary-bedroom-hvac.yaml. Load this repository's NEW
 # component code first; the old pinned component does not support gain_learning.
-# Include this overlay in Primary Bedroom ONLY for the initial rollout.
-# It uses the existing `hvac` ID and bedroom fusion global from base-hvac-cassette.
+# This overlay extends the existing `hvac` climate ID.
+# The component already receives the room/fused temperature; do not wire it again.
 
 sensor:
   - platform: homeassistant
@@ -20,12 +20,6 @@ sensor:
       if (unit == "°C") return value;
       if (unit == "°F") return (value - 32.f) * (5.f / 9.f);
       return NAN;  // Never guess units or substitute zero for missing weather.
-  - platform: template
-    id: learning_fusion_weight
-    internal: true
-    unit_of_measurement: "%"
-    update_interval: 10s
-    lambda: return id(fusion_wall_weight_g) * 100.f;
 
 text_sensor:
   - platform: homeassistant
@@ -40,10 +34,6 @@ binary_sensor:
     entity_id: binary_sensor.living_room_living_room_fireplace_power
     internal: true
   - platform: homeassistant
-    id: learning_context_valid
-    entity_id: binary_sensor.living_room_living_room_fireplace_state_valid
-    internal: true
-  - platform: homeassistant
     id: learning_hailee_operating
     entity_id: binary_sensor.hailee_s_bedroom_operating
     internal: true
@@ -56,9 +46,6 @@ climate:
   - id: !extend hvac
     gain_learning:
       enabled: true
-      mode: heat
-      outdoor_temperature: learning_outdoor_celsius
-      external_heat: learning_fireplace
-      context_valid: learning_context_valid
-      fusion_weight: learning_fusion_weight
+      outdoor_temperature_sensor: learning_outdoor_celsius
+      fireplace_active_sensor: learning_fireplace
       other_units_operating: [learning_hailee_operating, learning_main_operating]

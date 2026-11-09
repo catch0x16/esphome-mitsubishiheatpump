@@ -151,6 +151,9 @@ void PidGainLearner::observe(const Sample &s, uint32_t now) {
     const double dt = scored_ms/1000.;
     // Derive exposure from integer elapsed time, rather than accumulating
     // floating-point intervals: equal event counts must have equal denominators.
+    period_.fireplace_context = s.fireplace_context;
+    period_.fusion_context = s.fusion_context;
+    period_.others_context = s.others_context;
     period_.seconds = (std::min(elapsed_ms_, end_ms)-config_.settling_ms)/1000.;
     period_.over += std::max(0.f, over)*dt;
     period_.absolute += std::fabs(over)*dt;
@@ -182,17 +185,21 @@ void PidGainLearner::add(Outcome &a, const Outcome &b) {
   a.others += b.others; a.other_0 += b.other_0; a.other_1 += b.other_1;
   a.fusion += b.fusion; a.fusion_mean += b.fusion_mean;
   a.observable_seconds += b.observable_seconds; a.operating_seconds += b.operating_seconds;
+  a.fireplace_context = b.fireplace_context; a.fusion_context = b.fusion_context; a.others_context = b.others_context;
   a.shutdowns += b.shutdowns; a.peak = std::max(a.peak, b.peak);
 }
 bool PidGainLearner::comparable(const Outcome &a, const Outcome &b) const {
   return a.seconds > 0 && b.seconds > 0 &&
     std::fabs(mean(a.outdoor,a.seconds)-mean(b.outdoor,b.seconds)) <= config_.outdoor_pair_difference &&
-    std::fabs(mean(a.fireplace,a.seconds)-mean(b.fireplace,b.seconds)) <= config_.context_pair_difference &&
-    std::fabs(mean(a.others,a.seconds)-mean(b.others,b.seconds)) <= config_.context_pair_difference &&
-    std::fabs(mean(a.other_0,a.seconds)-mean(b.other_0,b.seconds)) <= config_.context_pair_difference &&
-    std::fabs(mean(a.other_1,a.seconds)-mean(b.other_1,b.seconds)) <= config_.context_pair_difference &&
-    std::fabs(mean(a.fusion_mean,a.seconds)-mean(b.fusion_mean,b.seconds)) <= 5.f &&
-    std::fabs(a.fusion/a.seconds-b.fusion/b.seconds) <= .01 &&
+    a.fireplace_context == b.fireplace_context && a.fusion_context == b.fusion_context &&
+    a.others_context == b.others_context &&
+    (!a.fireplace_context || std::fabs(mean(a.fireplace,a.seconds)-mean(b.fireplace,b.seconds)) <= config_.context_pair_difference) &&
+    (!a.others_context ||
+      (std::fabs(mean(a.other_0,a.seconds)-mean(b.other_0,b.seconds)) <= config_.context_pair_difference &&
+       std::fabs(mean(a.other_1,a.seconds)-mean(b.other_1,b.seconds)) <= config_.context_pair_difference)) &&
+    (!a.fusion_context ||
+      (std::fabs(mean(a.fusion_mean,a.seconds)-mean(b.fusion_mean,b.seconds)) <= 5.f &&
+       std::fabs(a.fusion/a.seconds-b.fusion/b.seconds) <= .01)) &&
     a.observable_seconds*1000 >= config_.observable_ms && b.observable_seconds*1000 >= config_.observable_ms;
 }
 bool PidGainLearner::improved(const Outcome &a, const Outcome &b) const {
@@ -337,4 +344,18 @@ void PidGainLearner::saved(bool success, uint32_t now) {
 float PidGainLearner::progress() const {
   const float required = confirming() ? config_.confirmation_pairs : config_.discovery_pairs;
   return std::min(1.f, evidence_.pairs/required);
+}
+
+PidGainProfiles::PidGainProfiles(PidGainLearner::Gains heat, PidGainLearner::Gains cool,
+    const PidGainLearner::Config &config, uint32_t fingerprint, uint32_t seed, float span)
+    : learners_{{PidGainLearner(heat, config, fingerprint ^ 0x48454154u, seed, span),
+                 PidGainLearner(cool, config, fingerprint ^ 0x434f4f4cu, seed ^ 0x434f4f4cu, span)}} {}
+
+PidGainLearner *PidGainProfiles::select(Mode mode) {
+  const int next = mode == Mode::HEAT ? 0 : mode == Mode::COOL ? 1 : -1;
+  if (next != selected_) {
+    if (selected_ >= 0) learners_[selected_].pause();
+    selected_ = next;
+  }
+  return selected_ < 0 ? nullptr : &learners_[selected_];
 }

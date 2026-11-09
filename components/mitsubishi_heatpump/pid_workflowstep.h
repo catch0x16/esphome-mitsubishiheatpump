@@ -40,7 +40,7 @@ namespace workflow {
                 const float maxAdjustmentOver
             );
         
-            void attach_learner(PidGainLearner *learner, bool heating);
+            void attach_learner(PidGainLearner *learner, bool heating, PidGainLearner::Gains configured);
             void set_learning_sample(const PidGainLearner::Sample &sample, bool selected) {
                 if (selected != learning_mode_selected_) {
                     adaptivePID->reset_history();

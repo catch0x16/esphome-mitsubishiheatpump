@@ -828,20 +828,22 @@ void MitsubishiHeatPump::setup() {
     }
 
     if (gain_learning_configured_) {
-        PidGainLearner::Gains initial{{kp_, ki_, kd_}};
-        gain_learner_ = new (std::nothrow) PidGainLearner(initial, gain_learning_config_,
-            gain_learning_fingerprint_, esphome::random_uint32(), (max_temp-min_temp)*.5f);
-        if (!gain_learner_) { this->mark_failed(); return; }
-        learning_storage_ = global_preferences->make_preference<PidGainLearner::Record>(
-            this->get_object_id_hash() ^ 0x50474c01u, true);
-        PidGainLearner::Record record{};
-        if (learning_storage_.load(&record)) {
-            ESP_LOGI(TAG, "PID learned-gain restore: %s", gain_learner_->restore(record) ? "compatible" : "incompatible; using YAML");
+        gain_profiles_ = new (std::nothrow) PidGainProfiles(learning_initial_[0],learning_initial_[1],
+            gain_learning_config_,gain_learning_fingerprint_,esphome::random_uint32(),(max_temp-min_temp)*.5f);
+        if (!gain_profiles_) { this->mark_failed(); return; }
+        for (unsigned i=0;i<2;++i) {
+            learning_storage_[i] = global_preferences->make_preference<PidGainLearner::Record>(
+                this->get_object_id_hash() ^ (0x50474c01u+i),true);
+            PidGainLearner::Record record{};
+            if (learning_storage_[i].load(&record)) {
+                ESP_LOGI(TAG,"PID restore mode=%s: %s",i==0?"heat":"cool",
+                    gain_profiles_->at(i).restore(record)?"compatible":"incompatible; using YAML");
+            }
         }
-        ESP_LOGI(TAG, "PID_GAIN_CONFIG fingerprint=%08x mode=%s period_ms=%u settling_ms=%u discovery_pairs=%u confirmation_pairs=%u",
-            gain_learning_fingerprint_,gain_learning_heating_ ? "heat" : "cool",gain_learning_config_.period_ms,
-            gain_learning_config_.settling_ms,gain_learning_config_.discovery_pairs,gain_learning_config_.confirmation_pairs);
-        pidWorkflowStep->attach_learner(gain_learner_, gain_learning_heating_);
+        ESP_LOGI(TAG,"PID_GAIN_CONFIG fingerprint=%08x modes=automatic_heat_cool period_ms=%u settling_ms=%u discovery_pairs=%u confirmation_pairs=%u",
+            gain_learning_fingerprint_,gain_learning_config_.period_ms,gain_learning_config_.settling_ms,
+            gain_learning_config_.discovery_pairs,gain_learning_config_.confirmation_pairs);
+        pidWorkflowStep->attach_learner(nullptr,true,{{kp_,ki_,kd_}});
     }
 
     // create various setpoint persistence:
@@ -937,8 +939,9 @@ void MitsubishiHeatPump::update_setpoint(const float value) {
 }
 
 void MitsubishiHeatPump::run_workflows() {
+    if (gain_profiles_) select_gain_learning_profile_();
     if (!this->isComponentActive()) {
-        if (gain_learner_) {
+        if (gain_profiles_) {
             pidWorkflowStep->pause_learning();
             service_gain_learning_();
         }
@@ -948,110 +951,133 @@ void MitsubishiHeatPump::run_workflows() {
 
     ESP_LOGI(TAG, "Run workflows - currentTemperature: %.2f", this->current_temperature);
     this->hysterisisWorkflowStep->run(this->current_temperature, this->dsm);
-    if (gain_learner_) pidWorkflowStep->set_learning_sample(learning_sample_(),
-        this->mode == (gain_learning_heating_ ? climate::CLIMATE_MODE_HEAT : climate::CLIMATE_MODE_COOL));
+    if (gain_learner_) pidWorkflowStep->set_learning_sample(learning_sample_(),true);
     this->pidWorkflowStep->run(this->current_temperature, this->dsm);
-    if (gain_learner_) service_gain_learning_();
+    if (gain_profiles_) service_gain_learning_();
+}
+
+void MitsubishiHeatPump::select_gain_learning_profile_() {
+    const auto mode = this->mode == climate::CLIMATE_MODE_HEAT ? PidGainProfiles::Mode::HEAT :
+        this->mode == climate::CLIMATE_MODE_COOL ? PidGainProfiles::Mode::COOL : PidGainProfiles::Mode::OTHER;
+    auto *selected = gain_profiles_->select(mode);
+    if (selected == gain_learner_) return;
+    gain_learner_ = selected;
+    const int index = gain_profiles_->selected_index();
+    const PidGainLearner::Gains fallback{{kp_,ki_,kd_}};
+    pidWorkflowStep->attach_learner(selected,index==0,index>=0?learning_initial_[index]:fallback);
+}
+
+const char *MitsubishiHeatPump::learning_input_problem_() const {
+    auto *outdoor = learning_outdoor_ ? learning_outdoor_ : device_status_outside_temperature;
+    if (!outdoor || !outdoor->has_state() || !std::isfinite(outdoor->state))
+        return "waiting_for_outdoor_temperature";
+    if (learning_fireplace_ && !learning_fireplace_->has_state()) return "waiting_for_fireplace_state";
+    if (learning_fireplace_valid_ && (!learning_fireplace_valid_->has_state() || !learning_fireplace_valid_->state))
+        return "waiting_for_fireplace_state";
+    if (learning_fusion_ && (!learning_fusion_->has_state() || !std::isfinite(learning_fusion_->state) ||
+        learning_fusion_->state<0 || learning_fusion_->state>100)) return "waiting_for_fusion_wall_weight";
+    for (auto *source:learning_others_)
+        if (!source || !source->has_state()) return "waiting_for_other_unit";
+#ifdef USE_API
+    if (!api::global_api_server || !api::global_api_server->is_connected_with_state_subscription())
+        return "waiting_for_home_assistant";
+#else
+    return "waiting_for_home_assistant";
+#endif
+    return nullptr;
 }
 
 PidGainLearner::Sample MitsubishiHeatPump::learning_sample_() {
     PidGainLearner::Sample s;
-    s.enabled = gain_learning_enabled_ && this->mode ==
-        (gain_learning_heating_ ? climate::CLIMATE_MODE_HEAT : climate::CLIMATE_MODE_COOL);
-    s.valid = learning_outdoor_ && learning_outdoor_->has_state() &&
-        learning_external_heat_ && learning_external_heat_->has_state() &&
-        learning_context_ && learning_context_->has_state() && learning_context_->state;
-#ifdef USE_API
-    s.valid &= api::global_api_server && api::global_api_server->is_connected_with_state_subscription();
-#else
-    s.valid = false;
-#endif
-    s.outdoor = learning_outdoor_ ? learning_outdoor_->state : NAN;
-    s.external_heat = learning_external_heat_ && learning_external_heat_->state;
+    s.enabled = gain_learning_enabled_;
+    s.valid = learning_input_problem_()==nullptr;
+    auto *outdoor = learning_outdoor_ ? learning_outdoor_ : device_status_outside_temperature;
+    s.outdoor = outdoor ? outdoor->state : NAN;
+    s.fireplace_context = learning_fireplace_ != nullptr;
+    s.external_heat = learning_fireplace_ && learning_fireplace_->state;
+    s.fusion_context = learning_fusion_ != nullptr;
+    s.fusion_weight = learning_fusion_ ? learning_fusion_->state : 100.f;
+    s.others_context = !learning_others_.empty();
     s.hysteresis_off = hysterisisOff_;
-    s.fusion_weight = 100.f;
-    if (learning_fusion_) {
-        s.valid &= learning_fusion_->has_state() && learning_fusion_->state >= 0 && learning_fusion_->state <= 100;
-        s.fusion_weight = learning_fusion_->state;
+    float others=0;
+    unsigned index=0;
+    for (auto *source:learning_others_) {
+        const float state = source && source->state ? 1.f:0.f;
+        others+=state;
+        if (index++==0) s.other_0=state; else s.other_1=state;
     }
-    float others = 0;
-    unsigned index = 0;
-    for (auto *sensor : learning_others_) {
-        s.valid &= sensor && sensor->has_state();
-        if (sensor && sensor->state) others += 1.f;
-        if (index++ == 0) s.other_0 = sensor && sensor->state ? 1.f : 0.f;
-        else s.other_1 = sensor && sensor->state ? 1.f : 0.f;
-    }
-    s.other_duty = learning_others_.empty() ? 0.f : others/learning_others_.size();
+    s.other_duty=learning_others_.empty()?0.f:others/learning_others_.size();
     return s;
 }
 
 void MitsubishiHeatPump::service_gain_learning_() {
     const uint32_t now = esphome::millis();
-    if (gain_learner_->needs_save() && (!learning_save_attempted_ || uint32_t(now-learning_last_save_) >= 60000)) {
-        learning_save_attempted_ = true;
-        learning_last_save_ = now;
-        const auto record = gain_learner_->record();
-        bool saved = learning_storage_.save(&record) && global_preferences->sync();
-        if (saved) {
-            PidGainLearner::Record readback{};
-            saved = learning_storage_.load(&readback) && readback.magic == record.magic &&
-                readback.fingerprint == record.fingerprint && readback.revision == record.revision &&
-                readback.confirmations == record.confirmations && readback.accepted == record.accepted;
+    for (unsigned index=0;index<2;++index) {
+        auto *learner=&gain_profiles_->at(index);
+        const char *profile_name=index==0?"heat":"cool";
+        if (learner->needs_save() && (!learning_save_attempted_[index] || uint32_t(now-learning_last_save_[index]) >= 60000)) {
+            learning_save_attempted_[index] = true;
+            learning_last_save_[index] = now;
+            const auto record = learner->record();
+            bool saved = learning_storage_[index].save(&record) && global_preferences->sync();
+            if (saved) {
+                PidGainLearner::Record readback{};
+                saved = learning_storage_[index].load(&readback) && readback.magic == record.magic &&
+                    readback.fingerprint == record.fingerprint && readback.revision == record.revision &&
+                    readback.confirmations == record.confirmations && readback.accepted == record.accepted;
+            }
+            learner->saved(saved, now);
+            ESP_LOGI(TAG, "PID_GAIN_SAVE mode=%s revision=%u saved=%s result=%s", profile_name,record.revision,
+                     YESNO(saved), learner->result());
         }
-        gain_learner_->saved(saved, now);
-        ESP_LOGI(TAG, "PID_GAIN_SAVE revision=%u saved=%s result=%s", record.revision,
-                 YESNO(saved), gain_learner_->result());
-    }
-    if (gain_learner_->completed_periods() != learning_last_period_) {
-        learning_last_period_ = gain_learner_->completed_periods();
-        const auto &p = gain_learner_->last_period();
-        const auto b = gain_learner_->last_candidate_gains();
-        const auto a = gain_learner_->last_reference_gains();
-        const double seconds = p.seconds > 0 ? p.seconds : 1;
-        ESP_LOGI(TAG, "PID_GAIN_PERIOD proposal=%u completed=%u arm=%s A=[%.9g,%.9g,%.9g] B=[%.9g,%.9g,%.9g] seconds=%.0f shutdowns=%u over=%.6g error=%.6g recovery=%.6g peak=%.6g outdoor=%.3f fireplace=%.3f other0=%.3f other1=%.3f fusion_mean=%.3f fusion_movement=%.3f observable=%.0f",
-            gain_learner_->proposals(), learning_last_period_,gain_learner_->last_period_candidate() ? "B" : "A",
-            a[0],a[1],a[2],b[0],b[1],b[2],p.seconds,p.shutdowns,p.over/seconds,p.absolute/seconds,
-            p.recovery/seconds,p.peak,p.outdoor/seconds,p.fireplace/seconds,p.other_0/seconds,p.other_1/seconds,
-            p.fusion_mean/seconds,p.fusion,p.observable_seconds);
-        const auto &e = gain_learner_->last_evidence();
-        ESP_LOGI(TAG, "PID_GAIN_COMPARISON phase=%s pairs=%u attempts=%u wins=%u losses=%u p=%.9g alpha=%.9g A_seconds=%.0f B_seconds=%.0f A_shutdowns=%u B_shutdowns=%u result=%s",
-            gain_learner_->last_pair_confirmation() ? "confirm" : "discover",e.pairs,e.attempts,
-            e.wins,e.losses,e.p,e.alpha,e.reference.seconds,e.candidate.seconds,
-            e.reference.shutdowns,e.candidate.shutdowns,gain_learner_->result());
+        if (learner->completed_periods() != learning_last_period_[index]) {
+            learning_last_period_[index] = learner->completed_periods();
+            const auto &p = learner->last_period();
+            const auto b = learner->last_candidate_gains();
+            const auto a = learner->last_reference_gains();
+            const double seconds = p.seconds > 0 ? p.seconds : 1;
+            ESP_LOGI(TAG, "PID_GAIN_PERIOD mode=%s proposal=%u completed=%u arm=%s A=[%.9g,%.9g,%.9g] B=[%.9g,%.9g,%.9g] seconds=%.0f shutdowns=%u over=%.6g error=%.6g recovery=%.6g peak=%.6g outdoor=%.3f fireplace=%.3f other0=%.3f other1=%.3f fusion_mean=%.3f fusion_movement=%.3f observable=%.0f",
+                profile_name,learner->proposals(), learning_last_period_[index],learner->last_period_candidate() ? "B" : "A",
+                a[0],a[1],a[2],b[0],b[1],b[2],p.seconds,p.shutdowns,p.over/seconds,p.absolute/seconds,
+                p.recovery/seconds,p.peak,p.outdoor/seconds,p.fireplace_context?p.fireplace/seconds:-1.,p.other_0/seconds,p.other_1/seconds,
+                p.fusion_context?p.fusion_mean/seconds:-1.,p.fusion,p.observable_seconds);
+            const auto &e = learner->last_evidence();
+            ESP_LOGI(TAG, "PID_GAIN_COMPARISON mode=%s phase=%s pairs=%u attempts=%u wins=%u losses=%u p=%.9g alpha=%.9g A_seconds=%.0f B_seconds=%.0f A_shutdowns=%u B_shutdowns=%u result=%s",
+                profile_name,learner->last_pair_confirmation() ? "confirm" : "discover",e.pairs,e.attempts,
+                e.wins,e.losses,e.p,e.alpha,e.reference.seconds,e.candidate.seconds,
+                e.reference.shutdowns,e.candidate.shutdowns,learner->result());
+        }
     }
     if (uint32_t(now-learning_last_publish_) < 10000) return;
     learning_last_publish_ = now;
-    const auto gains = gain_learner_->accepted_gains();
-    const auto active = pidWorkflowStep->active_gains();
-    for (unsigned i = 0; i < 4; ++i)
-        if (learning_diagnostics_[i]) learning_diagnostics_[i]->publish_state(i < 3 ? active[i] : gain_learner_->revision());
+    const auto active=pidWorkflowStep->active_gains();
+    for (unsigned i=0;i<4;++i)
+        if (learning_diagnostics_[i]) learning_diagnostics_[i]->publish_state(i<3?active[i]:
+            gain_learner_?float(gain_learner_->revision()):NAN);
     if (learning_status_) {
-        const auto sample = learning_sample_();
-        const char *state = !gain_learning_enabled_ ? "frozen" : !sample.valid ? "waiting_for_context" :
-            !isComponentActive() ? "paused" :
-            this->mode != (gain_learning_heating_ ? climate::CLIMATE_MODE_HEAT : climate::CLIMATE_MODE_COOL) ? "paused_other_mode" : gain_learner_->result();
+        const auto heat=gain_profiles_->at(0).accepted_gains();
+        const auto cool=gain_profiles_->at(1).accepted_gains();
+        const char *problem=learning_input_problem_();
+        const char *state=!gain_learning_enabled_?"frozen":!gain_learner_?"paused_non_temperature_mode":
+            problem?problem:gain_learner_->result();
+        const char *mode=gain_profiles_->selected_index()==0?"heat":gain_profiles_->selected_index()==1?"cool":"inactive";
         char status[256];
-        std::snprintf(status,sizeof(status),"%s; revision=%u; %s %s; pairs=%u; YAML kp: %.9g, ki: %.9g, kd: %.9g",
-            state,gain_learner_->revision(), gain_learner_->confirming() ? "confirmation" : "discovery",
-            gain_learner_->testing_candidate() ? "B" : "A",gain_learner_->evidence().pairs,gains[0],gains[1],gains[2]);
-        const auto &verified = gain_learner_->verified_evidence();
-        if (verified.pairs && verified.reference.seconds > 0 && verified.candidate.seconds > 0) {
-            const size_t used = std::strlen(status);
-            std::snprintf(status+used,sizeof(status)-used,
-                "; last p=%.3g A(off,over,err,rec)=%u,%.3f,%.3f,%.3f B=%u,%.3f,%.3f,%.3f",
-                verified.p,verified.reference.shutdowns,verified.reference.over/verified.reference.seconds,
-                verified.reference.absolute/verified.reference.seconds,verified.reference.recovery/verified.reference.seconds,
-                verified.candidate.shutdowns,verified.candidate.over/verified.candidate.seconds,
-                verified.candidate.absolute/verified.candidate.seconds,verified.candidate.recovery/verified.candidate.seconds);
-        }
+        std::snprintf(status,sizeof(status),"%s %s %s pairs=%u; YAML {heat: {kp: %.9g, ki: %.9g, kd: %.9g}, cool: {kp: %.9g, ki: %.9g, kd: %.9g}}; revisions=%u/%u",
+            mode,state,gain_learner_&&gain_learner_->testing_candidate()?"B":"A",
+            gain_learner_?gain_learner_->evidence().pairs:0,
+            heat[0],heat[1],heat[2],cool[0],cool[1],cool[2],
+            gain_profiles_->at(0).revision(),gain_profiles_->at(1).revision());
         learning_status_->publish_state(status);
     }
 }
 
 void MitsubishiHeatPump::reset_pid_learning() {
-    if (gain_learner_) { gain_learner_->reset(); learning_save_attempted_ = false; }
+    if (!gain_profiles_) return;
+    for (unsigned i=0;i<2;++i) { gain_profiles_->at(i).reset(); learning_save_attempted_[i]=false; }
 }
 void MitsubishiHeatPump::rollback_pid_learning() {
-    if (gain_learner_) { gain_learner_->rollback(); learning_save_attempted_ = false; }
+    if (gain_learner_) {
+        gain_learner_->rollback();
+        learning_save_attempted_[gain_profiles_->selected_index()]=false;
+    }
 }

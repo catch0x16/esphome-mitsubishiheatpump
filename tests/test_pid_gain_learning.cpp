@@ -26,6 +26,7 @@ struct Fixture {
     Learner::Sample s;
     bool b = tuner.testing_candidate();
     s.valid = s.enabled = s.power = s.operating = true;
+    s.fireplace_context=s.fusion_context=s.others_context=true;
     s.target = 20;
     s.temperature = 20 + ((b && benefit) ? .15f : .4f);
     if (b && bad_recovery) s.temperature = 18;
@@ -254,6 +255,7 @@ void synthetic_closed_loop(bool heating, float lag=180, float loss=.0005f, float
       return std::round(std::max(low,std::min(high,pid.preview(v[0],v[1],v[2])))*2)/2;
     };
     Learner::Sample s;
+    s.fireplace_context=s.fusion_context=s.others_context=true;
     s.valid=step%3000!=2999; s.enabled=true;s.heating=heating;
     s.temperature=fused;s.target=target;s.outdoor=outdoor;s.fusion_weight=weight;
     s.power=power;s.operating=power&&std::fabs(heat_rate)>.001;s.external_heat=fire;
@@ -317,7 +319,78 @@ void exact_scoring_with_scheduler_jitter() {
   assert(completed==4);
 }
 
+void independent_heat_and_cool_profiles() {
+  PidGainProfiles profiles({{20,2,30}},{{12,1,5}},Fixture::config(),123);
+  auto *heat=profiles.select(PidGainProfiles::Mode::HEAT);
+  assert(heat==&profiles.at(0));
+  assert(heat->accepted_gains()[0]==20);
+  auto *cool=profiles.select(PidGainProfiles::Mode::COOL);
+  assert(cool==&profiles.at(1));
+  assert(cool->accepted_gains()[0]==12);
+  auto heat_record=heat->record();
+  auto cool_record=cool->record();
+  assert(heat_record.fingerprint!=cool_record.fingerprint);
+  assert(!heat->restore(cool_record));
+  assert(profiles.select(PidGainProfiles::Mode::OTHER)==nullptr);
+  assert(profiles.selected_index()==-1);
+  assert(profiles.select(PidGainProfiles::Mode::HEAT)==heat);
+  assert(profiles.select(PidGainProfiles::Mode::HEAT)==heat);
+
+  uint32_t now=1000;
+  for (unsigned i=0;i<100 && !heat->testing_candidate();++i) {
+    Learner::Sample sample;
+    sample.valid=sample.enabled=sample.power=true;
+    sample.temperature=20.2f;sample.target=20;sample.outdoor=10;
+    sample.command_a=20;sample.command_b=20.5f;
+    sample.unit_setpoint=heat->testing_candidate()?20.5f:20;
+    heat->observe(sample,now+=100);
+  }
+  assert(heat->testing_candidate());
+  profiles.select(PidGainProfiles::Mode::COOL);
+  assert(heat->gains()==heat->accepted_gains());
+  assert(cool->gains()==cool->accepted_gains());
+  profiles.select(PidGainProfiles::Mode::HEAT);
+  assert(heat->gains()==heat->accepted_gains());
+  for (unsigned i=0;i<20000 && heat->stage()!=Stage::SAVE_PROMOTION;++i) {
+    Learner::Sample sample;
+    const bool trial=heat->testing_candidate();
+    sample.valid=sample.enabled=sample.power=sample.operating=true;
+    sample.target=20;sample.temperature=trial?20.15f:20.4f;sample.outdoor=10;
+    sample.command_a=20;sample.command_b=20.5f;sample.unit_setpoint=trial?20.5f:20;
+    heat->observe(sample,now+=100);
+    if (heat->stage()==Stage::SAVE_BUDGET) heat->saved(true,now);
+  }
+  assert(heat->stage()==Stage::SAVE_PROMOTION);
+  heat->saved(true,now);
+  assert(heat->revision()==1);
+  assert(heat->accepted_gains()[0]<20);
+  profiles.select(PidGainProfiles::Mode::COOL);
+  // Heating's promotion changes neither cooling's gains nor its evidence budget.
+  assert(cool->record().confirmations==0);
+  assert(cool->revision()==0);
+  assert(cool->accepted_gains()[0]==12);
+  assert(heat->restore(heat->record()));
+  assert(!cool->restore(heat->record()));
+  profiles.select(PidGainProfiles::Mode::HEAT);
+  assert(heat->gains()==heat->accepted_gains());
+}
+
+void omitted_metadata_is_not_reported_as_measured_off() {
+  Fixture f;
+  auto s=f.frame();
+  s.fireplace_context=s.fusion_context=s.others_context=false;
+  for (unsigned i=0;i<100 && !f.tuner.completed_periods();++i) {
+    s.unit_setpoint=f.tuner.testing_candidate()?s.command_b:s.command_a;
+    f.tuner.observe(s,f.now+=100);
+  }
+  assert(!f.tuner.last_period().fireplace_context);
+  assert(!f.tuner.last_period().fusion_context);
+  assert(!f.tuner.last_period().others_context);
+}
+
 int main() {
+  independent_heat_and_cool_profiles();
+  omitted_metadata_is_not_reported_as_measured_off();
   exact_scoring_with_scheduler_jitter();
   assert(Learner::sign_probability(0,0)==1);
   assert(std::fabs(Learner::sign_probability(10,2)-.019287109375)<1e-12);
