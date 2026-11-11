@@ -119,19 +119,36 @@ that 30 seconds is the best filter for the real sensors.
 
 ## Candidate generation and command bounds
 
-A deterministic search schedule tests six local coordinate directions, four wider
-coordinated alternatives (including opposing P/I changes), and six wider
-coordinate alternatives, followed by rechecks of the configured and previous
-accepted triplets. These rechecks can themselves become confirmed replacements
-if the current gains no longer perform better. Randomness selects A/B order, not unbounded gain jumps.
-Default local changes are 10%; wider proportional changes are 50%. Nonzero seeds
-allow exploration from zero: P=1, I=0.01, D=30, multiplied by the selected step.
+A deterministic schedule considers six coordinate directions, four wider
+coordinated alternatives (including opposing P/I changes), six wider coordinate
+alternatives, and rechecks of the configured and previous accepted triplets.
+Randomness selects A/B order, not unbounded gain jumps.
 
-Alternate wider-coordinate sweeps use command-scale displacements calculated from
-the existing output mapping: approximately a quarter-degree raw setpoint offset
-at a 0.5°C error, integral accumulator of 1, or slope of 0.1°C/min. These can be much
-larger percentage changes in raw gains than local steps. They are exploration
-sizes, not identified process settings or textbook tuning formulas.
+Before starting discovery, the learner sizes an alternative using a read-only
+snapshot of the actual PID error, integral accumulator and filtered derivative.
+It uses exactly the controller's tanh mapping, output limits, raw adjustment
+limits and 0.5°C command rounding. A bounded search finds the first different
+rounded command along the selected gain direction. The initial command difference
+must be exactly one native step (0.5°C), within `max_command_difference`. A small
+percentage change is never timed as an experiment merely because its gain values
+differ. A distinguishable command does not establish a distinguishable thermal
+response or measured heating power.
+
+`local_step` (default 0.10) seeds the numerical search bracket; it is no longer a
+fixed percentage change applied to the equipment. `wider_step` (default 0.50)
+also permits farther alternatives within the same one-step command difference.
+Direction proportions use nonzero scales P=1, I=0.01, D=30 when gains are near zero.
+Configured/previous triplet rechecks retain their exact values and are deferred
+unless they currently produce a one-step command difference.
+
+Each changed term must have useful excitation: absolute error at least 0.1°C for
+P, absolute integral at least 0.1°C·s for I, and absolute filtered slope at least
+0.1°C/min for D. These are engineering eligibility thresholds, not comfort limits
+or identified process parameters. Flat temperature must not trigger a huge D
+increase solely to manufacture command separation. Directions that cannot produce
+one step within configured gain and command bounds are deferred; another direction
+is considered without spending a trial period or confirmation budget. No feasible
+alternative leaves the accepted gains active with `waiting_for_informative_command`.
 
 Before applying any candidate, compare its rounded setpoint with the accepted
 controller's rounded setpoint using the same current PID state and limits. A
@@ -141,9 +158,15 @@ It limits the incremental command effect relative to accepted gains; normal
 scheduled target changes remain possible. Existing rounding can put packet
 readback half a step beyond a raw offset limit, as it did before this feature.
 
-A gain change whose commands never differ observably is inconclusive. The learner
-moves to another candidate rather than declaring the gain direction optimal or
-waiting through dozens of identical commands. Confirmation requires actual
+Each arm starts only when the unit is enabled and the fixed candidate produces
+command separation. Waiting states include `waiting_for_enabled_unit`,
+`waiting_for_command_separation`, and `waiting_for_recovery`. Waiting is unscored
+and accepted gains remain active. A frozen candidate is never resized between
+arms or during confirmation. If an arm cannot start within one `period` duration,
+the candidate becomes `inconclusive_start_timeout` and the search can move on.
+Once an arm starts, power-off/coasting time and hysteresis shutdowns stay in its
+normal outcome scoring; they do not pause the clock. A gain change whose commands
+lose observable exposure is inconclusive, not proof that its direction is optimal. Confirmation requires actual
 readback consistent with the selected arm and observable command differences
 while the unit is enabled.
 
@@ -165,7 +188,7 @@ Default engineering settings, chosen before field testing:
 | Comparable confirmation pairs (`confirmation_pairs`) | 24 |
 | Attempt limit per phase (`max_pair_attempts`) | 48 pairs |
 | Rest after promotion (`hold_time`) | 24 hours |
-| Local / wider fractional step | 10% / 50% |
+| Local search bracket / wider within-step alternative | 0.10 / 0.50 |
 | Minimum meaningful relative improvement | 5% |
 | Mean error/recovery guard | reference × 1.05 + 0.02°C |
 | Peak overshoot guard | reference peak + 0.10°C |
@@ -233,7 +256,7 @@ learner reports a saved promotion. Failures keep the old accepted gains active
 and retry no more frequently than once a minute.
 
 The record contains configured, accepted and previous gains, revision, proposal
-and confirmation counters, PRNG state and the last accepted evidence summary.
+and confirmation counters, next search direction, PRNG state and the last accepted evidence summary.
 Restore checks schema, finite/bounded gains and a fingerprint of the learner/PID
 implementation, input identities, learning settings, mode and control limits.
 Heating and cooling have separate records and mode-specific fingerprints; a record
@@ -296,12 +319,14 @@ esphome compile tests/gain-learning-primary-example.yaml
 
 Tests exercise fresh confirmation, failed confirmation, no-response trials, context
 mismatch, bounds, missing data, rollover, save failures, restore/copy/reset/rollback,
-PID off/restart behavior, derivative steps, and synthetic heating/cooling with
+PID off/restart behavior, derivative steps, command-sized selection in both modes,
+flat-signal/disabled/clipped deferral, unchanged output mapping, bounded inter-arm
+waiting, fixed candidate gains, continued shutdown/coasting scoring, and synthetic heating/cooling with
 thermal lag, packet quantization, fusion changes and fireplace disturbance. The
 synthetic thermal runs deliberately do not assert that the tuner finds better
 gains in every plant. They check bounded commands and behavior, not real-world
 improvement. Static favorable-response fixtures verify promotion mechanics.
-Older untracked test/tuner files from the reverted implementation are not modified
+Older test/tuner files from the reverted implementation are not modified
 or used by this test command or the new supervisor.
 
 No field improvement is claimed yet. Before enabling more rooms, use the first

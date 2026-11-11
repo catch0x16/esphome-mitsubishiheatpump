@@ -5,6 +5,17 @@
 #include <cstdint>
 #include <cstdio>
 #include <algorithm>
+#include <array>
+
+// A read-only snapshot of the actual controller calculation. The learner uses
+// this same mapping, clipping and packet rounding to size an experiment.
+struct PidCommandState {
+    std::array<float, 3> terms{{0, 0, 0}};
+    float target = 0, output_min = 0, output_max = 0, low = 0, high = 0;
+    bool valid() const;
+    float map_output(float output) const;
+    float command(const std::array<float, 3> &gains) const;
+};
 
 class AdaptivePID {
 public:
@@ -42,6 +53,7 @@ public:
     float kd() const { return _kd; }
     void set_gains(float kp, float ki, float kd);
     float preview(float kp, float ki, float kd) const;
+    PidCommandState command_state(float low, float high) const;
     void set_derivative_filter_seconds(float seconds) { _derivative_filter_seconds = std::max(0.0f, seconds); }
     void reset_history();
 

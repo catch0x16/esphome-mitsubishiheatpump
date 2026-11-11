@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include "adaptive_pid.h"
 
 // Experimental forward-learning supervisor. No ESPHome dependencies, power
 // switching, temperature forecasting, or claims of global optimality.
@@ -19,8 +20,9 @@ class PidGainLearner {
     Gains minimum{{0, 0, 0}}, maximum{{250, 10, 7200}};
   };
   struct Sample {
+    PidCommandState command_state{};
     float temperature = 0, target = 0, outdoor = 0, fusion_weight = 100;
-    float other_duty = 0, other_0 = 0, other_1 = 0, unit_setpoint = 0, command_a = 0, command_b = 0;
+    float other_duty = 0, other_0 = 0, other_1 = 0, unit_setpoint = 0;
     bool power = false, operating = false, external_heat = false;
     bool fireplace_context = false, fusion_context = false, others_context = false;
     bool valid = false, enabled = false;
@@ -45,13 +47,13 @@ class PidGainLearner {
   };
   struct Record {
     uint32_t magic = 0, fingerprint = 0, revision = 0;
-    uint32_t confirmations = 0, proposals = 0, rng_state = 1;
+    uint32_t confirmations = 0, proposals = 0, rng_state = 1, next_direction = 0;
     Gains configured{}, accepted{}, previous{};
     Evidence evidence{};
   };
 
   PidGainLearner(Gains initial, const Config &config, uint32_t fingerprint,
-                 uint32_t seed = 1, float output_half_span = 3.75f);
+                 uint32_t seed = 1);
   void observe(const Sample &sample, uint32_t now);
   void pause();
   void abort(const char *reason);
@@ -89,7 +91,6 @@ class PidGainLearner {
  private:
   Config config_;
   Gains initial_, accepted_, previous_, candidate_, last_reference_gains_{}, last_candidate_gains_{};
-  float probe_output_ = 6.68f;
   uint32_t fingerprint_, rng_, revision_ = 0, confirmations_ = 0, proposals_ = 0;
   Stage stage_ = Stage::IDLE;
   Evidence evidence_{}, last_evidence_{}, verified_evidence_{};
@@ -98,13 +99,15 @@ class PidGainLearner {
   bool last_period_candidate_ = false, last_pair_confirmation_ = false;
   Sample last_{};
   bool have_sample_ = false, second_ = false, candidate_first_ = false;
-  bool suspended_ = false;
-  uint32_t last_ms_ = 0, elapsed_ms_ = 0, hold_start_ = 0, hold_duration_ = 0;
+  bool suspended_ = false, awaiting_period_ = true, waiting_clock_started_ = false;
+  unsigned next_direction_ = 0;
+  uint32_t last_ms_ = 0, elapsed_ms_ = 0, hold_start_ = 0, hold_duration_ = 0, waiting_since_ = 0;
   unsigned period_number_ = 0;
   const char *result_ = "collecting";
   uint32_t random();
   bool bounded(const Gains &g) const;
-  void start_candidate();
+  bool start_candidate(const PidCommandState &state);
+  bool size_candidate(const PidCommandState &state, unsigned direction, Gains &candidate) const;
   void start_pair();
   void start_period();
   void finish_period(uint32_t now);
@@ -122,7 +125,7 @@ class PidGainProfiles {
   enum class Mode { HEAT, COOL, OTHER };
   PidGainProfiles(PidGainLearner::Gains heat, PidGainLearner::Gains cool,
                  const PidGainLearner::Config &config, uint32_t fingerprint,
-                 uint32_t seed = 1, float output_half_span = 3.75f);
+                 uint32_t seed = 1);
   PidGainLearner *select(Mode mode);
   PidGainLearner &at(unsigned index) { return learners_[index]; }
   int selected_index() const { return selected_; }

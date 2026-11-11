@@ -829,7 +829,7 @@ void MitsubishiHeatPump::setup() {
 
     if (gain_learning_configured_) {
         gain_profiles_ = new (std::nothrow) PidGainProfiles(learning_initial_[0],learning_initial_[1],
-            gain_learning_config_,gain_learning_fingerprint_,esphome::random_uint32(),(max_temp-min_temp)*.5f);
+            gain_learning_config_,gain_learning_fingerprint_,esphome::random_uint32());
         if (!gain_profiles_) { this->mark_failed(); return; }
         for (unsigned i=0;i<2;++i) {
             learning_storage_[i] = global_preferences->make_preference<PidGainLearner::Record>(

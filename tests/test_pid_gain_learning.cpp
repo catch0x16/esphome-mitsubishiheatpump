@@ -10,6 +10,17 @@
 using Learner = PidGainLearner;
 using Stage = Learner::Stage;
 
+// Deterministic command excitation for testing evidence/persistence separately
+// from the plant. Physical controller state is exercised by closed-loop tests.
+PidCommandState evidence_command_state() {
+  PidCommandState state;
+  state.target=20;state.output_min=18;state.output_max=25.5;
+  state.low=18;state.high=22;
+  state.terms={{-.4f,-.5f,-.003f}};
+  return state;
+}
+
+
 struct Fixture {
   static Learner::Config config() {
     Learner::Config c;
@@ -30,8 +41,9 @@ struct Fixture {
     s.target = 20;
     s.temperature = 20 + ((b && benefit) ? .15f : .4f);
     if (b && bad_recovery) s.temperature = 18;
-    s.command_a = 20; s.command_b = no_command ? 20 : 20.5f;
-    s.unit_setpoint = b ? s.command_b : s.command_a;
+    s.command_state=evidence_command_state();
+    if (no_command) s.command_state.low=s.command_state.high=20;
+    s.unit_setpoint=s.command_state.command(b?tuner.candidate_gains():tuner.accepted_gains());
     s.outdoor = mismatch && b ? 18 : 10;
     s.fusion_weight = 75;
     return s;
@@ -69,6 +81,9 @@ void confirmation_and_persistence() {
   assert(restored.restore(record));
   assert(restored.accepted_gains()==record.accepted);
   assert(restored.record().evidence.pairs==24);
+  assert(restored.record().next_direction==record.next_direction);
+  auto invalid_direction=record;invalid_direction.next_direction=18;
+  assert(!restored.restore(invalid_direction));
   // Copying accepted values into YAML keeps compatible history.
   Learner copied(record.accepted,Fixture::config(),123);
   assert(copied.restore(record));
@@ -103,7 +118,9 @@ void guards_and_context() {
   assert(g.tuner.revision()==0);
   Fixture h;
   h.no_command=true;
-  h.until(Stage::HOLD);
+  for (unsigned i=0;i<100;++i) h.tick();
+  assert(h.tuner.stage()==Stage::IDLE);
+  assert(h.tuner.proposals()==0);
   assert(h.tuner.evidence().pairs==0);
   assert(h.tuner.revision()==0);
 }
@@ -212,7 +229,9 @@ void clock_rollover_and_command_bound() {
   f.now=UINT32_MAX-500;
   for(int i=0;i<100;++i)f.tick();
   assert(f.tuner.evidence().attempts>0);
-  auto s=f.frame();s.command_b=s.command_a+1;
+  auto s=f.frame();
+  s.command_state.target=50;s.command_state.output_max=100;s.command_state.high=100;
+  s.command_state.terms={{-1,0,0}};
   f.tuner.observe(s,f.now+=100);
   assert(f.tuner.gains()==f.tuner.accepted_gains());
   assert(std::strcmp(f.tuner.result(),"inconclusive_command_bound")==0);
@@ -261,7 +280,7 @@ void synthetic_closed_loop(bool heating, float lag=180, float loss=.0005f, float
     s.power=power;s.operating=power&&std::fabs(heat_rate)>.001;s.external_heat=fire;
     s.other_0=(hour>8 && hour<12);s.other_1=(hour>5&&hour<7);
     s.other_duty=(s.other_0+s.other_1)*.5f;
-    s.command_a=preview(learner.accepted_gains());s.command_b=preview(learner.candidate_gains());
+    s.command_state=pid.command_state(low,high);
     s.unit_setpoint=command;
     learner.observe(s,now);
     if(learner.testing_candidate() && std::fabs(preview(learner.accepted_gains())-preview(learner.gains()))>.501f)
@@ -341,8 +360,8 @@ void independent_heat_and_cool_profiles() {
     Learner::Sample sample;
     sample.valid=sample.enabled=sample.power=true;
     sample.temperature=20.2f;sample.target=20;sample.outdoor=10;
-    sample.command_a=20;sample.command_b=20.5f;
-    sample.unit_setpoint=heat->testing_candidate()?20.5f:20;
+    sample.command_state=evidence_command_state();
+    sample.unit_setpoint=sample.command_state.command(heat->gains());
     heat->observe(sample,now+=100);
   }
   assert(heat->testing_candidate());
@@ -356,7 +375,8 @@ void independent_heat_and_cool_profiles() {
     const bool trial=heat->testing_candidate();
     sample.valid=sample.enabled=sample.power=sample.operating=true;
     sample.target=20;sample.temperature=trial?20.15f:20.4f;sample.outdoor=10;
-    sample.command_a=20;sample.command_b=20.5f;sample.unit_setpoint=trial?20.5f:20;
+    sample.command_state=evidence_command_state();
+    sample.unit_setpoint=sample.command_state.command(heat->gains());
     heat->observe(sample,now+=100);
     if (heat->stage()==Stage::SAVE_BUDGET) heat->saved(true,now);
   }
@@ -380,7 +400,7 @@ void omitted_metadata_is_not_reported_as_measured_off() {
   auto s=f.frame();
   s.fireplace_context=s.fusion_context=s.others_context=false;
   for (unsigned i=0;i<100 && !f.tuner.completed_periods();++i) {
-    s.unit_setpoint=f.tuner.testing_candidate()?s.command_b:s.command_a;
+    s.unit_setpoint=s.command_state.command(f.tuner.gains());
     f.tuner.observe(s,f.now+=100);
   }
   assert(!f.tuner.last_period().fireplace_context);
@@ -388,7 +408,189 @@ void omitted_metadata_is_not_reported_as_measured_off() {
   assert(!f.tuner.last_period().others_context);
 }
 
+Learner::Sample physical_sample(AdaptivePID &pid, const Learner &learner, float temperature,
+                                float target, uint32_t now, bool heating=true, bool power=true) {
+  pid.set_gains(learner.gains()[0],learner.gains()[1],learner.gains()[2]);
+  if (pid.get_target()!=target || pid.heating()!=heating) pid.set_target(target,heating);
+  pid.update(temperature,now,power);
+  Learner::Sample sample;
+  sample.valid=sample.enabled=true;sample.power=power;sample.heating=heating;
+  sample.temperature=temperature;sample.target=target;sample.outdoor=10;
+  const float low=std::max(18.f,target-(heating?2.f:.25f));
+  const float high=std::min(25.5f,target+(heating?.25f:2.f));
+  sample.command_state=pid.command_state(low,high);
+  sample.unit_setpoint=sample.command_state.command(learner.gains());
+  return sample;
+}
+
+void quantization_aware_candidates() {
+  for (bool heating : {true,false}) {
+    Learner learner({{1.25f,.015f,0}},Fixture::config(),42);
+    AdaptivePID pid(1.25f,.015f,0,18,25.5);
+    pid.enable_adaptation(false);
+    const float target=heating?20.f:24.f;
+    auto sample=physical_sample(pid,learner,target+(heating?-.5f:.5f),target,1000,heating);
+    // This cooling case allows a lower native command; a 0.25 C raw lower
+    // limit at a half-degree target cannot do so because ties round upward.
+    if (!heating) sample.command_state.low=target-.5f;
+    auto small=learner.accepted_gains();small[0]*=1.1f;
+    assert(sample.command_state.command(small)==sample.command_state.command(learner.accepted_gains()));
+    learner.observe(sample,1000);
+    assert(learner.stage()==Stage::DISCOVERY);
+    const auto candidate=learner.candidate_gains();
+    assert(candidate[0]>10 && candidate[0]<50); // sized for a real command, not 10%.
+    assert(candidate[1]==.015f && candidate[2]==0);
+    assert(std::fabs(sample.command_state.command(candidate)-
+                     sample.command_state.command(learner.accepted_gains()))==.5f);
+    auto smaller=candidate;
+    smaller[0]=1.25f+(candidate[0]-1.25f)*.9999f;
+    assert(sample.command_state.command(smaller)==sample.command_state.command(learner.accepted_gains()));
+    // A later state cannot resize a candidate under test.
+    sample.command_state.terms[0]*=.9f;
+    learner.observe(sample,1100);
+    assert(learner.candidate_gains()==candidate);
+  }
+  // A downward experiment is sized just across the other rounding boundary.
+  Learner down({{30,0,0}},Fixture::config(),43);
+  AdaptivePID pid(30,0,0,18,25.5);pid.enable_adaptation(false);
+  auto sample=physical_sample(pid,down,19.5,20,1000);
+  down.observe(sample,1000);
+  assert(down.candidate_gains()[0]<30);
+  assert(std::fabs(sample.command_state.command(down.candidate_gains())-
+                   sample.command_state.command(down.accepted_gains()))==.5f);
+}
+
+void defer_uninformative_and_disabled_conditions() {
+  Learner learner({{1.25f,.015f,0}},Fixture::config(),42);
+  AdaptivePID pid(1.25f,.015f,0,18,25.5);pid.enable_adaptation(false);
+  auto sample=physical_sample(pid,learner,19.5,20,1000);
+  sample.power=false;
+  learner.observe(sample,1000);
+  assert(learner.proposals()==0 && learner.period_number()==0);
+  assert(std::strcmp(learner.result(),"waiting_for_enabled_unit")==0);
+  sample.power=true;sample.command_state.terms={{0,0,0}};
+  learner.observe(sample,100000);
+  assert(learner.proposals()==0 && learner.period_number()==0);
+  assert(std::strcmp(learner.result(),"waiting_for_informative_command")==0);
+  // A nearly flat signal must not cause escalation of D to force a command.
+  sample.command_state.terms={{0,0,.00001f}};
+  learner.observe(sample,100100);
+  assert(learner.proposals()==0 && learner.candidate_gains()[2]==0);
+  // Neither raw clipping nor tight gain bounds may be overridden for excitation.
+  sample.command_state.terms={{.5f,1,.01f}};
+  sample.command_state.low=sample.command_state.high=20;
+  learner.observe(sample,100200);
+  assert(learner.proposals()==0);
+  sample.command_state.low=18;sample.command_state.high=20.25f;
+  sample.command_state.terms={{.5f,0,0}};
+  learner.observe(sample,100300);
+  assert(learner.proposals()==1);
+  auto config=Fixture::config();config.maximum={{2,.02f,1}};
+  Learner bounded({{1.25f,.015f,0}},config,42);
+  bounded.observe(sample,100300);
+  assert(bounded.proposals()==0);
+  sample.command_state.terms[0]=NAN;
+  learner.observe(sample,100400);
+  assert(learner.gains()==learner.accepted_gains());
+}
+
+void informative_integral_and_derivative() {
+  for (unsigned coordinate : {1u,2u}) {
+    Learner learner({{1.25f,.015f,0}},Fixture::config(),42);
+    auto sample=Fixture().frame();
+    sample.command_state.terms={{0,0,0}};
+    sample.command_state.terms[coordinate]=coordinate==1?1.f:-.01f;
+    learner.observe(sample,1000);
+    assert(learner.proposals()==1);
+    auto a=learner.accepted_gains(), b=learner.candidate_gains();
+    assert(b[coordinate]>a[coordinate]);
+    for (unsigned i=0;i<3;++i) if (i!=coordinate) assert(a[i]==b[i]);
+    assert(std::fabs(sample.command_state.command(a)-sample.command_state.command(b))==.5f);
+  }
+}
+
+void periods_include_shutdown_and_coasting() {
+  Fixture f;
+  f.tick();
+  const auto candidate=f.tuner.candidate_gains();
+  f.tick();f.tick();f.tick(); // beyond settling
+  auto sample=f.frame();
+  sample.power=false;sample.temperature=20.8f;
+  sample.command_state.terms={{0,0,0}}; // actual PID resets while off
+  const unsigned periods=f.tuner.completed_periods();
+  for (unsigned i=0;i<20 && f.tuner.completed_periods()==periods;++i)
+    f.tuner.observe(sample,f.now+=100);
+  assert(f.tuner.completed_periods()==periods+1);
+  assert(f.tuner.last_period().seconds==1);
+  assert(f.tuner.last_period().shutdowns==1);
+  assert(f.tuner.candidate_gains()==candidate);
+  f.tuner.observe(sample,f.now+=100);
+  assert(!f.tuner.testing_candidate());
+  assert(f.tuner.gains()==f.tuner.accepted_gains());
+  const auto number=f.tuner.period_number();
+  for (unsigned i=0;i<3;++i) f.tuner.observe(sample,f.now+=100);
+  assert(f.tuner.period_number()==number);
+  assert(f.tuner.completed_periods()==periods+1);
+  assert(std::strcmp(f.tuner.result(),"waiting_for_enabled_unit")==0);
+  // Resume the same fixed candidate only after both commands separate again.
+  sample=f.frame();sample.power=true;
+  f.tuner.observe(sample,f.now+=100);
+  assert(f.tuner.candidate_gains()==candidate);
+  assert(f.tuner.completed_periods()==periods+1);
+}
+
+void bounded_wait_and_actual_readback() {
+  Fixture f;
+  f.tick();f.tick();
+  auto sample=f.frame();
+  sample.unit_setpoint=-100; // neither arm's command was actually read back
+  for (unsigned i=0;i<100 && f.tuner.stage()!=Stage::HOLD;++i) {
+    sample.temperature=f.frame().temperature;
+    f.tuner.observe(sample,f.now+=100);
+  }
+  assert(f.tuner.stage()==Stage::HOLD && f.tuner.revision()==0);
+  assert(std::strcmp(f.tuner.result(),"inconclusive_unobservable_command")==0);
+  Fixture waiting;
+  waiting.tick();
+  // Complete one arm, then prevent the second from starting.
+  for (unsigned i=0;i<30 && waiting.tuner.completed_periods()==0;++i) waiting.tick();
+  sample=waiting.frame();sample.power=false;
+  for (unsigned i=0;i<30 && waiting.tuner.stage()!=Stage::HOLD;++i)
+    waiting.tuner.observe(sample,waiting.now+=100);
+  assert(waiting.tuner.stage()==Stage::HOLD);
+  assert(waiting.tuner.revision()==0);
+  assert(std::strcmp(waiting.tuner.result(),"inconclusive_start_timeout")==0);
+}
+
+void command_snapshot_matches_existing_mapping() {
+  AdaptivePID pid(1.25f,.015f,0,18,25.5);
+  pid.enable_adaptation(false);pid.set_derivative_filter_seconds(30);
+  pid.set_target(20,true);pid.update(19,1000,true);pid.update(19.3f,3000,true);
+  const auto state=pid.command_state(18,20.25f);
+  for (float p : {0.f,1.25f,20.f,250.f})
+    for (float i : {0.f,.015f,10.f})
+      for (float d : {0.f,30.f,7200.f}) {
+        const float output=p*state.terms[0]+i*state.terms[1]+d*state.terms[2];
+        const float expected=std::max(18.f,std::min(25.5f,20+3.75f*std::tanh(output/100)));
+        assert(std::fabs(pid.preview(p,i,d)-expected)<1e-6);
+        assert(state.command({{p,i,d}})==std::round(std::max(18.f,std::min(20.25f,expected))*2)/2);
+      }
+  // At a half-degree target, a cooling lower limit of -0.25 C rounds back
+  // to that same target; the learner must defer rather than cross the limit.
+  Learner limited({{1.25f,.015f,0}},Fixture::config(),42);
+  auto sample=physical_sample(pid,limited,24.5,24,5000,false);
+  limited.observe(sample,5000);
+  assert(limited.proposals()==0);
+  assert(limited.gains()==limited.accepted_gains());
+}
+
 int main() {
+  command_snapshot_matches_existing_mapping();
+  quantization_aware_candidates();
+  defer_uninformative_and_disabled_conditions();
+  informative_integral_and_derivative();
+  periods_include_shutdown_and_coasting();
+  bounded_wait_and_actual_readback();
   independent_heat_and_cool_profiles();
   omitted_metadata_is_not_reported_as_measured_off();
   exact_scoring_with_scheduler_jitter();

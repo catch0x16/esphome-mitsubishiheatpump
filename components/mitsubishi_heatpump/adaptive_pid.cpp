@@ -1,5 +1,31 @@
 #include "adaptive_pid.h"
 
+bool PidCommandState::valid() const {
+    return std::isfinite(target) && std::isfinite(output_min) && std::isfinite(output_max) &&
+        std::isfinite(low) && std::isfinite(high) && output_min < output_max &&
+        low >= output_min && high <= output_max && low <= high &&
+        std::isfinite(terms[0]) && std::isfinite(terms[1]) && std::isfinite(terms[2]);
+}
+
+float PidCommandState::map_output(float output) const {
+    const float sp = target + std::tanh(output / 100.f) * (output_max - output_min) * .5f;
+    return std::max(output_min, std::min(output_max, sp));
+}
+
+float PidCommandState::command(const std::array<float, 3> &gains) const {
+    const float sp = map_output(gains[0]*terms[0] + gains[1]*terms[1] + gains[2]*terms[2]);
+    return std::round(std::max(low, std::min(high, sp))*2.f)/2.f;
+}
+
+PidCommandState AdaptivePID::command_state(float low, float high) const {
+    PidCommandState state;
+    state.terms = {{_last_error, _integral, _last_derivative}};
+    state.target = _target;
+    state.output_min = _output_min; state.output_max = _output_max;
+    state.low = low; state.high = high;
+    return state;
+}
+
 // -----------------------------
 // Constructor & defaults
 // -----------------------------
@@ -163,18 +189,7 @@ float AdaptivePID::convert_output_to_setpoint(float control_output, float /*curr
     // Map control output to a setpoint range around target; here control_output is unbounded,
     // but we'll project it to a ±span and clamp to output limits.
     // Choose a mapping span: 100 units of control_output maps to full range by default.
-    const float map_scale = 100.0f;
-    float frac = std::tanh(control_output / map_scale); // squashes large values safely between -1 and 1
-
-    float half_span = (_output_max - _output_min) * 0.5f;
-    float center = _target;
-    float setpoint_offset = frac * half_span;
-
-    float sp = center + setpoint_offset;
-    // Clamp to output bounds
-    if (sp < _output_min) sp = _output_min;
-    if (sp > _output_max) sp = _output_max;
-    return sp;
+    return command_state(_output_min, _output_max).map_output(control_output);
 }
 
 float AdaptivePID::apply_safe_update(float currentK, float deltaK, float Kmin, float Kmax) const {

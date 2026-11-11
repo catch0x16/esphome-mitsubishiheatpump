@@ -73,10 +73,8 @@ namespace workflow {
                     (direction ? maxAdjustmentOver : maxAdjustmentUnder), minTemp, maxTemp);
                 const uint32_t now = esphome::millis();
                 adaptivePID->update(currentTemperature, now, deviceManager->isInternalPowerOn());
-                auto a = learner_->accepted_gains(), b = learner_->candidate_gains();
-                auto command = [&](const PidGainLearner::Gains &x) {
-                    return std::round(devicestate::clamp(adaptivePID->preview(x[0],x[1],x[2]), low, high)*2.f)/2.f;
-                };
+                const auto command_state = adaptivePID->command_state(low,high);
+                auto command = [&](const PidGainLearner::Gains &x) { return command_state.command(x); };
                 auto sample = learning_sample_;
                 sample.temperature = currentTemperature;
                 sample.target = deviceManager->getTargetTemperature();
@@ -84,7 +82,7 @@ namespace workflow {
                 sample.power = deviceManager->isInternalPowerOn();
                 sample.operating = deviceManager->getDeviceStatus().operating;
                 sample.unit_setpoint = deviceManager->getDeviceState().targetTemperature;
-                sample.command_a = command(a); sample.command_b = command(b);
+                sample.command_state = command_state;
                 sample.enabled &= direction == learning_heating_ && learning_mode_selected_;
                 learner_->observe(sample, now);
                 if (learner_->testing_candidate()) {

@@ -3,7 +3,7 @@
 #include <cmath>
 
 namespace {
-constexpr uint32_t MAGIC = 0x50474c01;  // schema 1
+constexpr uint32_t MAGIC = 0x50474c02;  // schema 2: retain the next search direction
 float clamp(float x, float low, float high) { return std::max(low, std::min(x, high)); }
 double mean(double value, double seconds) { return seconds > 0 ? value / seconds : 0; }
 bool same(const PidGainLearner::Gains &a, const PidGainLearner::Gains &b) {
@@ -14,11 +14,9 @@ bool same(const PidGainLearner::Gains &a, const PidGainLearner::Gains &b) {
 }
 
 PidGainLearner::PidGainLearner(Gains initial, const Config &config,
-                             uint32_t fingerprint, uint32_t seed, float output_half_span)
+                             uint32_t fingerprint, uint32_t seed)
     : config_(config), initial_(initial), accepted_(initial), previous_(initial),
-      candidate_(initial), fingerprint_(fingerprint), rng_(seed ? seed : 1) {
-  probe_output_ = 100.f*std::atanh(std::min(.5f,.25f/std::max(.01f,output_half_span)));
-}
+      candidate_(initial), fingerprint_(fingerprint), rng_(seed ? seed : 1) {}
 
 bool PidGainLearner::finite_gains(const Gains &g) {
   for (float x : g) if (!std::isfinite(x) || x < 0) return false;
@@ -35,11 +33,13 @@ uint32_t PidGainLearner::random() {
   return rng_;
 }
 bool PidGainLearner::testing_candidate() const {
-  return !suspended_ && (stage_ == Stage::DISCOVERY || stage_ == Stage::CONFIRMATION) &&
+  return !suspended_ && !awaiting_period_ && (stage_ == Stage::DISCOVERY || stage_ == Stage::CONFIRMATION) &&
          (second_ ? !candidate_first_ : candidate_first_);
 }
 void PidGainLearner::start_period() {
   period_ = Outcome{};
+  awaiting_period_ = true;
+  waiting_clock_started_ = false;
   elapsed_ms_ = 0;
   have_sample_ = false;
   ++period_number_;
@@ -50,48 +50,85 @@ void PidGainLearner::start_pair() {
   reference_ = trial_ = Outcome{};
   start_period();
 }
-void PidGainLearner::start_candidate() {
-  stage_ = Stage::DISCOVERY;
-  evidence_ = Evidence{};
-  // Six local directions, four wider coordinated directions, then two wider
-  // directions per coordinate. Zero-valued terms can be explored too.
-  static const unsigned coordinates[] = {0,0,1,1,2,2,0,0,0,0,0,0,1,1,2,2,0,0};
-  unsigned probe = proposals_++ % 18;
-  unsigned coordinate = coordinates[probe];
-  candidate_ = accepted_;
-  const float scale = probe < 6 ? config_.step : config_.wider_step;
-  const float sign = probe % 2 == 0 ? -1.f : 1.f;
-  // Nonzero exploration seeds are engineering defaults, not identified gains.
+bool PidGainLearner::size_candidate(const PidCommandState &state, unsigned direction, Gains &candidate) const {
+  const float baseline = state.command(accepted_);
+  // Eligibility thresholds describe experimental excitation, not comfort limits:
+  // error >= 0.1 C, integral >= 0.1 C*s, slope >= 0.1 C/min.
+  const float informative[] = {.1f, .1f, 1.f/600.f};
+  if (direction >= 16) {
+    candidate = direction == 16 ? initial_ : previous_;
+    for (unsigned i=0;i<3;++i)
+      if (candidate[i] != accepted_[i] && std::fabs(state.terms[i]) < informative[i]) return false;
+    const float difference = std::fabs(state.command(candidate)-baseline);
+    return bounded(candidate) && difference >= .49f && difference <= .501f;
+  }
+  const unsigned coordinate = direction < 6 ? direction/2 : direction < 10 ? 0 : (direction-10)/2;
+  const bool all = direction == 6 || direction == 7;
+  const bool mixed = direction == 8 || direction == 9;
+  const float sign = direction%2 == 0 ? -1.f : 1.f;
   const float seeds[] = {1.f, .01f, 30.f};
-  for (unsigned i = 0; i < 3 && probe < 16; ++i) {
-    const bool all = probe == 6 || probe == 7;
-    const bool mixed = probe == 8 || probe == 9;
+  Gains delta{{0,0,0}};
+  float maximum_scale = 1e30f;
+  for (unsigned i=0;i<3;++i) {
     if (mixed ? i == 2 : (!all && i != coordinate)) continue;
-    float step = std::max(std::fabs(accepted_[i]), seeds[i]) * scale;
-    candidate_[i] = clamp(accepted_[i] + sign*(mixed && i == 1 ? -step : step), config_.minimum[i], config_.maximum[i]);
+    if (std::fabs(state.terms[i]) < informative[i]) return false;
+    delta[i] = sign*(mixed && i == 1 ? -1.f : 1.f)*std::max(std::fabs(accepted_[i]),seeds[i]);
+    const float distance = delta[i] > 0 ? config_.maximum[i]-accepted_[i] : config_.minimum[i]-accepted_[i];
+    maximum_scale = std::min(maximum_scale, distance/delta[i]);
   }
-  // Every other wider-coordinate sweep explores a command-scale displacement.
-  // Runtime command-difference checks prevent applying an excessive jump.
-  if (probe >= 10 && probe < 16 && (proposals_/18) % 2 == 0) {
-    const float observable_steps[] = {probe_output_/.5f, probe_output_, probe_output_*600.f};
-    candidate_[coordinate] = clamp(accepted_[coordinate] + sign*observable_steps[coordinate],
-                                   config_.minimum[coordinate], config_.maximum[coordinate]);
+  auto at = [&](float scale) {
+    Gains g;
+    for (unsigned i=0;i<3;++i) g[i] = clamp(accepted_[i]+scale*delta[i],config_.minimum[i],config_.maximum[i]);
+    return g;
+  };
+  if (maximum_scale <= 0 || state.command(at(maximum_scale)) == baseline) return false;
+  // Bracket and bisect the first real packet change, including tanh, raw limits
+  // and 0.5 C rounding. No trial time is spent searching for this boundary.
+  const float seed_scale = direction < 6 ? config_.step : config_.wider_step;
+  float hi = std::min(maximum_scale,seed_scale), lo = 0;
+  while (hi < maximum_scale && state.command(at(hi)) == baseline)
+    hi = std::min(maximum_scale,hi*2);
+  for (unsigned i=0;i<32;++i) {
+    const float middle = (lo+hi)*.5f;
+    if (state.command(at(middle)) == baseline) lo=middle; else hi=middle;
   }
-  if (probe == 16) candidate_ = initial_;
-  if (probe == 17) candidate_ = previous_;
-  result_ = same(candidate_, accepted_) ? "candidate_unchanged" : "discovery";
-  if (same(candidate_, accepted_)) {
-    stage_ = Stage::HOLD;
-    hold_start_ = last_ms_;
-    hold_duration_ = config_.settling_ms;
-    have_sample_ = false;
-  } else start_pair();
+  candidate=at(hi);
+  // Occasional wider alternatives can explore farther within the same single
+  // command step. Never enlarge the permitted command change to force a test.
+  if (direction >= 6) {
+    const auto wider=at(std::min(maximum_scale,config_.wider_step));
+    if (std::fabs(state.command(wider)-baseline) == .5f) candidate=wider;
+  }
+  const float difference=std::fabs(state.command(candidate)-baseline);
+  return bounded(candidate) && difference >= .49f && difference <= .501f &&
+         difference <= config_.max_command_difference+.001f;
+}
+
+bool PidGainLearner::start_candidate(const PidCommandState &state) {
+  // Search every direction at most once per sample. Unsuitable directions are
+  // deferred without entering discovery, starting a timer, or consuming alpha.
+  for (unsigned n=0;n<18;++n) {
+    const unsigned direction=next_direction_;
+    next_direction_=(next_direction_+1)%18;
+    Gains candidate;
+    if (!size_candidate(state,direction,candidate)) continue;
+    candidate_=candidate;
+    ++proposals_;
+    stage_=Stage::DISCOVERY;
+    evidence_=Evidence{};
+    result_="discovery";
+    start_pair();
+    return true;
+  }
+  result_="waiting_for_informative_command";
+  return false;
 }
 void PidGainLearner::pause() {
   // Lose only the incomplete pair, preserving complete-pair evidence. Resume
   // with a fresh random order, and never leave trial gains active while paused.
   if (!suspended_ && (stage_ == Stage::DISCOVERY || stage_ == Stage::CONFIRMATION)) start_pair();
   suspended_ = true;
+  awaiting_period_ = true;
   have_sample_ = false;
 }
 void PidGainLearner::abort(const char *reason) {
@@ -110,26 +147,47 @@ void PidGainLearner::rollback() {
   }
 }
 
-void PidGainLearner::observe(const Sample &s, uint32_t now) {
+void PidGainLearner::observe(const Sample &input, uint32_t now) {
+  const Sample &s=input;
   if (!s.enabled || !s.valid || !std::isfinite(s.temperature) ||
       !std::isfinite(s.target) || !std::isfinite(s.outdoor) ||
       !std::isfinite(s.other_0) || !std::isfinite(s.other_1) ||
       !std::isfinite(s.fusion_weight) || !std::isfinite(s.other_duty) ||
-      !std::isfinite(s.unit_setpoint) || !std::isfinite(s.command_a) ||
-      !std::isfinite(s.command_b)) {
+      !std::isfinite(s.unit_setpoint) || !s.command_state.valid()) {
     pause(); last_ms_ = now; return;
   }
-  suspended_ = false;
-  if (stage_ == Stage::IDLE) start_candidate();
-  if (stage_ == Stage::HOLD) {
-    if (uint32_t(now-hold_start_) >= hold_duration_) start_candidate();
-    else { last_ms_ = now; return; }
-  }
   if (needs_save()) { last_ms_ = now; return; }
-  if (std::fabs(s.command_b-s.command_a) > config_.max_command_difference+.001f) {
+  if (stage_ == Stage::HOLD && uint32_t(now-hold_start_) < hold_duration_) {
+    last_ms_=now; return;
+  }
+  if (stage_ == Stage::IDLE || stage_ == Stage::HOLD) {
+    if (!s.power) { result_="waiting_for_enabled_unit"; last_ms_=now; return; }
+    if (!start_candidate(s.command_state)) { last_ms_=now; return; }
+  }
+  const float command_a=s.command_state.command(accepted_);
+  const float command_b=s.command_state.command(candidate_);
+  if (std::fabs(command_b-command_a) > config_.max_command_difference+.001f) {
     abort("inconclusive_command_bound"); last_ms_ = now; return;
   }
   const float over = (s.heating ? 1.f : -1.f)*(s.temperature-s.target);
+  if (awaiting_period_) {
+    // A fixed candidate can lose excitation between arms. Defer it, but do not
+    // let an unstartable comparison monopolize the tuner indefinitely.
+    if (!waiting_clock_started_) { waiting_since_=now; waiting_clock_started_=true; }
+    if (uint32_t(now-waiting_since_) >= config_.period_ms) {
+      abort("inconclusive_start_timeout"); last_ms_=now; return;
+    }
+    if (!s.power) { result_="waiting_for_enabled_unit"; last_ms_=now; return; }
+    if (std::fabs(command_b-command_a) < .49f) {
+      result_="waiting_for_command_separation"; last_ms_=now; return;
+    }
+    if (over > s.hysteresis_off+config_.peak_guard) {
+      result_="waiting_for_recovery"; last_ms_=now; return;
+    }
+    awaiting_period_=false;
+    suspended_=false;
+    result_=stage_==Stage::CONFIRMATION ? "confirming" : "discovery";
+  }
   if (testing_candidate() && over > s.hysteresis_off + config_.peak_guard) {
     abort("early_rollback_overshoot"); last_ms_ = now; return;
   }
@@ -166,8 +224,8 @@ void PidGainLearner::observe(const Sample &s, uint32_t now) {
     period_.fusion_mean += s.fusion_weight*dt;
     period_.fusion += std::fabs(s.fusion_weight-last_.fusion_weight);
     period_.operating_seconds += (s.operating ? 1 : 0)*dt;
-    if (s.power && std::fabs(s.command_a-s.command_b) >= .49f &&
-        std::fabs(s.unit_setpoint-(testing_candidate() ? s.command_b : s.command_a)) < .01f)
+    if (s.power && std::fabs(command_a-command_b) >= .49f &&
+        std::fabs(s.unit_setpoint-(testing_candidate() ? command_b : command_a)) < .01f)
       period_.observable_seconds += dt;
     // Target changes remain in error/recovery scoring but must not be counted
     // as evidence of an overshoot-driven hysteresis shutdown.
@@ -295,7 +353,7 @@ PidGainLearner::Record PidGainLearner::record() const {
   Record r{};
   r.magic = MAGIC; r.fingerprint = fingerprint_; r.configured = initial_;
   r.accepted = accepted_; r.previous = previous_; r.revision = revision_;
-  r.confirmations = confirmations_; r.proposals = proposals_; r.rng_state = rng_;
+  r.confirmations = confirmations_; r.proposals = proposals_; r.rng_state = rng_; r.next_direction = next_direction_;
   r.evidence = verified_evidence_;
   if (stage_ == Stage::SAVE_PROMOTION) {
     r.previous = accepted_; r.accepted = candidate_; ++r.revision;
@@ -316,11 +374,11 @@ bool PidGainLearner::restore(const Record &r) {
       (r.evidence.pairs && (r.evidence.pairs != config_.confirmation_pairs ||
        r.evidence.p > r.evidence.alpha || !r.revision))) return false;
 
-  if (r.magic != MAGIC || r.fingerprint != fingerprint_ || !bounded(r.accepted) ||
+  if (r.next_direction >= 18 || r.magic != MAGIC || r.fingerprint != fingerprint_ || !bounded(r.accepted) ||
       !bounded(r.previous) || !finite_gains(r.configured) ||
       (!same(r.configured,initial_) && !same(r.accepted,initial_))) return false;
   accepted_ = r.accepted; previous_ = r.previous; revision_ = r.revision;
-  confirmations_ = r.confirmations; proposals_ = r.proposals; rng_ = r.rng_state ? r.rng_state : 1;
+  confirmations_ = r.confirmations; proposals_ = r.proposals; next_direction_ = r.next_direction; rng_ = r.rng_state ? r.rng_state : 1;
   verified_evidence_ = r.evidence;
   stage_ = Stage::IDLE; result_ = r.evidence.pairs ? "restored_verified" : "restored_baseline"; have_sample_ = false;
   return true;
@@ -347,9 +405,9 @@ float PidGainLearner::progress() const {
 }
 
 PidGainProfiles::PidGainProfiles(PidGainLearner::Gains heat, PidGainLearner::Gains cool,
-    const PidGainLearner::Config &config, uint32_t fingerprint, uint32_t seed, float span)
-    : learners_{{PidGainLearner(heat, config, fingerprint ^ 0x48454154u, seed, span),
-                 PidGainLearner(cool, config, fingerprint ^ 0x434f4f4cu, seed ^ 0x434f4f4cu, span)}} {}
+    const PidGainLearner::Config &config, uint32_t fingerprint, uint32_t seed)
+    : learners_{{PidGainLearner(heat, config, fingerprint ^ 0x48454154u, seed),
+                 PidGainLearner(cool, config, fingerprint ^ 0x434f4f4cu, seed ^ 0x434f4f4cu)}} {}
 
 PidGainLearner *PidGainProfiles::select(Mode mode) {
   const int next = mode == Mode::HEAT ? 0 : mode == Mode::COOL ? 1 : -1;
