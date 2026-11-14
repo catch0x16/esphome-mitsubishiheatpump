@@ -27,10 +27,15 @@ class ConfigTests(unittest.TestCase):
                  dict(minimum_gains=[251,0,0]), dict(period='8d'),
                  dict(guard_relative=float('nan')), dict(minimum_gains=[float('nan'),0,0]),
                  dict(other_units_operating=[]), dict(other_units_operating=['one']),
-                 dict(other_units_operating=['a','b','c'])]
+                 dict(other_units_operating=['a','b','c']),
+                 dict(period='48h'), dict(period='47h', settling_time='1h')]
         for extra in cases:
             with self.subTest(extra=extra), self.assertRaises(Exception):
                 module.GAIN_LEARNING_SCHEMA(dict(self.base(), **extra))
+
+    def test_full_window_exposure_validation(self):
+        config = module.GAIN_LEARNING_SCHEMA(dict(self.base(), observable_time='135min'))
+        self.assertEqual(config['observable_time'].total_milliseconds, 8100000)
 
     def test_automatic_mode_and_freeze(self):
         config = module.GAIN_LEARNING_SCHEMA(dict(self.base(), enabled=False))

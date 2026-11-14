@@ -40,7 +40,7 @@ learner at its restored accepted gains, rather than deleting the block.
 
 The climate's current mode selects heating or cooling automatically. Each has its
 own learner, accepted gains, evidence, confirmation budget and persistent record.
-Switching modes pauses the old learner and cancels its incomplete pair; heating
+Switching modes pauses the old learner and cancels its unfinished observation; heating
 and cooling observations are never mixed. Off, fan-only, dry and AUTO operation
 pause gain trials. AUTO's heating/cooling action in this component is inferred from
 temperature error, not reliable native direction feedback, so it is not used for
@@ -158,35 +158,88 @@ It limits the incremental command effect relative to accepted gains; normal
 scheduled target changes remain possible. Existing rounding can put packet
 readback half a step beyond a raw offset limit, as it did before this feature.
 
-Each arm starts only when the unit is enabled and the fixed candidate produces
-command separation. Waiting states include `waiting_for_enabled_unit`,
-`waiting_for_command_separation`, and `waiting_for_recovery`. Waiting is unscored
-and accepted gains remain active. A frozen candidate is never resized between
-arms or during confirmation. If an arm cannot start within one `period` duration,
-the candidate becomes `inconclusive_start_timeout` and the search can move on.
-Once an arm starts, power-off/coasting time and hysteresis shutdowns stay in its
-normal outcome scoring; they do not pause the clock. A gain change whose commands
-lose observable exposure is inconclusive, not proof that its direction is optimal. Confirmation requires actual
-readback consistent with the selected arm and observable command differences
-while the unit is enabled.
+Each observation starts only when the unit is enabled and the fixed candidate
+produces command separation. The learner first collects five minutes of continuous
+valid temperature context, including while hysteresis has the unit off. Its recent
+trend is a five-minute first-order filtered temperature rate independent of PID
+history resets. Fireplace context also needs five minutes of unchanged reported
+state. Waiting leaves accepted gains active; it never forces a unit on.
 
-## Discovery, confirmation and acceptance
+Waiting states include `waiting_for_recent_context`, `waiting_for_enabled_unit`,
+`waiting_for_command_separation`, `waiting_for_command_bound`,
+`waiting_for_recovery`, and `waiting_for_matching_context`. A frozen candidate is
+never resized between observations or during confirmation. Without a completed
+observation to preserve, an observation unable to start within one `period` is
+`inconclusive_start_timeout`. A retained observation can instead wait up to its
+48-hour retention limit for a comparable opportunity.
 
-A pair consists of one accepted-gain period A and one candidate period B, with
-randomized order. Each period has a settling interval followed by a scored
-interval. Discovery and confirmation use separate pairs. Candidate gains remain
-unchanged throughout both phases. Normal target changes remain in scoring.
+## Whole-response scoring and retained observations
+
+The default observation still lasts 2.5 hours: `period` plus `settling_time`.
+**Every part of that window is now scored, from the start of the assigned arm.**
+The first 30 minutes are no longer discarded. The total window must be shorter
+than the 48-hour retention limit; `observable_time` is bounded by this full window. The legacy `settling_time` key keeps
+its contribution to total duration and its unsuccessful-candidate cooldown role;
+it no longer names an unscored interval. This preserves observation length while
+capturing the recovery and early demand changes the tuner is intended to assess.
+Power-off/coasting time and hysteresis shutdowns remain in the window once it
+starts. Normal scheduled target changes also remain in scoring, but a change of
+target is not counted as an overshoot-driven shutdown.
+
+A pair uses one accepted-gain observation A and one candidate observation B.
+Assignments are randomized in A/B blocks. Observations need not be adjacent in
+wall time: a completed observation can wait for a later comparable counterpart.
+At most eight qualified, unmatched summaries are held per room/mode, in RAM, for
+at most 48 hours. The oldest compatible opposite-arm observation is selected,
+using context and age only; outcome scores never select a counterpart. A summary
+is consumed once. Full capacity evicts the oldest summary, not the worst score.
+An observation with a fireplace transition remains in diagnostics but is not
+eligible for pairing. Neither is one with insufficient confirmed command exposure.
+
+Counterparts must have the same conditioning mode and match these initial conditions:
+
+- Signed conditioning-direction temperature error within 0.25°C.
+- Recent temperature trend within 0.02°C/min.
+- Requested target within 0.1°C and outdoor reading within the existing weather limit.
+- The same fireplace state. If a fireplace transition was observed within the last
+  30 minutes, both starts must be in that recent-transition category and their
+  times since transition must be within five minutes. A missing earlier state
+  history does not establish the actual time of the last fireplace transition.
+
+Both complete observations must additionally satisfy the existing outdoor,
+other-unit duty and optional fusion-context checks. Mean target, final target and
+total target movement must match within 0.1°C, so matching scheduled changes can
+contribute without comparing substantially different schedules. Matching includes
+pre-existing temperature momentum to reduce thermal carryover bias; it cannot
+identify all hidden heat storage or prove that prior treatment has no influence.
+These are engineering evidence-eligibility defaults, not comfort tolerances or
+parameters identified from a thermal model. They never relax automatically.
+
+Discovery and confirmation have separate queues. Invalid inputs, gaps, mode changes
+and climate-off discard only the unfinished observation; qualified summaries can
+survive in their original room/mode until expiry. Safety aborts, candidate changes,
+reset, rollback, reboot, and entry to confirmation discard incompatible summaries.
+Candidate gains remain fixed throughout discovery and confirmation. The phase
+attempt budget permits at most `2 * max_pair_attempts` completed observations;
+`attempts` reports the ceiling of completed observations divided by two. Two
+observations without sufficient exposure yield an unobservable result when no
+observation in that phase has qualified for exposure. None of these results proves
+a gain direction optimal. Actual setpoint readback and the unchanged
+`observable_time` threshold are still required.
 
 Default engineering settings, chosen before field testing:
 
 | Setting | Default |
 |---|---:|
-| Scored interval per arm (`period`) | 2 hours |
-| Unscored settling per arm (`settling_time`) | 30 minutes |
+| Observation duration (`period` + `settling_time`), all scored | 2.5 hours |
+| Duration contributions retained for YAML compatibility | 2 hours + 30 minutes |
 | Observable command exposure per arm (`observable_time`) | 2 minutes |
 | Comparable discovery pairs (`discovery_pairs`) | 4 |
 | Comparable confirmation pairs (`confirmation_pairs`) | 24 |
-| Attempt limit per phase (`max_pair_attempts`) | 48 pairs |
+| Observation budget per phase (`2 * max_pair_attempts`) | 96 observations |
+| Unmatched observation retention | 8 summaries, up to 48 hours |
+| Recent temperature/fireplace history required | 5 minutes |
+| Starting error / trend matching limits | 0.25°C / 0.02°C per minute |
 | Rest after promotion (`hold_time`) | 24 hours |
 | Local search bracket / wider within-step alternative | 0.10 / 0.50 |
 | Minimum meaningful relative improvement | 5% |
@@ -211,7 +264,8 @@ demand `max(0, -directional_error - 0.5°C)`. The last metric measures degree-ti
 beyond a 0.5°C deficit, not elapsed time to recover and not an accepted comfort
 band. It can reveal restricted recovery demand. Also retain operating time,
 command exposure, outdoor mean, fireplace duty, both other-head duties, fusion
-weight mean and movement, and starting error.
+weight mean and movement, signed starting error, starting trend, target trajectory
+and observed fireplace transition context.
 
 Classify a pair's direction lexicographically: shutdown rate first, then mean
 overshoot, then large unmet demand, then absolute error. Differences must exceed
@@ -227,8 +281,8 @@ in flash and allocate alpha `0.05 / (k * (k + 1))`. These allocations sum to at 
 reboots/manual gain reset do not replenish the persisted budget. A newly
 incompatible configuration starts a new evidence family. There is no global
 optimum certificate and no unqualified real-world 95% guarantee: these calculations
-assume exchangeable pair directions under the null, adequate settling and useful
-context control. Thermal dependence or unmeasured confounding can violate those
+assume exchangeable pair directions under the null and useful
+context control, including adequate handling of thermal carryover. Thermal dependence or unmeasured confounding can violate those
 assumptions.
 
 Promotion also requires aggregate improvement, no observed increase in shutdown
@@ -238,10 +292,11 @@ zero shutdowns, promotion must be supported by the other predeclared outcomes; i
 must not be described as demonstrated reduction in shutdown risk. Full outcome
 summaries remain available for checking which outcome actually improved.
 
-Pairs with insufficient context overlap are recorded but do not count toward
-confirmation. Invalid inputs, gaps exceeding 30 seconds, unsupported mode or
-climate-off restore accepted gains and restart only the incomplete pair; complete
-pairs remain. Exhausted evidence attempts yield an inconclusive result, not a
+Observations with insufficient context overlap are retained for later matching
+within the queue limits; they do not yet count toward confirmation. Invalid inputs,
+gaps exceeding 30 seconds, unsupported mode or climate-off restore accepted gains
+and restart only the unfinished observation in its assigned arm; completed
+summaries and matched evidence remain. Exhausted evidence attempts yield an inconclusive result, not a
 rejection or proof of optimality. After an unsuccessful/inconclusive candidate,
 wait one settling interval before the next. A trial exceeding the configured
 hysteresis shutdown threshold by another `peak_guard` triggers early rollback.
@@ -289,7 +344,8 @@ for float round-trip precision. Disabling learning preserves compatible storage.
 - `PID Verified Revision`: persisted revision of the current heating/cooling
   profile (unavailable outside those modes); promotions, reset and rollback advance it. A revision alone is not proof of improvement; inspect the status.
 - `PID Tuning State`: current mode, progress/reason, both modes' accepted YAML
-  values and separate revisions. `verified_saved_copy_to_yaml` identifies a promotion.
+  values, separate revisions and `pending` count of retained observations.
+  `verified_saved_copy_to_yaml` identifies a promotion.
 - `Reset Learned PID Gains`: reset both profiles to their configured starting
   gains; preserve each spent confirmation budget.
 - `Rollback PID Gains`: restore the current heating/cooling profile's previous
@@ -298,8 +354,9 @@ for float round-trip precision. Disabling learning preserves compatible storage.
 
 The saved evidence retains sign probability and A/B shutdown counts, mean
 overshoot, mean absolute error and large unmet demand. Detailed `PID_GAIN_PERIOD`,
-`PID_GAIN_COMPARISON`, `PID_GAIN_SAVE` and `PID_GAIN_CONFIG` log lines retain trial
-parameters, context, provenance and outcomes. Log retention must be configured by
+`PID_GAIN_COMPARISON`, `PID_GAIN_SAVE`, `PID_GAIN_CONFIG` and `PID_GAIN_CONTEXT`
+log lines retain trial parameters, starting conditions, fireplace transitions,
+pending-summary count, provenance and outcomes. Log retention must be configured by
 the collector; Prometheus does not retain these text log lines. Intermediate
 trial history is not all written to flash. This is a bounded on-device audit
 summary plus telemetry, not an unlimited historical database.
@@ -321,7 +378,10 @@ Tests exercise fresh confirmation, failed confirmation, no-response trials, cont
 mismatch, bounds, missing data, rollover, save failures, restore/copy/reset/rollback,
 PID off/restart behavior, derivative steps, command-sized selection in both modes,
 flat-signal/disabled/clipped deferral, unchanged output mapping, bounded inter-arm
-waiting, fixed candidate gains, continued shutdown/coasting scoring, and synthetic heating/cooling with
+waiting, fixed candidate gains, full-window transient/shutdown/coasting scoring,
+matching of thermal momentum and fireplace transitions, bounded retained-data
+queues, discovery/confirmation queue isolation, scheduled-target matching,
+and synthetic heating/cooling with
 thermal lag, packet quantization, fusion changes and fireplace disturbance. The
 synthetic thermal runs deliberately do not assert that the tuner finds better
 gains in every plant. They check bounded commands and behavior, not real-world
@@ -330,7 +390,7 @@ Older test/tuner files from the reverted implementation are not modified
 or used by this test command or the new supervisor.
 
 No field improvement is claimed yet. Before enabling more rooms, use the first
-room's forward history to check settling adequacy, pair comparability, actual
+room's forward history to check carryover handling, pair comparability, actual
 command influence, evidence availability, shutdowns and recovery. Do not interpret
 inconclusive or unobservable trials as evidence that the existing controller is bad.
 

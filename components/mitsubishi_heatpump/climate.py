@@ -145,8 +145,11 @@ def validate_learning(config):
         raise cv.Invalid("confirmation_pairs must be at least 12 for a useful fixed-look sign test")
     if config["max_pair_attempts"] < max(config["discovery_pairs"], config["confirmation_pairs"]):
         raise cv.Invalid("max_pair_attempts must cover both discovery and confirmation pairs")
-    if config["observable_time"].total_milliseconds > config["period"].total_milliseconds:
-        raise cv.Invalid("observable_time must not exceed period")
+    observation_ms = config["period"].total_milliseconds + config["settling_time"].total_milliseconds
+    if config["observable_time"].total_milliseconds > observation_ms:
+        raise cv.Invalid("observable_time must not exceed the full observation window")
+    if observation_ms >= 172800000:
+        raise cv.Invalid("the full observation window must be shorter than the 48-hour retention limit")
     for low, high in zip(config["minimum_gains"], config["maximum_gains"]):
         if low > high:
             raise cv.Invalid("minimum_gains must not exceed maximum_gains")

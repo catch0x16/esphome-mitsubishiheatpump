@@ -3,7 +3,7 @@
 #include <cmath>
 
 namespace {
-constexpr uint32_t MAGIC = 0x50474c02;  // schema 2: retain the next search direction
+constexpr uint32_t MAGIC = 0x50474c03;  // schema 3: whole-response and matched-context evidence
 float clamp(float x, float low, float high) { return std::max(low, std::min(x, high)); }
 double mean(double value, double seconds) { return seconds > 0 ? value / seconds : 0; }
 bool same(const PidGainLearner::Gains &a, const PidGainLearner::Gains &b) {
@@ -116,6 +116,7 @@ bool PidGainLearner::start_candidate(const PidCommandState &state) {
     ++proposals_;
     stage_=Stage::DISCOVERY;
     evidence_=Evidence{};
+    pending_={}; phase_observations_=phase_observable_=0;
     result_="discovery";
     start_pair();
     return true;
@@ -124,27 +125,109 @@ bool PidGainLearner::start_candidate(const PidCommandState &state) {
   return false;
 }
 void PidGainLearner::pause() {
-  // Lose only the incomplete pair, preserving complete-pair evidence. Resume
-  // with a fresh random order, and never leave trial gains active while paused.
-  if (!suspended_ && (stage_ == Stage::DISCOVERY || stage_ == Stage::CONFIRMATION)) start_pair();
+  // Drop only the unfinished observation. Completed observations and matched
+  // evidence survive a pause; retry the already-randomized arm assignment.
+  if (!suspended_ && (stage_ == Stage::DISCOVERY || stage_ == Stage::CONFIRMATION)) start_period();
+  context_initialized_ = false;
   suspended_ = true;
   awaiting_period_ = true;
   have_sample_ = false;
 }
 void PidGainLearner::abort(const char *reason) {
   last_evidence_ = evidence_;
+  pending_={};
   result_ = reason;
   stage_ = Stage::HOLD;
   hold_start_ = last_ms_;
   hold_duration_ = config_.settling_ms;
   have_sample_ = false;
 }
-void PidGainLearner::reset() { stage_ = Stage::SAVE_RESET; have_sample_ = false; }
+void PidGainLearner::reset() { pending_={}; stage_ = Stage::SAVE_RESET; have_sample_ = false; }
 void PidGainLearner::rollback() {
   if (revision_ && !same(previous_, accepted_)) {
+    pending_={};
     stage_ = Stage::SAVE_ROLLBACK;
     have_sample_ = false;
   }
+}
+
+unsigned PidGainLearner::pending_observations() const {
+  unsigned count=0;
+  for (const auto &item:pending_) if (item.used) ++count;
+  return count;
+}
+
+bool PidGainLearner::update_context(const Sample &s, uint32_t now) {
+  if (!context_initialized_ || uint32_t(now-context_last_ms_) > 30000 ||
+      context_heating_ != s.heating) {
+    context_initialized_=true; context_since_=fireplace_since_=now;
+    context_last_ms_=now; context_temperature_=s.temperature; context_trend_=0;
+    context_heating_=s.heating; context_fireplace_=s.external_heat; fireplace_transition_seen_=false;
+  } else {
+    const uint32_t dt=now-context_last_ms_;
+    if (dt) {
+      const float rate=(s.temperature-context_temperature_)*60000.f/dt;
+      const float alpha=float(dt)/(config_.context_ms+float(dt));
+      context_trend_+=alpha*(rate-context_trend_);
+    }
+    if (s.external_heat != context_fireplace_) {
+      context_fireplace_=s.external_heat; fireplace_since_=now; fireplace_transition_seen_=true;
+    }
+    context_last_ms_=now; context_temperature_=s.temperature;
+  }
+  // Zero history is used only by portable mechanism fixtures. Production uses
+  // a five-minute trend independent of PID resets, power and target changes.
+  if (!config_.context_ms) context_trend_=-s.command_state.terms[2]*60;
+  return uint32_t(now-context_since_) >= config_.context_ms &&
+      (!s.fireplace_context || uint32_t(now-fireplace_since_) >= config_.context_ms);
+}
+
+PidGainLearner::Outcome PidGainLearner::starting_context(const Sample &s, uint32_t now) const {
+  Outcome out;
+  out.start_error=(s.heating?1.f:-1.f)*(s.temperature-s.target);
+  out.start_trend=context_trend_; out.start_target=out.end_target=s.target;
+  out.start_outdoor=s.outdoor; out.heating=s.heating;
+  out.fireplace_context=s.fireplace_context; out.start_fireplace=s.external_heat;
+  out.fusion_context=s.fusion_context; out.others_context=s.others_context;
+  // Treat older fireplace states as established; retain recent transition age.
+  out.fireplace_stable_ms=std::min(uint32_t(now-fireplace_since_),config_.context_ms*6);
+  out.fireplace_recent_transition=fireplace_transition_seen_ &&
+      uint32_t(now-fireplace_since_)<config_.context_ms*6;
+  return out;
+}
+
+bool PidGainLearner::matching_start(const Outcome &a, const Outcome &b) const {
+  return a.heating==b.heating && a.fireplace_context==b.fireplace_context &&
+    a.fusion_context==b.fusion_context && a.others_context==b.others_context &&
+    std::fabs(a.start_error-b.start_error) <= config_.start_error_difference &&
+    std::fabs(a.start_trend-b.start_trend) <= config_.start_trend_difference &&
+    std::fabs(a.start_target-b.start_target) <= .1f &&
+    std::fabs(a.start_outdoor-b.start_outdoor) <= config_.outdoor_pair_difference &&
+    (!a.fireplace_context || (a.start_fireplace==b.start_fireplace &&
+      a.fireplace_recent_transition==b.fireplace_recent_transition &&
+      (!a.fireplace_recent_transition ||
+       std::fabs(double(a.fireplace_stable_ms)-b.fireplace_stable_ms) <= config_.context_ms)));
+}
+
+bool PidGainLearner::matching_pending_start(const Outcome &start) const {
+  const bool candidate_arm=second_?!candidate_first_:candidate_first_;
+  bool have_opposite=false;
+  for (const auto &item:pending_) {
+    if (!item.used || item.candidate==candidate_arm) continue;
+    have_opposite=true;
+    if (matching_start(start,item.outcome)) return true;
+  }
+  return !have_opposite;
+}
+
+void PidGainLearner::expire_pending(uint32_t now) {
+  for (auto &item:pending_)
+    if (item.used && uint32_t(now-item.finished_ms)>config_.retention_ms) item.used=false;
+}
+
+void PidGainLearner::advance_period() {
+  if (!second_) { second_=true; start_period(); }
+  else start_pair();
 }
 
 void PidGainLearner::observe(const Sample &input, uint32_t now) {
@@ -156,17 +239,20 @@ void PidGainLearner::observe(const Sample &input, uint32_t now) {
       !std::isfinite(s.unit_setpoint) || !s.command_state.valid()) {
     pause(); last_ms_ = now; return;
   }
+  const bool context_ready=update_context(s,now);
+  expire_pending(now);
   if (needs_save()) { last_ms_ = now; return; }
   if (stage_ == Stage::HOLD && uint32_t(now-hold_start_) < hold_duration_) {
     last_ms_=now; return;
   }
   if (stage_ == Stage::IDLE || stage_ == Stage::HOLD) {
     if (!s.power) { result_="waiting_for_enabled_unit"; last_ms_=now; return; }
+    if (!context_ready) { result_="waiting_for_recent_context"; last_ms_=now; return; }
     if (!start_candidate(s.command_state)) { last_ms_=now; return; }
   }
   const float command_a=s.command_state.command(accepted_);
   const float command_b=s.command_state.command(candidate_);
-  if (std::fabs(command_b-command_a) > config_.max_command_difference+.001f) {
+  if (!awaiting_period_ && std::fabs(command_b-command_a) > config_.max_command_difference+.001f) {
     abort("inconclusive_command_bound"); last_ms_ = now; return;
   }
   const float over = (s.heating ? 1.f : -1.f)*(s.temperature-s.target);
@@ -174,15 +260,22 @@ void PidGainLearner::observe(const Sample &input, uint32_t now) {
     // A fixed candidate can lose excitation between arms. Defer it, but do not
     // let an unstartable comparison monopolize the tuner indefinitely.
     if (!waiting_clock_started_) { waiting_since_=now; waiting_clock_started_=true; }
-    if (uint32_t(now-waiting_since_) >= config_.period_ms) {
+    if (!pending_observations() && uint32_t(now-waiting_since_) >= config_.period_ms) {
       abort("inconclusive_start_timeout"); last_ms_=now; return;
     }
     if (!s.power) { result_="waiting_for_enabled_unit"; last_ms_=now; return; }
+    if (std::fabs(command_b-command_a) > config_.max_command_difference+.001f) {
+      result_="waiting_for_command_bound"; last_ms_=now; return;
+    }
     if (std::fabs(command_b-command_a) < .49f) {
       result_="waiting_for_command_separation"; last_ms_=now; return;
     }
     if (over > s.hysteresis_off+config_.peak_guard) {
       result_="waiting_for_recovery"; last_ms_=now; return;
+    }
+    if (!context_ready) { result_="waiting_for_recent_context"; last_ms_=now; return; }
+    if (!matching_pending_start(starting_context(s,now))) {
+      result_="waiting_for_matching_context"; last_ms_=now; return;
     }
     awaiting_period_=false;
     suspended_=false;
@@ -192,7 +285,7 @@ void PidGainLearner::observe(const Sample &input, uint32_t now) {
     abort("early_rollback_overshoot"); last_ms_ = now; return;
   }
   if (!have_sample_) {
-    period_.start_error = std::fabs(s.temperature-s.target);
+    period_=starting_context(s,now);
     have_sample_ = true; last_ = s; last_ms_ = now; return;
   }
   uint32_t dt_ms = now-last_ms_;
@@ -202,17 +295,18 @@ void PidGainLearner::observe(const Sample &input, uint32_t now) {
   }
   uint32_t previous_elapsed = elapsed_ms_;
   elapsed_ms_ += dt_ms;
-  if (elapsed_ms_ > config_.settling_ms) {
-    const uint32_t end_ms = config_.settling_ms + config_.period_ms;
-    const uint32_t scored_ms = std::min(elapsed_ms_, end_ms) -
-                               std::max(previous_elapsed, config_.settling_ms);
-    const double dt = scored_ms/1000.;
-    // Derive exposure from integer elapsed time, rather than accumulating
-    // floating-point intervals: equal event counts must have equal denominators.
-    period_.fireplace_context = s.fireplace_context;
-    period_.fusion_context = s.fusion_context;
-    period_.others_context = s.others_context;
-    period_.seconds = (std::min(elapsed_ms_, end_ms)-config_.settling_ms)/1000.;
+  {
+    const uint32_t end_ms=config_.settling_ms+config_.period_ms;
+    const uint32_t scored_ms=std::min(elapsed_ms_,end_ms)-previous_elapsed;
+    const double dt=scored_ms/1000.;
+    // Score the entire fixed window, including its initial response. Derive
+    // exposure from integer time so equal event counts have equal denominators.
+    period_.seconds=std::min(elapsed_ms_,end_ms)/1000.;
+    period_.target+=s.target*dt;
+    period_.target_movement+=std::fabs(s.target-last_.target);
+    period_.end_target=s.target;
+    period_.fireplace_changed|=s.fireplace_context!=period_.fireplace_context ||
+      (s.fireplace_context && s.external_heat!=period_.start_fireplace);
     period_.over += std::max(0.f, over)*dt;
     period_.absolute += std::fabs(over)*dt;
     period_.recovery += std::max(0.f, -over-.5f)*dt;
@@ -230,7 +324,7 @@ void PidGainLearner::observe(const Sample &input, uint32_t now) {
     // Target changes remain in error/recovery scoring but must not be counted
     // as evidence of an overshoot-driven hysteresis shutdown.
     if (last_.power && !s.power && std::fabs(s.target-last_.target) < .01f &&
-        over >= s.hysteresis_off-.05f && previous_elapsed >= config_.settling_ms)
+        over >= s.hysteresis_off-.05f)
       ++period_.shutdowns;
   }
   last_ = s;
@@ -244,10 +338,15 @@ void PidGainLearner::add(Outcome &a, const Outcome &b) {
   a.fusion += b.fusion; a.fusion_mean += b.fusion_mean;
   a.observable_seconds += b.observable_seconds; a.operating_seconds += b.operating_seconds;
   a.fireplace_context = b.fireplace_context; a.fusion_context = b.fusion_context; a.others_context = b.others_context;
+  a.target += b.target;
   a.shutdowns += b.shutdowns; a.peak = std::max(a.peak, b.peak);
 }
 bool PidGainLearner::comparable(const Outcome &a, const Outcome &b) const {
-  return a.seconds > 0 && b.seconds > 0 &&
+  return a.seconds > 0 && b.seconds > 0 && matching_start(a,b) &&
+    !a.fireplace_changed && !b.fireplace_changed &&
+    std::fabs(mean(a.target,a.seconds)-mean(b.target,b.seconds)) <= .1f &&
+    std::fabs(a.target_movement-b.target_movement) <= .1f &&
+    std::fabs(a.end_target-b.end_target) <= .1f &&
     std::fabs(mean(a.outdoor,a.seconds)-mean(b.outdoor,b.seconds)) <= config_.outdoor_pair_difference &&
     a.fireplace_context == b.fireplace_context && a.fusion_context == b.fusion_context &&
     a.others_context == b.others_context &&
@@ -285,10 +384,50 @@ void PidGainLearner::finish_period(uint32_t now) {
   last_period_ = period_; last_period_candidate_ = testing_candidate();
   last_reference_gains_ = accepted_; last_candidate_gains_ = candidate_;
   ++completed_periods_;
-  if (testing_candidate()) trial_ = period_; else reference_ = period_;
-  if (!second_) { second_ = true; start_period(); }
-  else finish_pair(now);
+  last_pair_confirmation_=stage_==Stage::CONFIRMATION;
+  ++phase_observations_;
+  evidence_.attempts=(phase_observations_+1)/2;
+  expire_pending(now);
+  // Qualification depends on context and actual command exposure, never on the
+  // improvement score. Oldest compatible counterpart wins, used exactly once.
+  const bool exposed=period_.observable_seconds*1000 >= config_.observable_ms;
+  if (exposed) ++phase_observable_;
+  const bool qualified=!period_.fireplace_changed && exposed;
+  Pending *match=nullptr;
+  if (qualified) {
+    for (auto &item:pending_) {
+      if (!item.used || item.candidate==last_period_candidate_ || !comparable(period_,item.outcome)) continue;
+      if (!match || uint32_t(now-item.finished_ms)>uint32_t(now-match->finished_ms)) match=&item;
+    }
+  }
+  if (match) {
+    reference_=last_period_candidate_?match->outcome:period_;
+    trial_=last_period_candidate_?period_:match->outcome;
+    match->used=false;
+    finish_pair(now);
+  } else {
+    if (qualified) {
+      Pending *slot=nullptr;
+      for (auto &item:pending_) {
+        if (!item.used) { slot=&item; break; }
+        if (!slot || uint32_t(now-item.finished_ms)>uint32_t(now-slot->finished_ms)) slot=&item;
+      }
+      slot->outcome=period_;slot->candidate=last_period_candidate_;
+      slot->finished_ms=now;slot->used=true;
+      result_="retained_for_matching_context";
+    } else result_=period_.fireplace_changed?"inconclusive_fireplace_transition":"inconclusive_unobservable_command";
+    last_evidence_=evidence_;
+  }
+  if (stage_==Stage::DISCOVERY || stage_==Stage::CONFIRMATION) {
+    const unsigned required=stage_==Stage::DISCOVERY?config_.discovery_pairs:config_.confirmation_pairs;
+    if (phase_observations_>=2 && !phase_observable_) {
+      abort("inconclusive_unobservable_command");hold_start_=now;
+    } else if (evidence_.pairs<required && phase_observations_>=2*config_.max_pair_attempts) {
+      abort("inconclusive_evidence");hold_start_=now;
+    } else advance_period();
+  }
 }
+
 double PidGainLearner::sign_probability(unsigned wins, unsigned losses) {
   unsigned n = wins+losses;
   if (!n) return 1;
@@ -301,26 +440,19 @@ double PidGainLearner::sign_probability(unsigned wins, unsigned losses) {
 }
 void PidGainLearner::finish_pair(uint32_t now) {
   last_pair_confirmation_ = stage_ == Stage::CONFIRMATION;
-  ++evidence_.attempts;
-  if (reference_.observable_seconds == 0 && trial_.observable_seconds == 0) {
-    abort("inconclusive_unobservable_command"); hold_start_ = now; return;
-  }
-  if (comparable(reference_, trial_)) {
-    ++evidence_.pairs;
-    add(evidence_.reference, reference_); add(evidence_.candidate, trial_);
-    if (improved(reference_,trial_)) ++evidence_.wins;
-    else if (improved(trial_,reference_)) ++evidence_.losses;
-    result_ = stage_ == Stage::CONFIRMATION ? "confirming" : "discovering";
-  } else result_ = "inconclusive_context_or_command";
+  ++evidence_.pairs;
+  add(evidence_.reference,reference_);add(evidence_.candidate,trial_);
+  if (improved(reference_,trial_)) ++evidence_.wins;
+  else if (improved(trial_,reference_)) ++evidence_.losses;
+  result_=stage_==Stage::CONFIRMATION?"confirming":"discovering";
   evidence_.p = sign_probability(evidence_.wins,evidence_.losses);
   last_evidence_ = evidence_;
   const unsigned required = stage_ == Stage::DISCOVERY ? config_.discovery_pairs : config_.confirmation_pairs;
-  if (evidence_.pairs < required && evidence_.attempts < config_.max_pair_attempts) {
-    start_pair(); return;
+  if (evidence_.pairs < required) {
+    return;
   }
   evidence_.p = sign_probability(evidence_.wins,evidence_.losses);
   last_evidence_ = evidence_;
-  if (evidence_.pairs < required) { abort("inconclusive_evidence"); hold_start_ = now; return; }
   if (stage_ == Stage::DISCOVERY) {
     if (guards(evidence_) && improved(evidence_.reference,evidence_.candidate) &&
         evidence_.wins >= (3*config_.discovery_pairs+3)/4) {
@@ -380,6 +512,7 @@ bool PidGainLearner::restore(const Record &r) {
   accepted_ = r.accepted; previous_ = r.previous; revision_ = r.revision;
   confirmations_ = r.confirmations; proposals_ = r.proposals; next_direction_ = r.next_direction; rng_ = r.rng_state ? r.rng_state : 1;
   verified_evidence_ = r.evidence;
+  pending_={}; context_initialized_=false;
   stage_ = Stage::IDLE; result_ = r.evidence.pairs ? "restored_verified" : "restored_baseline"; have_sample_ = false;
   return true;
 }
@@ -388,10 +521,11 @@ void PidGainLearner::saved(bool success, uint32_t now) {
   if (!success) { result_ = "save_failed_retrying"; return; }
   if (stage_ == Stage::SAVE_BUDGET) {
     // Discovery evidence is never counted toward confirmation.
-    evidence_ = Evidence{};
+    evidence_ = Evidence{}; pending_={}; phase_observations_=phase_observable_=0;
     stage_ = Stage::CONFIRMATION; result_ = "confirming"; start_pair();
   } else {
     Record r = record();
+    pending_={};
     accepted_ = r.accepted; previous_ = r.previous; revision_ = r.revision;
     verified_evidence_ = r.evidence;
     result_ = stage_ == Stage::SAVE_PROMOTION ? "verified_saved_copy_to_yaml" :

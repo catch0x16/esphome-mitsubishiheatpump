@@ -17,6 +17,9 @@ class PidGainLearner {
     float peak_guard = .10f, max_command_difference = .5f;
     float outdoor_pair_difference = 3.f, context_pair_difference = .25f;
     uint32_t observable_ms = 120000;
+    // Internal experiment defaults (not room comfort tolerances).
+    uint32_t context_ms = 300000, retention_ms = 172800000;
+    float start_error_difference = .25f, start_trend_difference = .02f;
     Gains minimum{{0, 0, 0}}, maximum{{250, 10, 7200}};
   };
   struct Sample {
@@ -34,9 +37,13 @@ class PidGainLearner {
     double seconds = 0, over = 0, absolute = 0, recovery = 0;
     double outdoor = 0, fireplace = 0, others = 0, other_0 = 0, other_1 = 0, fusion = 0, fusion_mean = 0;
     double observable_seconds = 0, operating_seconds = 0;
-    float peak = 0, start_error = 0;
+    double target = 0;
+    float peak = 0, start_error = 0, start_trend = 0, start_target = 0, end_target = 0, start_outdoor = 0;
+    float target_movement = 0;
+    uint32_t fireplace_stable_ms = 0;
     unsigned shutdowns = 0;
     bool fireplace_context = false, fusion_context = false, others_context = false;
+    bool heating = true, start_fireplace = false, fireplace_changed = false, fireplace_recent_transition = false;
   };
   enum class Stage { IDLE, DISCOVERY, SAVE_BUDGET, CONFIRMATION,
                      SAVE_PROMOTION, HOLD, SAVE_RESET, SAVE_ROLLBACK };
@@ -77,6 +84,7 @@ class PidGainLearner {
   Gains last_reference_gains() const { return last_reference_gains_; }
   Gains last_candidate_gains() const { return last_candidate_gains_; }
   uint32_t completed_periods() const { return completed_periods_; }
+  unsigned pending_observations() const;
   bool last_period_candidate() const { return last_period_candidate_; }
   bool last_pair_confirmation() const { return last_pair_confirmation_; }
   const char *result() const { return result_; }
@@ -95,6 +103,13 @@ class PidGainLearner {
   Stage stage_ = Stage::IDLE;
   Evidence evidence_{}, last_evidence_{}, verified_evidence_{};
   Outcome period_{}, reference_{}, trial_{}, last_period_{};
+  struct Pending {
+    Outcome outcome{};
+    uint32_t finished_ms = 0;
+    bool used = false, candidate = false;
+  };
+  std::array<Pending, 8> pending_{};
+  unsigned phase_observations_ = 0, phase_observable_ = 0;
   uint32_t completed_periods_ = 0;
   bool last_period_candidate_ = false, last_pair_confirmation_ = false;
   Sample last_{};
@@ -103,6 +118,9 @@ class PidGainLearner {
   unsigned next_direction_ = 0;
   uint32_t last_ms_ = 0, elapsed_ms_ = 0, hold_start_ = 0, hold_duration_ = 0, waiting_since_ = 0;
   unsigned period_number_ = 0;
+  bool context_initialized_ = false, context_heating_ = true, context_fireplace_ = false, fireplace_transition_seen_ = false;
+  float context_temperature_ = 0, context_trend_ = 0;
+  uint32_t context_last_ms_ = 0, context_since_ = 0, fireplace_since_ = 0;
   const char *result_ = "collecting";
   uint32_t random();
   bool bounded(const Gains &g) const;
@@ -112,6 +130,12 @@ class PidGainLearner {
   void start_period();
   void finish_period(uint32_t now);
   void finish_pair(uint32_t now);
+  bool update_context(const Sample &sample, uint32_t now);
+  Outcome starting_context(const Sample &sample, uint32_t now) const;
+  bool matching_start(const Outcome &a, const Outcome &b) const;
+  bool matching_pending_start(const Outcome &start) const;
+  void expire_pending(uint32_t now);
+  void advance_period();
   bool comparable(const Outcome &a, const Outcome &b) const;
   bool guards(const Evidence &e) const;
   bool improved(const Outcome &a, const Outcome &b) const;

@@ -26,6 +26,7 @@ struct Fixture {
     Learner::Config c;
     c.period_ms = 1000; c.settling_ms = 200; c.hold_ms = 1000;
     c.observable_ms = 100;
+    c.context_ms = 0; // Isolate evidence mechanics; dedicated tests exercise real history.
     return c;
   }
   Learner tuner;
@@ -65,6 +66,7 @@ void confirmation_and_persistence() {
   f.until(Stage::CONFIRMATION);
   assert(f.tuner.accepted_gains() == initial);
   assert(f.tuner.evidence().pairs == 0);  // no discovery leakage
+  assert(f.tuner.pending_observations()==0);
   f.until(Stage::SAVE_PROMOTION);
   assert(f.tuner.evidence().pairs == 24);
   assert(f.tuner.evidence().p <= f.tuner.evidence().alpha);
@@ -241,7 +243,7 @@ void clock_rollover_and_command_bound() {
 void synthetic_closed_loop(bool heating, float lag=180, float loss=.0005f, float fireplace_rate=.001f) {
   auto config=Fixture::config();
   config.period_ms=600000; config.settling_ms=300000; config.hold_ms=3600000;
-  config.observable_ms=20000;
+  config.observable_ms=20000;config.context_ms=300000;
   Learner learner({{20,.015f,0}},config,789,12345);
   AdaptivePID pid(20,.015f,0,18,25.5f);
   pid.enable_adaptation(false);
@@ -322,7 +324,7 @@ void exact_scoring_with_scheduler_jitter() {
     f.tuner.observe(f.frame(),f.now);
   }
   assert(f.tuner.completed_periods()==1);
-  assert(std::fabs(f.tuner.last_period().seconds-1.0)<1e-9);
+  assert(std::fabs(f.tuner.last_period().seconds-1.2)<1e-9);
 
   Fixture varied;
   const unsigned ticks[] = {137,181,97,203,53};
@@ -332,7 +334,7 @@ void exact_scoring_with_scheduler_jitter() {
     varied.tuner.observe(varied.frame(),varied.now);
     if (varied.tuner.completed_periods()!=completed) {
       completed=varied.tuner.completed_periods();
-      assert(varied.tuner.last_period().seconds==1.0);
+      assert(varied.tuner.last_period().seconds==1.2);
     }
   }
   assert(completed==4);
@@ -521,7 +523,7 @@ void periods_include_shutdown_and_coasting() {
   for (unsigned i=0;i<20 && f.tuner.completed_periods()==periods;++i)
     f.tuner.observe(sample,f.now+=100);
   assert(f.tuner.completed_periods()==periods+1);
-  assert(f.tuner.last_period().seconds==1);
+  assert(f.tuner.last_period().seconds==1.2);
   assert(f.tuner.last_period().shutdowns==1);
   assert(f.tuner.candidate_gains()==candidate);
   f.tuner.observe(sample,f.now+=100);
@@ -541,25 +543,24 @@ void periods_include_shutdown_and_coasting() {
 
 void bounded_wait_and_actual_readback() {
   Fixture f;
-  f.tick();f.tick();
   auto sample=f.frame();
-  sample.unit_setpoint=-100; // neither arm's command was actually read back
   for (unsigned i=0;i<100 && f.tuner.stage()!=Stage::HOLD;++i) {
-    sample.temperature=f.frame().temperature;
+    sample=f.frame();
+    sample.unit_setpoint=-100; // neither arm's command was actually read back
     f.tuner.observe(sample,f.now+=100);
   }
   assert(f.tuner.stage()==Stage::HOLD && f.tuner.revision()==0);
   assert(std::strcmp(f.tuner.result(),"inconclusive_unobservable_command")==0);
   Fixture waiting;
   waiting.tick();
-  // Complete one arm, then prevent the second from starting.
   for (unsigned i=0;i<30 && waiting.tuner.completed_periods()==0;++i) waiting.tick();
   sample=waiting.frame();sample.power=false;
-  for (unsigned i=0;i<30 && waiting.tuner.stage()!=Stage::HOLD;++i)
-    waiting.tuner.observe(sample,waiting.now+=100);
-  assert(waiting.tuner.stage()==Stage::HOLD);
+  for (unsigned i=0;i<30;++i) waiting.tuner.observe(sample,waiting.now+=100);
+  assert(waiting.tuner.stage()==Stage::DISCOVERY);
+  assert(waiting.tuner.pending_observations()==1);
   assert(waiting.tuner.revision()==0);
-  assert(std::strcmp(waiting.tuner.result(),"inconclusive_start_timeout")==0);
+  assert(std::strcmp(waiting.tuner.result(),"waiting_for_enabled_unit")==0);
+
 }
 
 void command_snapshot_matches_existing_mapping() {
@@ -584,7 +585,234 @@ void command_snapshot_matches_existing_mapping() {
   assert(limited.gains()==limited.accepted_gains());
 }
 
+template <typename Change>
+void complete_observation(Fixture &f, Change change) {
+  const unsigned before=f.tuner.completed_periods();
+  for (unsigned frame=0;frame<100 && f.tuner.completed_periods()==before;++frame) {
+    auto sample=f.frame();change(sample,frame);
+    sample.unit_setpoint=sample.command_state.command(f.tuner.gains());
+    f.tuner.observe(sample,f.now+=100);
+  }
+  assert(f.tuner.completed_periods()==before+1);
+}
+void complete_observation(Fixture &f) {
+  complete_observation(f,[](Learner::Sample &,unsigned){});
+}
+
+void initial_response_is_scored() {
+  Fixture f;
+  complete_observation(f,[&](Learner::Sample &s,unsigned frame){
+    // The old unscored interval contained all distinct command exposure and a
+    // hysteresis shutdown. Both must now count in the full response.
+    s.temperature=frame<2?20.4f:20.8f;
+    if (frame>=2) { s.power=false;s.command_state.terms={{0,0,0}}; }
+  });
+  const auto &out=f.tuner.last_period();
+  assert(out.seconds==1.2);
+  assert(out.observable_seconds>=.1 && out.observable_seconds<.3);
+  assert(out.shutdowns==1);
+  assert(out.over>.8); // includes the entire early response and later coasting
+}
+
+void retain_until_fireplace_context_returns() {
+  Fixture f;
+  complete_observation(f);
+  const auto fixed=f.tuner.candidate_gains();
+  const auto count=f.tuner.completed_periods();
+  assert(f.tuner.pending_observations()==1);
+  for (unsigned i=0;i<30;++i) {
+    auto sample=f.frame();sample.external_heat=true;
+    f.tuner.observe(sample,f.now+=100);
+  }
+  assert(f.tuner.completed_periods()==count);
+  assert(f.tuner.pending_observations()==1);
+  assert(f.tuner.candidate_gains()==fixed);
+  assert(f.tuner.gains()==f.tuner.accepted_gains());
+  assert(std::strcmp(f.tuner.result(),"waiting_for_matching_context")==0);
+  // An outage discards only the partial measurement, never the complete cache.
+  auto invalid=f.frame();invalid.valid=false;f.tuner.observe(invalid,f.now+=100);
+  assert(f.tuner.pending_observations()==1);
+  for (unsigned i=0;i<4 && f.tuner.evidence().pairs==0;++i) complete_observation(f);
+  assert(f.tuner.evidence().pairs==1);
+  assert(f.tuner.candidate_gains()==fixed);
+  assert(f.tuner.pending_observations()<=1);
+  // The cached observation cannot be reused for a second comparison.
+  assert(f.tuner.evidence().pairs*2<=f.tuner.completed_periods());
+}
+
+void mismatched_error_target_and_fireplace_transition() {
+  Fixture f;complete_observation(f);
+  auto sample=f.frame();sample.temperature=19.6f; // opposite sign, same absolute error
+  f.tuner.observe(sample,f.now+=100);
+  assert(std::strcmp(f.tuner.result(),"waiting_for_matching_context")==0);
+  assert(f.tuner.pending_observations()==1);
+  sample=f.frame();sample.target=20.5f;sample.temperature=20.9f;sample.command_state.target=20.5f;
+  f.tuner.observe(sample,f.now+=100);
+  assert(std::strcmp(f.tuner.result(),"waiting_for_matching_context")==0);
+  assert(f.tuner.evidence().pairs==0);
+  Fixture transition;
+  complete_observation(transition,[](Learner::Sample &s,unsigned frame){s.external_heat=frame>=3 && frame<5;});
+  assert(transition.tuner.last_period().fireplace_changed);
+  assert(transition.tuner.pending_observations()==0);
+  assert(transition.tuner.evidence().pairs==0);
+  assert(std::strcmp(transition.tuner.result(),"inconclusive_fireplace_transition")==0);
+}
+
+void bounded_retention_and_context_only_pairing() {
+  Fixture full;full.mismatch=true;
+  for (unsigned i=0;i<500 && full.tuner.completed_periods()<12;++i) {
+    full.tick();assert(full.tuner.pending_observations()<=8);
+  }
+  assert(full.tuner.pending_observations()==8);
+  assert(full.tuner.evidence().pairs==0);
+  assert(full.tuner.revision()==0);
+  // Expiration is bounded even across the millis rollover.
+  auto config=Fixture::config();config.retention_ms=2000;
+  Learner expiring({{20,2,30}},config,42);
+  uint32_t now=UINT32_MAX-1700;
+  auto sample=Fixture().frame();
+  for (unsigned i=0;i<30 && !expiring.completed_periods();++i) {
+    sample.unit_setpoint=sample.command_state.command(expiring.gains());
+    expiring.observe(sample,now+=100);
+  }
+  assert(expiring.pending_observations()==1);
+  sample.external_heat=true;
+  for (unsigned i=0;i<30 && expiring.stage()!=Stage::HOLD;++i) expiring.observe(sample,now+=100);
+  assert(expiring.pending_observations()==0);
+  assert(expiring.stage()==Stage::HOLD);
+  assert(expiring.revision()==0);
+  full.tuner.reset();assert(full.tuner.pending_observations()==0);
+}
+
+void recent_trend_matches_thermal_carryover() {
+  auto config=Fixture::config();config.context_ms=1000;
+  Learner learner({{20,2,30}},config,42);
+  uint32_t now=1000;float temperature=20.2f;
+  auto tick=[&](bool power,float rate,bool fireplace=false) {
+    temperature+=rate/600.f; // rate in C/min, 100 ms samples
+    auto sample=Fixture().frame();
+    sample.temperature=temperature;sample.power=power;sample.external_heat=fireplace;
+    sample.command_state.terms[2]=0; // trend must not depend on PID derivative history
+    sample.unit_setpoint=sample.command_state.command(learner.gains());
+    learner.observe(sample,now+=100);
+  };
+  // Synthetic residual warming: build history even with the unit off.
+  for (unsigned i=0;i<30;++i) tick(false,.2f);
+  for (unsigned i=0;i<30 && !learner.completed_periods();++i) tick(true,.2f);
+  assert(learner.completed_periods()==1);
+  assert(learner.last_period().start_trend>.15f);
+  assert(learner.pending_observations()==1);
+  const auto fixed=learner.candidate_gains();
+  for (unsigned i=0;i<60;++i) tick(false,-.2f);
+  tick(true,-.2f);
+  assert(std::strcmp(learner.result(),"waiting_for_matching_context")==0);
+  assert(learner.completed_periods()==1 && learner.pending_observations()==1);
+  // Similar temperature error is insufficient while momentum is opposite.
+  for (unsigned i=0;i<60;++i) tick(false,.2f);
+  for (unsigned i=0;i<30 && learner.completed_periods()==1;++i) tick(true,.2f);
+  assert(learner.completed_periods()==2 && learner.evidence().pairs==1);
+  assert(learner.candidate_gains()==fixed);
+}
+
+void scheduled_targets_are_scored_and_matched() {
+  Fixture f;
+  auto schedule=[](Learner::Sample &s,unsigned frame) {
+    if (frame>=5) { s.target=20.5f;s.command_state.target=20.5f;s.temperature+=.5f; }
+  };
+  complete_observation(f,schedule);
+  assert(f.tuner.last_period().target_movement==.5f);
+  assert(f.tuner.last_period().seconds==1.2);
+  complete_observation(f,schedule);
+  assert(f.tuner.evidence().pairs==1);
+  Fixture mismatch;
+  complete_observation(mismatch,schedule);
+  complete_observation(mismatch); // identical start, different target trajectory
+  assert(mismatch.tuner.evidence().pairs==0);
+  assert(mismatch.tuner.pending_observations()==2);
+}
+
+void discovery_cache_is_not_confirmation_evidence() {
+  Fixture f;f.save_budget=false;
+  // A complete but unmatched target trajectory stays queued through discovery.
+  complete_observation(f,[](Learner::Sample &s,unsigned frame){
+    if (frame>=5) {s.target+=.5f;s.temperature+=.5f;s.command_state.target+=.5f;}
+  });
+  f.until(Stage::SAVE_BUDGET);
+  assert(f.tuner.pending_observations()>0);
+  f.tuner.saved(true,f.now);
+  assert(f.tuner.stage()==Stage::CONFIRMATION);
+  assert(f.tuner.pending_observations()==0);
+  assert(f.tuner.evidence().pairs==0);
+  assert(f.tuner.record().confirmations==1);
+}
+
+void fireplace_residual_context_requires_similar_history() {
+  auto config=Fixture::config();config.context_ms=1000;
+  Learner learner({{20,2,30}},config,42);
+  uint32_t now=1000;
+  auto tick=[&](bool power,bool fireplace) {
+    auto sample=Fixture().frame();sample.power=power;sample.external_heat=fireplace;
+    sample.temperature=20.2f;sample.command_state.terms[2]=0;
+    sample.unit_setpoint=sample.command_state.command(learner.gains());
+    learner.observe(sample,now+=100);
+  };
+  for (unsigned i=0;i<100;++i) tick(false,false);
+  for (unsigned i=0;i<30 && !learner.completed_periods();++i) tick(true,false);
+  assert(learner.pending_observations()==1);
+  // Fireplace on then off. Identical temperature and current off state cannot
+  // hide a recently observed transition from the matching rules.
+  for (unsigned i=0;i<20;++i) tick(false,true);
+  for (unsigned i=0;i<15;++i) tick(false,false);
+  tick(true,false);
+  assert(learner.completed_periods()==1);
+  assert(std::strcmp(learner.result(),"waiting_for_matching_context")==0);
+  for (unsigned i=0;i<60;++i) tick(false,false);
+  for (unsigned i=0;i<30 && learner.completed_periods()==1;++i) tick(true,false);
+  assert(learner.completed_periods()==2);
+  assert(learner.evidence().pairs==1);
+}
+
+void oldest_context_match_does_not_select_the_best_score() {
+  Fixture f;f.benefit=false;
+  complete_observation(f);
+  const bool side=f.tuner.last_period_candidate();
+  const double first=f.tuner.last_period().over;
+  // Retain a second, better-scoring observation of the same arm. Opposite-arm
+  // placeholders deliberately have a fireplace transition and cannot pair.
+  double second=0;
+  for (unsigned i=0;i<4 && f.tuner.pending_observations()<2;++i) {
+    complete_observation(f,[&](Learner::Sample &s,unsigned frame){
+      if (frame && f.tuner.testing_candidate()!=side) s.external_heat=frame>=3;
+      else if (frame) s.temperature=20.1f;
+    });
+    if (f.tuner.last_period_candidate()==side) second=f.tuner.last_period().over;
+  }
+  assert(second>0 && second<first);
+  assert(f.tuner.pending_observations()==2);
+  auto counterpart=[&](Learner::Sample &s,unsigned frame) {
+    if (frame && f.tuner.testing_candidate()==side) s.external_heat=frame>=3;
+  };
+  for (unsigned i=0;i<4 && f.tuner.evidence().pairs<1;++i) complete_observation(f,counterpart);
+  assert(f.tuner.evidence().pairs==1);
+  const auto &e=f.tuner.evidence();
+  assert((side?e.candidate.over:e.reference.over)==first);
+  assert(f.tuner.pending_observations()==1);
+  for (unsigned i=0;i<4 && f.tuner.evidence().pairs<2;++i) complete_observation(f,counterpart);
+  assert(f.tuner.evidence().pairs==2);
+  assert((side?e.candidate.over:e.reference.over)==first+second);
+  assert(f.tuner.pending_observations()==0);
+}
+
 int main() {
+  oldest_context_match_does_not_select_the_best_score();
+  discovery_cache_is_not_confirmation_evidence();
+  fireplace_residual_context_requires_similar_history();
+  initial_response_is_scored();
+  retain_until_fireplace_context_returns();
+  mismatched_error_target_and_fireplace_transition();
+  bounded_retention_and_context_only_pairing();
+  recent_trend_matches_thermal_carryover();
+  scheduled_targets_are_scored_and_matched();
   command_snapshot_matches_existing_mapping();
   quantization_aware_candidates();
   defer_uninformative_and_disabled_conditions();

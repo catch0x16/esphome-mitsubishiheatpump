@@ -1041,6 +1041,10 @@ void MitsubishiHeatPump::service_gain_learning_() {
                 a[0],a[1],a[2],b[0],b[1],b[2],p.seconds,p.shutdowns,p.over/seconds,p.absolute/seconds,
                 p.recovery/seconds,p.peak,p.outdoor/seconds,p.fireplace_context?p.fireplace/seconds:-1.,p.other_0/seconds,p.other_1/seconds,
                 p.fusion_context?p.fusion_mean/seconds:-1.,p.fusion,p.observable_seconds);
+            ESP_LOGI(TAG, "PID_GAIN_CONTEXT mode=%s proposal=%u completed=%u pending=%u seconds=%.0f observable=%.0f start_error=%.4f start_trend_c_per_min=%.4f start_target=%.4f start_outdoor=%.3f fireplace_start=%d fireplace_stable_ms=%u fireplace_recent=%s fireplace_changed=%s target_mean=%.4f target_movement=%.4f",
+                profile_name,learner->proposals(),learning_last_period_[index],learner->pending_observations(),p.seconds,p.observable_seconds,
+                p.start_error,p.start_trend,p.start_target,p.start_outdoor,p.fireplace_context?int(p.start_fireplace):-1,
+                p.fireplace_stable_ms,YESNO(p.fireplace_recent_transition),YESNO(p.fireplace_changed),p.target/seconds,p.target_movement);
             const auto &e = learner->last_evidence();
             ESP_LOGI(TAG, "PID_GAIN_COMPARISON mode=%s phase=%s pairs=%u attempts=%u wins=%u losses=%u p=%.9g alpha=%.9g A_seconds=%.0f B_seconds=%.0f A_shutdowns=%u B_shutdowns=%u result=%s",
                 profile_name,learner->last_pair_confirmation() ? "confirm" : "discover",e.pairs,e.attempts,
@@ -1062,9 +1066,9 @@ void MitsubishiHeatPump::service_gain_learning_() {
             problem?problem:gain_learner_->result();
         const char *mode=gain_profiles_->selected_index()==0?"heat":gain_profiles_->selected_index()==1?"cool":"inactive";
         char status[256];
-        std::snprintf(status,sizeof(status),"%s %s %s pairs=%u; YAML {heat: {kp: %.9g, ki: %.9g, kd: %.9g}, cool: {kp: %.9g, ki: %.9g, kd: %.9g}}; revisions=%u/%u",
+        std::snprintf(status,sizeof(status),"%s %s %s pairs=%u pending=%u; YAML {heat: {kp: %.9g, ki: %.9g, kd: %.9g}, cool: {kp: %.9g, ki: %.9g, kd: %.9g}}; revisions=%u/%u",
             mode,state,gain_learner_&&gain_learner_->testing_candidate()?"B":"A",
-            gain_learner_?gain_learner_->evidence().pairs:0,
+            gain_learner_?gain_learner_->evidence().pairs:0,gain_learner_?gain_learner_->pending_observations():0,
             heat[0],heat[1],heat[2],cool[0],cool[1],cool[2],
             gain_profiles_->at(0).revision(),gain_profiles_->at(1).revision());
         learning_status_->publish_state(status);
