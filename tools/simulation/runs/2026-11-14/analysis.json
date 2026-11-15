@@ -1,0 +1,1023 @@
+{
+  "schema": 1,
+  "runtime": {
+    "python": "3.13.12 (main, Feb  4 2026, 00:05:32) [Clang 21.1.4 ]",
+    "platform": "macOS-27.2.1-arm64-arm-64bit-Mach-O",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1"
+  },
+  "analysis_settings": {
+    "max_windows": 16,
+    "split": "chronological complete local days 60/20/20",
+    "minimum_complete_days": 4
+  },
+  "scope": "Offline research; no device writes or deployment authorization",
+  "mode": 1,
+  "validation_kind": "Conditional response replay using recorded future commands, enablement and external scenario inputs; not an operational forecast.",
+  "config_sha256": "877d01207907e368d77426c3ee0e842794d90eb851276d1d482be01713c3c6a3",
+  "controller_sources": {
+    "components/mitsubishi_heatpump/adaptive_pid.cpp": "1b054da5d5854dea2fdc6a592e9db821ea3979ec4098bf16e82a8dee6cb4c165",
+    "components/mitsubishi_heatpump/adaptive_pid.h": "4816cfb71d583a35e710a9d3d1f8ffc4ba0d1502f3af913bd4bbd03b6d09d93c",
+    "tools/simulation/native/bridge.cpp": "6217b0959a0b7d9e3ddd03d44f14a8ce63e6631f2deb6a4f22664d5fc696ad1b",
+    "tools/simulation/native/fusion_reference.inc": "f7dcb607bfdb26dd1b65d12d95c223702c15385474c44ae745e0baa166328b07",
+    "tools/simulation/native/fusion_provenance.json": "ffa9d06e79de0f6449215f0cf143747b9483fd4ae5d047b4441c2e6f269a235d",
+    "tools/simulation/hvacsim/__init__.py": "0736e828acad990e13c89321ffc1c27dd5e49d8447481d5e77061f9c47cb01f1",
+    "tools/simulation/hvacsim/cli.py": "5ac378fc0f2120449f5bf6d85f44090c2d256319af809f38bf2fdc73a6b41e0b",
+    "tools/simulation/hvacsim/data.py": "5fbc92719ec7bffc33ea3599a8d8b9c5101b6a2d4c683f0b6dd5dd488ca04931",
+    "tools/simulation/hvacsim/model.py": "0305b81850895c0e069f1c0f538478b2605c460bf5c699899544a588791517b6",
+    "tools/simulation/hvacsim/native.py": "cc95e24535f3cfce9417e600519bf9f102fd46a09f1106eb756acbc612ad4ab4",
+    "tools/simulation/hvacsim/notebook.py": "d7e1ed72f935a355bbbb9f65b297a5b6406bf10ed3f65931a1134d41461cf0a8",
+    "tools/simulation/hvacsim/report.py": "fbc682b6a58c04ee1c33f485afc351b36ebfec39e87c1b282a962e10e1fff9d6",
+    "tools/simulation/hvacsim/search.py": "5c5c53ee5f26c4f66f64b699d84701e9dc6f5e913de658a3c1ed8add548f9c2f",
+    "tools/simulation/hvacsim/simulate.py": "57295867b0b05b73b8f61449a994af7755a89a9d2fd2fa00ce4d8ec24ecc8bc5",
+    "tools/simulation/hvacsim/validate.py": "f02c340bc417a1a3b43f2f8bb0c940967fcb84096f442f17f79d2bfb2f7cf3dd"
+  },
+  "data_sha256": "ae826e02d63c9de254c82a69f50b95301e0dfdf636c771d5dcf4c629f61a0bdf",
+  "rooms": {
+    "primary": {
+      "audit": {
+        "samples": 40321,
+        "valid_samples": 32216,
+        "coverage_fraction": 0.7989881203343171,
+        "actual_start": "2026-10-23 12:01:21.143719912+00:00",
+        "actual_end": "2026-11-14 20:59:21.143719912+00:00",
+        "splits": {
+          "train": [
+            "2026-10-24",
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-28",
+            "2026-10-29",
+            "2026-10-30",
+            "2026-10-31",
+            "2026-11-01",
+            "2026-11-02",
+            "2026-11-03",
+            "2026-11-04"
+          ],
+          "validation": [
+            "2026-11-05",
+            "2026-11-06",
+            "2026-11-07",
+            "2026-11-08"
+          ],
+          "test": [
+            "2026-11-09",
+            "2026-11-10",
+            "2026-11-11",
+            "2026-11-12",
+            "2026-11-13"
+          ],
+          "complete_days": [
+            "2026-10-24",
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-28",
+            "2026-10-29",
+            "2026-10-30",
+            "2026-10-31",
+            "2026-11-01",
+            "2026-11-02",
+            "2026-11-03",
+            "2026-11-04",
+            "2026-11-05",
+            "2026-11-06",
+            "2026-11-07",
+            "2026-11-08",
+            "2026-11-09",
+            "2026-11-10",
+            "2026-11-11",
+            "2026-11-12",
+            "2026-11-13"
+          ]
+        },
+        "native_command_changes": 1619,
+        "enabled_fraction": 0.32620437049913087,
+        "outdoor_range": [
+          4.444444444444445,
+          19.833333333333336
+        ],
+        "fireplace_fraction": 0.4012912838341197,
+        "idle_samples": 21707,
+        "fusion_transition_samples": 947,
+        "limitations": [
+          "Scrape availability does not establish source freshness.",
+          "Setpoint and operating flags are not measurements of delivered power.",
+          "Unknown historical firmware/fusion revisions require checking measurement replay fidelity."
+        ],
+        "weather_bands": {
+          "-20:-15": 0,
+          "-15:-10": 0,
+          "-10:-5": 0,
+          "-5:0": 0,
+          "0:5": 109,
+          "5:10": 9166,
+          "10:15": 20824,
+          "15:20": 2117,
+          "20:25": 0,
+          "25:30": 0,
+          "30:35": 0,
+          "35:40": 0
+        }
+      },
+      "models": [
+        {
+          "parameters": {
+            "loss": 0.09863487755678212,
+            "mass": 0.06709962477578132,
+            "hvac": 2.534434760026655,
+            "fireplace": 2.5044408646720263e-17,
+            "shared": -3.402792535437906e-23,
+            "bias": 0.7075692844270004,
+            "tau_hvac": 120.0,
+            "tau_mass": 7200.0,
+            "tau_fire": 1800.0,
+            "offset": 0.5,
+            "ceiling_offset": 0.7917210987773852,
+            "ceiling_gain": 0.20641817519951494,
+            "tau_ceiling": 120,
+            "constant_demand": 0.0
+          },
+          "validation_mae": 0.23996078968047807
+        },
+        {
+          "parameters": {
+            "loss": 0.09741912532036476,
+            "mass": 0.011720682502354932,
+            "hvac": 2.54833318325154,
+            "fireplace": 1.879391088879434e-17,
+            "shared": -2.6116193211315103e-23,
+            "bias": 0.6951375191842406,
+            "tau_hvac": 120.0,
+            "tau_mass": 28800.0,
+            "tau_fire": 1800.0,
+            "offset": 0.5,
+            "ceiling_offset": 0.7917210987773852,
+            "ceiling_gain": 0.20641817519951494,
+            "tau_ceiling": 120,
+            "constant_demand": 0.0
+          },
+          "validation_mae": 0.24007856845855424
+        },
+        {
+          "parameters": {
+            "loss": 0.11368842923853173,
+            "mass": 0.30624540914370674,
+            "hvac": 2.6445241100769197,
+            "fireplace": 1.0522294867732236e-13,
+            "shared": -3.869490587512796e-16,
+            "bias": 0.8396774298018583,
+            "tau_hvac": 600.0,
+            "tau_mass": 7200.0,
+            "tau_fire": 1800.0,
+            "offset": 0.5,
+            "ceiling_offset": 0.754625683900782,
+            "ceiling_gain": 0.6056271187913059,
+            "tau_ceiling": 120,
+            "constant_demand": 0.0
+          },
+          "validation_mae": 0.24547512531280194
+        },
+        {
+          "parameters": {
+            "loss": 0.11103665736601238,
+            "mass": 0.12452477636527857,
+            "hvac": 2.64791284611401,
+            "fireplace": 3.135215269707963e-14,
+            "shared": -2.441646751279528e-16,
+            "bias": 0.814851077906495,
+            "tau_hvac": 600.0,
+            "tau_mass": 28800.0,
+            "tau_fire": 1800.0,
+            "offset": 0.5,
+            "ceiling_offset": 0.754625683900782,
+            "ceiling_gain": 0.6056271187913059,
+            "tau_ceiling": 120,
+            "constant_demand": 0.0
+          },
+          "validation_mae": 0.2469565391540495
+        },
+        {
+          "parameters": {
+            "loss": 0.0870164567808006,
+            "mass": 0.0005816734020880556,
+            "hvac": 1.3038294360351277,
+            "fireplace": 1.7249904441322636e-15,
+            "shared": -1.852991144414542e-15,
+            "bias": 0.6094004638094715,
+            "tau_hvac": 120.0,
+            "tau_mass": 28800.0,
+            "tau_fire": 1800.0,
+            "offset": 1.0,
+            "ceiling_offset": 0.7857530125026829,
+            "ceiling_gain": 0.14798909746338024,
+            "tau_ceiling": 120,
+            "constant_demand": 0.0
+          },
+          "validation_mae": 0.24943771362304426
+        }
+      ],
+      "test": {
+        "horizons": {
+          "5": {
+            "n": 16,
+            "mae": 0.09111094474792192,
+            "p95": 0.25221490859984463,
+            "stronger_baseline_mae": 0.07219552993774614,
+            "relative_improvement": -0.2620025758725846,
+            "interval_half_width": 0.2679386138915909,
+            "coverage": 0.9375
+          },
+          "15": {
+            "n": 16,
+            "mae": 0.19076943397522017,
+            "p95": 0.46925449371337713,
+            "stronger_baseline_mae": 0.1929651498794578,
+            "relative_improvement": 0.011378821023429575,
+            "interval_half_width": 0.44738578796385653,
+            "coverage": 0.9375
+          },
+          "30": {
+            "n": 16,
+            "mae": 0.2840179204940816,
+            "p95": 0.6581616401672266,
+            "stronger_baseline_mae": 0.31943309307098233,
+            "relative_improvement": 0.11086882776115814,
+            "interval_half_width": 0.4879674911498988,
+            "coverage": 0.75
+          },
+          "60": {
+            "n": 16,
+            "mae": 0.2116458415985134,
+            "p95": 0.594573497772231,
+            "stronger_baseline_mae": 0.27050161361694425,
+            "relative_improvement": 0.21758011433446067,
+            "interval_half_width": 0.6265592575073349,
+            "coverage": 0.9375
+          },
+          "150": {
+            "n": 16,
+            "mae": 0.24349033832549716,
+            "p95": 0.47220325469971947,
+            "stronger_baseline_mae": 0.429612755775455,
+            "relative_improvement": 0.43323298702806246,
+            "interval_half_width": 0.5499477386474414,
+            "coverage": 1.0
+          }
+        },
+        "command_response_episodes": [],
+        "categories": {
+          "coasting": {
+            "n": 7,
+            "mae": 0.3408246721540209
+          },
+          "heating_or_cooling": {
+            "n": 6,
+            "mae": 0.13015174865723309
+          },
+          "passive": {
+            "n": 66,
+            "mae": 0.19767339301831688
+          },
+          "recovery": {
+            "n": 1,
+            "mae": 0.12342453002928977
+          }
+        },
+        "fusion_transitions": {
+          "False": {
+            "n": 45,
+            "mae": 0.2015477922227638
+          },
+          "True": {
+            "n": 35,
+            "mae": 0.20762574332101075
+          }
+        },
+        "scheduled_target_changes": {
+          "False": {
+            "n": 65,
+            "mae": 0.18024289057804987
+          },
+          "True": {
+            "n": 15,
+            "mae": 0.3080509185791004
+          }
+        },
+        "weather_bands": {
+          "5.0": {
+            "n": 13,
+            "mae": 0.267240671011117
+          },
+          "10.0": {
+            "n": 67,
+            "mae": 0.19197646183754072
+          }
+        }
+      },
+      "validation_intervals": {
+        "5": 0.2679386138915909,
+        "15": 0.44738578796385653,
+        "30": 0.4879674911498988,
+        "60": 0.6265592575073349,
+        "150": 0.5499477386474414
+      },
+      "qualification": {
+        "qualified": false,
+        "reasons": [
+          "does_not_beat_stronger_baseline_by_10_percent",
+          "fewer_than_three_held_out_command_change_episodes"
+        ],
+        "meaning": "Screening eligibility only; does not authorize deployment or establish causal gain improvement."
+      },
+      "measurement_audit": {
+        "samples": 32216,
+        "fused_reconstruction_mae": 0.0028806778704645046,
+        "note": "Same-time raw/weight reconstruction; does not validate unknown historical fusion revisions or sensor response to new commands."
+      },
+      "limits": [
+        "Model family assumes a saturated native thermostat response plus lag; it is not the vendor controller.",
+        "Closed-loop observational fitting may be biased by unmeasured gains/disturbances; command ablation is not causal proof.",
+        "Other heads are held scenario context; simultaneous three-head optimization is not qualified.",
+        "Empirical validation residual intervals are not counterfactual confidence guarantees.",
+        "Heat/cool modes and unobserved weather ranges need separate qualification."
+      ],
+      "next_experiment": {
+        "needed": true,
+        "proposal": "If response identification is weak, collect repeated bounded one-native-step changes with stable fireplace/target and coordinated other heads; retain unchanged hysteresis and rollback. No probe is initiated by this tool."
+      }
+    },
+    "hailee": {
+      "audit": {
+        "samples": 40321,
+        "valid_samples": 32216,
+        "coverage_fraction": 0.7989881203343171,
+        "actual_start": "2026-10-23 12:01:21.143719912+00:00",
+        "actual_end": "2026-11-14 20:59:21.143719912+00:00",
+        "splits": {
+          "train": [
+            "2026-10-24",
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-28",
+            "2026-10-29",
+            "2026-10-30",
+            "2026-10-31",
+            "2026-11-01",
+            "2026-11-02",
+            "2026-11-03",
+            "2026-11-04"
+          ],
+          "validation": [
+            "2026-11-05",
+            "2026-11-06",
+            "2026-11-07",
+            "2026-11-08"
+          ],
+          "test": [
+            "2026-11-09",
+            "2026-11-10",
+            "2026-11-11",
+            "2026-11-12",
+            "2026-11-13"
+          ],
+          "complete_days": [
+            "2026-10-24",
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-28",
+            "2026-10-29",
+            "2026-10-30",
+            "2026-10-31",
+            "2026-11-01",
+            "2026-11-02",
+            "2026-11-03",
+            "2026-11-04",
+            "2026-11-05",
+            "2026-11-06",
+            "2026-11-07",
+            "2026-11-08",
+            "2026-11-09",
+            "2026-11-10",
+            "2026-11-11",
+            "2026-11-12",
+            "2026-11-13"
+          ]
+        },
+        "native_command_changes": 2849,
+        "enabled_fraction": 0.22457784951576856,
+        "outdoor_range": [
+          4.444444444444445,
+          19.833333333333336
+        ],
+        "fireplace_fraction": 0.4012912838341197,
+        "idle_samples": 24981,
+        "fusion_transition_samples": 335,
+        "limitations": [
+          "Scrape availability does not establish source freshness.",
+          "Setpoint and operating flags are not measurements of delivered power.",
+          "Unknown historical firmware/fusion revisions require checking measurement replay fidelity."
+        ],
+        "weather_bands": {
+          "-20:-15": 0,
+          "-15:-10": 0,
+          "-10:-5": 0,
+          "-5:0": 0,
+          "0:5": 109,
+          "5:10": 9166,
+          "10:15": 20824,
+          "15:20": 2117,
+          "20:25": 0,
+          "25:30": 0,
+          "30:35": 0,
+          "35:40": 0
+        }
+      },
+      "models": [
+        {
+          "parameters": {
+            "loss": 0.3349477360350831,
+            "mass": 0.6542832833315093,
+            "hvac": 8.206499835817064,
+            "fireplace": 0.6396831085726918,
+            "shared": -1.353047766422447e-16,
+            "bias": 2.042712842163021,
+            "tau_hvac": 120.0,
+            "tau_mass": 28800.0,
+            "tau_fire": 1800.0,
+            "offset": 1.0,
+            "ceiling_offset": -0.38056687746648965,
+            "ceiling_gain": 0.683409300928543,
+            "tau_ceiling": 120,
+            "constant_demand": 0.49999999999999645
+          },
+          "validation_mae": 0.18081984519958544
+        },
+        {
+          "parameters": {
+            "loss": 0.34857024398247693,
+            "mass": 1.9933778125698274,
+            "hvac": 6.5383111095930015,
+            "fireplace": 0.6048080518160746,
+            "shared": -5.127255865852791e-16,
+            "bias": 2.3839311514495956,
+            "tau_hvac": 600.0,
+            "tau_mass": 7200.0,
+            "tau_fire": 1800.0,
+            "offset": 1.0,
+            "ceiling_offset": -0.49294381252618896,
+            "ceiling_gain": 1.3379976894583068,
+            "tau_ceiling": 120,
+            "constant_demand": 0.49999999999999645
+          },
+          "validation_mae": 0.1818133592605553
+        },
+        {
+          "parameters": {
+            "loss": 0.32505580772670556,
+            "mass": 0.9357777932338894,
+            "hvac": 8.15872755403799,
+            "fireplace": 0.6539519951883482,
+            "shared": -1.2492274674730794e-16,
+            "bias": 1.9361844465788154,
+            "tau_hvac": 120.0,
+            "tau_mass": 7200.0,
+            "tau_fire": 1800.0,
+            "offset": 1.0,
+            "ceiling_offset": -0.38056687746648965,
+            "ceiling_gain": 0.683409300928543,
+            "tau_ceiling": 120,
+            "constant_demand": 0.49999999999999645
+          },
+          "validation_mae": 0.18489286899566698
+        },
+        {
+          "parameters": {
+            "loss": 0.35226363675818895,
+            "mass": 1.195220871144408,
+            "hvac": 6.380297145641122,
+            "fireplace": 0.5456995068811563,
+            "shared": -6.693285980590105e-16,
+            "bias": 2.4775567333815935,
+            "tau_hvac": 600.0,
+            "tau_mass": 28800.0,
+            "tau_fire": 1800.0,
+            "offset": 1.0,
+            "ceiling_offset": -0.49294381252618896,
+            "ceiling_gain": 1.3379976894583068,
+            "tau_ceiling": 120,
+            "constant_demand": 0.49999999999999645
+          },
+          "validation_mae": 0.18715288639068386
+        },
+        {
+          "parameters": {
+            "loss": 0.3253168805903042,
+            "mass": 1.206456462199159,
+            "hvac": 8.419477683708916,
+            "fireplace": 0.5493914139621063,
+            "shared": -3.305450653104443e-16,
+            "bias": 2.2473275494722946,
+            "tau_hvac": 600.0,
+            "tau_mass": 28800.0,
+            "tau_fire": 1800.0,
+            "offset": 0.5,
+            "ceiling_offset": -0.4567292461337451,
+            "ceiling_gain": 1.58293142000106,
+            "tau_ceiling": 120,
+            "constant_demand": 0.0
+          },
+          "validation_mae": 0.19823951721191108
+        }
+      ],
+      "test": {
+        "horizons": {
+          "5": {
+            "n": 16,
+            "mae": 0.1019072532653873,
+            "p95": 0.2716341018676811,
+            "stronger_baseline_mae": 0.12838923931121093,
+            "relative_improvement": 0.20626328333975286,
+            "interval_half_width": 0.12971973419187321,
+            "coverage": 0.8125
+          },
+          "15": {
+            "n": 16,
+            "mae": 0.12805068492889604,
+            "p95": 0.3202986717223961,
+            "stronger_baseline_mae": 0.2473310232162398,
+            "relative_improvement": 0.4822700231303284,
+            "interval_half_width": 0.18176269531250533,
+            "coverage": 0.75
+          },
+          "30": {
+            "n": 16,
+            "mae": 0.19113469123840043,
+            "p95": 0.43929147720338513,
+            "stronger_baseline_mae": 0.29529166221618053,
+            "relative_improvement": 0.3527257430706854,
+            "interval_half_width": 0.3469028472900195,
+            "coverage": 0.875
+          },
+          "60": {
+            "n": 16,
+            "mae": 0.26186907291412487,
+            "p95": 0.6177988052368368,
+            "stronger_baseline_mae": 0.31829810142516957,
+            "relative_improvement": 0.1772835849739145,
+            "interval_half_width": 0.5101356506347567,
+            "coverage": 0.9375
+          },
+          "150": {
+            "n": 16,
+            "mae": 0.3116878271102923,
+            "p95": 0.8214926719665732,
+            "stronger_baseline_mae": 0.46840941905974276,
+            "relative_improvement": 0.33458249465615797,
+            "interval_half_width": 0.5650911331176687,
+            "coverage": 0.875
+          }
+        },
+        "command_response_episodes": [
+          {
+            "origin": "2026-11-09 08:30:21.143719912+00:00",
+            "steps": 5,
+            "model_mae": 0.17555130004883174,
+            "constant_input_mae": 0.28582820892334104
+          },
+          {
+            "origin": "2026-11-09 11:30:21.143719912+00:00",
+            "steps": 2,
+            "model_mae": 0.23521231333414552,
+            "constant_input_mae": 0.4548954518636047
+          },
+          {
+            "origin": "2026-11-10 09:30:21.143719912+00:00",
+            "steps": 2,
+            "model_mae": 0.1432397079467771,
+            "constant_input_mae": 0.31973918914795185
+          },
+          {
+            "origin": "2026-11-10 12:30:21.143719912+00:00",
+            "steps": 2,
+            "model_mae": 0.16443758646647202,
+            "constant_input_mae": 0.3935367202758799
+          },
+          {
+            "origin": "2026-11-11 06:30:21.143719912+00:00",
+            "steps": 1,
+            "model_mae": 0.11459547678629561,
+            "constant_input_mae": 0.09503841400146612
+          },
+          {
+            "origin": "2026-11-11 09:30:21.143719912+00:00",
+            "steps": 3,
+            "model_mae": 0.18276359558105498,
+            "constant_input_mae": 0.27074839274088497
+          }
+        ],
+        "categories": {
+          "heating_or_cooling": {
+            "n": 5,
+            "mae": 0.21766395568847513
+          },
+          "passive": {
+            "n": 75,
+            "mae": 0.19768096923828318
+          }
+        },
+        "fusion_transitions": {
+          "False": {
+            "n": 55,
+            "mae": 0.21556691256436636
+          },
+          "True": {
+            "n": 25,
+            "mae": 0.16232849121093865
+          }
+        },
+        "scheduled_target_changes": {
+          "False": {
+            "n": 65,
+            "mae": 0.17363477853628295
+          },
+          "True": {
+            "n": 15,
+            "mae": 0.30854212443034823
+          }
+        },
+        "weather_bands": {
+          "5.0": {
+            "n": 13,
+            "mae": 0.3447223076453636
+          },
+          "10.0": {
+            "n": 67,
+            "mae": 0.17064182793916252
+          }
+        }
+      },
+      "validation_intervals": {
+        "5": 0.12971973419187321,
+        "15": 0.18176269531250533,
+        "30": 0.3469028472900195,
+        "60": 0.5101356506347567,
+        "150": 0.5650911331176687
+      },
+      "qualification": {
+        "qualified": true,
+        "reasons": [],
+        "meaning": "Screening eligibility only; does not authorize deployment or establish causal gain improvement."
+      },
+      "measurement_audit": {
+        "samples": 32216,
+        "fused_reconstruction_mae": 0.008169780197200997,
+        "note": "Same-time raw/weight reconstruction; does not validate unknown historical fusion revisions or sensor response to new commands."
+      },
+      "limits": [
+        "Model family assumes a saturated native thermostat response plus lag; it is not the vendor controller.",
+        "Closed-loop observational fitting may be biased by unmeasured gains/disturbances; command ablation is not causal proof.",
+        "Other heads are held scenario context; simultaneous three-head optimization is not qualified.",
+        "Empirical validation residual intervals are not counterfactual confidence guarantees.",
+        "Heat/cool modes and unobserved weather ranges need separate qualification."
+      ],
+      "next_experiment": {
+        "needed": false,
+        "proposal": "If response identification is weak, collect repeated bounded one-native-step changes with stable fireplace/target and coordinated other heads; retain unchanged hysteresis and rollback. No probe is initiated by this tool."
+      }
+    },
+    "main": {
+      "audit": {
+        "samples": 40321,
+        "valid_samples": 32216,
+        "coverage_fraction": 0.7989881203343171,
+        "actual_start": "2026-10-23 12:01:21.143719912+00:00",
+        "actual_end": "2026-11-14 20:59:21.143719912+00:00",
+        "splits": {
+          "train": [
+            "2026-10-24",
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-28",
+            "2026-10-29",
+            "2026-10-30",
+            "2026-10-31",
+            "2026-11-01",
+            "2026-11-02",
+            "2026-11-03",
+            "2026-11-04"
+          ],
+          "validation": [
+            "2026-11-05",
+            "2026-11-06",
+            "2026-11-07",
+            "2026-11-08"
+          ],
+          "test": [
+            "2026-11-09",
+            "2026-11-10",
+            "2026-11-11",
+            "2026-11-12",
+            "2026-11-13"
+          ],
+          "complete_days": [
+            "2026-10-24",
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-28",
+            "2026-10-29",
+            "2026-10-30",
+            "2026-10-31",
+            "2026-11-01",
+            "2026-11-02",
+            "2026-11-03",
+            "2026-11-04",
+            "2026-11-05",
+            "2026-11-06",
+            "2026-11-07",
+            "2026-11-08",
+            "2026-11-09",
+            "2026-11-10",
+            "2026-11-11",
+            "2026-11-12",
+            "2026-11-13"
+          ]
+        },
+        "native_command_changes": 840,
+        "enabled_fraction": 0.3256146014402781,
+        "outdoor_range": [
+          4.444444444444445,
+          19.833333333333336
+        ],
+        "fireplace_fraction": 0.4012912838341197,
+        "idle_samples": 21726,
+        "fusion_transition_samples": 0,
+        "limitations": [
+          "Scrape availability does not establish source freshness.",
+          "Setpoint and operating flags are not measurements of delivered power.",
+          "Unknown historical firmware/fusion revisions require checking measurement replay fidelity."
+        ],
+        "weather_bands": {
+          "-20:-15": 0,
+          "-15:-10": 0,
+          "-10:-5": 0,
+          "-5:0": 0,
+          "0:5": 109,
+          "5:10": 9166,
+          "10:15": 20824,
+          "15:20": 2117,
+          "20:25": 0,
+          "25:30": 0,
+          "30:35": 0,
+          "35:40": 0
+        }
+      },
+      "models": [
+        {
+          "parameters": {
+            "loss": 0.03234579695995207,
+            "mass": 0.088587279482305,
+            "hvac": 1.3701593098585834,
+            "fireplace": 0.23066691318209886,
+            "shared": -6.793134300926649e-14,
+            "bias": 0.0642223618311228,
+            "tau_hvac": 120.0,
+            "tau_mass": 28800.0,
+            "tau_fire": 1800.0,
+            "offset": 1.0,
+            "ceiling_offset": 0,
+            "ceiling_gain": 0,
+            "tau_ceiling": 120,
+            "constant_demand": 0.49999999999999645
+          },
+          "validation_mae": 0.14887884377282457
+        },
+        {
+          "parameters": {
+            "loss": 0.031237226374201565,
+            "mass": 0.19683145071110947,
+            "hvac": 1.4064540852633742,
+            "fireplace": 0.23595313106797172,
+            "shared": -1.4251101023627702e-13,
+            "bias": 0.04524241712574152,
+            "tau_hvac": 120.0,
+            "tau_mass": 7200.0,
+            "tau_fire": 1800.0,
+            "offset": 1.0,
+            "ceiling_offset": 0,
+            "ceiling_gain": 0,
+            "tau_ceiling": 120,
+            "constant_demand": 0.49999999999999645
+          },
+          "validation_mae": 0.1493848524825956
+        },
+        {
+          "parameters": {
+            "loss": 0.03559160829592473,
+            "mass": 0.06505894966311393,
+            "hvac": 1.1341752819105093,
+            "fireplace": 0.19414938475389107,
+            "shared": -1.760384905898032e-14,
+            "bias": 0.14746235618058948,
+            "tau_hvac": 600.0,
+            "tau_mass": 28800.0,
+            "tau_fire": 1800.0,
+            "offset": 1.0,
+            "ceiling_offset": 0,
+            "ceiling_gain": 0,
+            "tau_ceiling": 120,
+            "constant_demand": 0.49999999999999645
+          },
+          "validation_mae": 0.15291061862946514
+        },
+        {
+          "parameters": {
+            "loss": 0.034817671060395905,
+            "mass": 0.16371041260452518,
+            "hvac": 1.1826754576092244,
+            "fireplace": 0.2033614533305543,
+            "shared": -3.123705766168337e-14,
+            "bias": 0.12867679685394265,
+            "tau_hvac": 600.0,
+            "tau_mass": 7200.0,
+            "tau_fire": 1800.0,
+            "offset": 1.0,
+            "ceiling_offset": 0,
+            "ceiling_gain": 0,
+            "tau_ceiling": 120,
+            "constant_demand": 0.49999999999999645
+          },
+          "validation_mae": 0.15335557019236612
+        },
+        {
+          "parameters": {
+            "loss": 0.04950836818975681,
+            "mass": 0.08727311595735238,
+            "hvac": 2.041564633601462,
+            "fireplace": 0.3038907465177418,
+            "shared": -2.6439764577688575e-19,
+            "bias": 0.2527428762251844,
+            "tau_hvac": 120.0,
+            "tau_mass": 28800.0,
+            "tau_fire": 1800.0,
+            "offset": 0.5,
+            "ceiling_offset": 0,
+            "ceiling_gain": 0,
+            "tau_ceiling": 120,
+            "constant_demand": 0.0
+          },
+          "validation_mae": 0.15343531337399927
+        }
+      ],
+      "test": {
+        "horizons": {
+          "5": {
+            "n": 16,
+            "mae": 0.06641982890835885,
+            "p95": 0.15413921719865087,
+            "stronger_baseline_mae": 0.06331205368041815,
+            "relative_improvement": -0.0490866280160156,
+            "interval_half_width": 0.0946644567211532,
+            "coverage": 0.875
+          },
+          "15": {
+            "n": 16,
+            "mae": 0.1714941643489698,
+            "p95": 0.494129980523236,
+            "stronger_baseline_mae": 0.171173214912423,
+            "relative_improvement": -0.0018749980054473259,
+            "interval_half_width": 0.2850377472544139,
+            "coverage": 0.8125
+          },
+          "30": {
+            "n": 16,
+            "mae": 0.2139455121616305,
+            "p95": 0.5877163655446287,
+            "stronger_baseline_mae": 0.25431287288667326,
+            "relative_improvement": 0.15873109476070935,
+            "interval_half_width": 0.36340675010117174,
+            "coverage": 0.6875
+          },
+          "60": {
+            "n": 16,
+            "mae": 0.2537523149731227,
+            "p95": 0.6586099652302702,
+            "stronger_baseline_mae": 0.33860492706299206,
+            "relative_improvement": 0.25059473536273713,
+            "interval_half_width": 0.4381561306319366,
+            "coverage": 0.75
+          },
+          "150": {
+            "n": 16,
+            "mae": 0.32149286597344284,
+            "p95": 0.8591937932590561,
+            "stronger_baseline_mae": 0.5630725622177193,
+            "relative_improvement": 0.4290383024397245,
+            "interval_half_width": 0.6821939455584989,
+            "coverage": 0.875
+          }
+        },
+        "command_response_episodes": [
+          {
+            "origin": "2026-11-09 14:30:21.143719912+00:00",
+            "steps": 2,
+            "model_mae": 0.2511183463191389,
+            "constant_input_mae": 0.5816310661482722
+          }
+        ],
+        "categories": {
+          "coasting": {
+            "n": 16,
+            "mae": 0.3191606167594603
+          },
+          "heating_or_cooling": {
+            "n": 5,
+            "mae": 0.3505826057655888
+          },
+          "passive": {
+            "n": 58,
+            "mae": 0.1622809057702109
+          },
+          "recovery": {
+            "n": 1,
+            "mae": 0.16189955019685343
+          }
+        },
+        "fusion_transitions": {
+          "False": {
+            "n": 80,
+            "mae": 0.20542093727310493
+          }
+        },
+        "scheduled_target_changes": {
+          "False": {
+            "n": 70,
+            "mae": 0.21462887128994224
+          },
+          "True": {
+            "n": 10,
+            "mae": 0.1409653991552439
+          }
+        },
+        "weather_bands": {
+          "5.0": {
+            "n": 13,
+            "mae": 0.19326860059705425
+          },
+          "10.0": {
+            "n": 67,
+            "mae": 0.20777885334457746
+          }
+        }
+      },
+      "validation_intervals": {
+        "5": 0.0946644567211532,
+        "15": 0.2850377472544139,
+        "30": 0.36340675010117174,
+        "60": 0.4381561306319366,
+        "150": 0.6821939455584989
+      },
+      "qualification": {
+        "qualified": false,
+        "reasons": [
+          "does_not_beat_stronger_baseline_by_10_percent",
+          "fewer_than_three_held_out_command_change_episodes"
+        ],
+        "meaning": "Screening eligibility only; does not authorize deployment or establish causal gain improvement."
+      },
+      "measurement_audit": {
+        "note": "Single sensor with four-sample, ten-second moving average."
+      },
+      "limits": [
+        "Model family assumes a saturated native thermostat response plus lag; it is not the vendor controller.",
+        "Closed-loop observational fitting may be biased by unmeasured gains/disturbances; command ablation is not causal proof.",
+        "Other heads are held scenario context; simultaneous three-head optimization is not qualified.",
+        "Empirical validation residual intervals are not counterfactual confidence guarantees.",
+        "Heat/cool modes and unobserved weather ranges need separate qualification."
+      ],
+      "next_experiment": {
+        "needed": true,
+        "proposal": "If response identification is weak, collect repeated bounded one-native-step changes with stable fireplace/target and coordinated other heads; retain unchanged hysteresis and rollback. No probe is initiated by this tool."
+      }
+    }
+  },
+  "query": "{__name__=~\"homeassistant_sensor_temperature_celsius|homeassistant_sensor_state|homeassistant_sensor_unit_percent|homeassistant_binary_sensor_state|homeassistant_climate_current_temperature_celsius|homeassistant_climate_target_temperature_celsius|homeassistant_climate_mode|homeassistant_climate_action\",entity=~\".*(bedroom|main_floor|mainfloor|outside_temperature|fireplace|diningroompanel).*\"}",
+  "requested_start": 1792270761.14372,
+  "requested_end": 1794689961.14372,
+  "data_step_seconds": 60,
+  "outdoor_audit": {
+    "valid_fraction": {
+      "primary": 0.7990129213065152,
+      "hailee": 0.7990377222787133,
+      "main": 0.7990129213065152
+    },
+    "max_spread_c": 9.0,
+    "note": "Native reports share one outdoor unit; not independent measurements. Preferred aggregate includes HVAC."
+  }
+}

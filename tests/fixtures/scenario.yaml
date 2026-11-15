@@ -1,0 +1,102 @@
+# End-to-end scenario on the host platform. Short timings so it finishes in
+# about a minute; the log shows the outer climate against the inner one.
+#
+#   esphome compile tests/fixtures/scenario.yaml
+#   .esphome/build/workflow-scenario/.pioenvs/workflow-scenario/program
+esphome:
+  name: workflow-scenario
+  on_boot:
+    priority: -200
+    then:
+      - delay: 3s
+      - logger.log: "STEP 1: user selects HEAT 21 with the room at 20 -> device on"
+      - climate.control:
+          id: outer
+          mode: HEAT
+          target_temperature: 21
+      - delay: 8s
+      - logger.log: "STEP 2: room rises to 22 -> hysteresis switches the device off, outer stays HEAT"
+      - globals.set:
+          id: room
+          value: "22.0"
+      - delay: 10s
+      - logger.log: "STEP 3: room falls to 20 -> hysteresis switches the device back on"
+      - globals.set:
+          id: room
+          value: "20.0"
+      - delay: 10s
+      - logger.log: "STEP 4: remote switches the device off -> outer turns OFF"
+      - climate.control:
+          id: inner_climate
+          mode: "OFF"
+      - delay: 6s
+      - logger.log: "STEP 5: remote switches the device on in COOL -> outer follows to COOL"
+      - climate.control:
+          id: inner_climate
+          mode: COOL
+      - delay: 6s
+      - logger.log: "STEP 6: remote changes COOL to HEAT -> outer follows to HEAT"
+      - climate.control:
+          id: inner_climate
+          mode: HEAT
+      - delay: 6s
+      - logger.log: "STEP 7: room rises to 22, device goes off, then is switched on behind the workflow's back"
+      - globals.set:
+          id: room
+          value: "22.0"
+      - delay: 8s
+      - climate.control:
+          id: inner_climate
+          mode: HEAT
+      - delay: 10s
+      - logger.log: "STEP 8: user selects DRY -> plain pass-through, no workflow"
+      - climate.control:
+          id: outer
+          mode: DRY
+      - delay: 5s
+      - logger.log: "SCENARIO DONE"
+
+host:
+
+logger:
+  level: DEBUG
+
+external_components:
+  - source: ../../components
+
+globals:
+  - id: room
+    type: float
+    initial_value: "20.0"
+
+demo:
+  climates:
+    # Type 2 supports HEAT, COOL, DRY and FAN_ONLY but reports no temperature
+    # of its own, so the room sensor below is the only temperature source.
+    - id: inner_climate
+      name: "Inner climate"
+      type: 2
+
+sensor:
+  - platform: template
+    id: room_temperature
+    name: "Room temperature"
+    unit_of_measurement: "°C"
+    update_interval: 1s
+    lambda: return id(room);
+
+climate:
+  - platform: workflow_climate
+    id: outer
+    name: "Outer climate"
+    climate_id: inner_climate
+    temperature_sensor: room_temperature
+    update_interval: 1s
+    settle_time: 2s
+    pid:
+      kp: 1.5
+      ki: 0.015
+    hysteresis:
+      on_threshold: 0.25
+      off_threshold: 0.5
+      min_cycle_duration: 4s

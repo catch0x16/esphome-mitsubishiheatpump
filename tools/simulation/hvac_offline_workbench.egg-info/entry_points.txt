@@ -1,0 +1,2 @@
+[console_scripts]
+hvac-sim = hvacsim.cli:main

@@ -1,0 +1,25 @@
+# A two-point (low/high target) inner climate is not supported. Running the
+# host binary must log "Two-point target climates are not supported" and mark
+# only the wrapper as failed.
+esphome:
+  name: workflow-two-point
+
+host:
+
+logger:
+
+external_components:
+  - source: ../../components
+
+demo:
+  climates:
+    - id: inner_climate
+      name: "Inner climate"
+      type: 3
+
+climate:
+  - platform: workflow_climate
+    name: "Outer climate"
+    climate_id: inner_climate
+    hysteresis:
+      on_threshold: 0.25

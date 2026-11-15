@@ -1,0 +1,3518 @@
+{
+  "schema": 1,
+  "data_sha256": "ae826e02d63c9de254c82a69f50b95301e0dfdf636c771d5dcf4c629f61a0bdf",
+  "config_sha256": "877d01207907e368d77426c3ee0e842794d90eb851276d1d482be01713c3c6a3",
+  "fitted_analysis_sha256": "736d89fe2573e766396a504d9a97bef1b8c4a403b72fbc178895b19713200023",
+  "fitted_sources": {
+    "components/mitsubishi_heatpump/adaptive_pid.cpp": "1b054da5d5854dea2fdc6a592e9db821ea3979ec4098bf16e82a8dee6cb4c165",
+    "components/mitsubishi_heatpump/adaptive_pid.h": "4816cfb71d583a35e710a9d3d1f8ffc4ba0d1502f3af913bd4bbd03b6d09d93c",
+    "tools/simulation/native/bridge.cpp": "6217b0959a0b7d9e3ddd03d44f14a8ce63e6631f2deb6a4f22664d5fc696ad1b",
+    "tools/simulation/native/fusion_reference.inc": "f7dcb607bfdb26dd1b65d12d95c223702c15385474c44ae745e0baa166328b07",
+    "tools/simulation/native/fusion_provenance.json": "ffa9d06e79de0f6449215f0cf143747b9483fd4ae5d047b4441c2e6f269a235d",
+    "tools/simulation/hvacsim/__init__.py": "0736e828acad990e13c89321ffc1c27dd5e49d8447481d5e77061f9c47cb01f1",
+    "tools/simulation/hvacsim/cli.py": "5ac378fc0f2120449f5bf6d85f44090c2d256319af809f38bf2fdc73a6b41e0b",
+    "tools/simulation/hvacsim/data.py": "5fbc92719ec7bffc33ea3599a8d8b9c5101b6a2d4c683f0b6dd5dd488ca04931",
+    "tools/simulation/hvacsim/model.py": "0305b81850895c0e069f1c0f538478b2605c460bf5c699899544a588791517b6",
+    "tools/simulation/hvacsim/native.py": "cc95e24535f3cfce9417e600519bf9f102fd46a09f1106eb756acbc612ad4ab4",
+    "tools/simulation/hvacsim/notebook.py": "d7e1ed72f935a355bbbb9f65b297a5b6406bf10ed3f65931a1134d41461cf0a8",
+    "tools/simulation/hvacsim/report.py": "fbc682b6a58c04ee1c33f485afc351b36ebfec39e87c1b282a962e10e1fff9d6",
+    "tools/simulation/hvacsim/search.py": "5c5c53ee5f26c4f66f64b699d84701e9dc6f5e913de658a3c1ed8add548f9c2f",
+    "tools/simulation/hvacsim/simulate.py": "57295867b0b05b73b8f61449a994af7755a89a9d2fd2fa00ce4d8ec24ecc8bc5",
+    "tools/simulation/hvacsim/validate.py": "f02c340bc417a1a3b43f2f8bb0c940967fcb84096f442f17f79d2bfb2f7cf3dd"
+  },
+  "audit_sources": {
+    "components/mitsubishi_heatpump/adaptive_pid.cpp": "1b054da5d5854dea2fdc6a592e9db821ea3979ec4098bf16e82a8dee6cb4c165",
+    "components/mitsubishi_heatpump/adaptive_pid.h": "4816cfb71d583a35e710a9d3d1f8ffc4ba0d1502f3af913bd4bbd03b6d09d93c",
+    "tools/simulation/native/bridge.cpp": "6217b0959a0b7d9e3ddd03d44f14a8ce63e6631f2deb6a4f22664d5fc696ad1b",
+    "tools/simulation/native/fusion_reference.inc": "f7dcb607bfdb26dd1b65d12d95c223702c15385474c44ae745e0baa166328b07",
+    "tools/simulation/native/fusion_provenance.json": "ffa9d06e79de0f6449215f0cf143747b9483fd4ae5d047b4441c2e6f269a235d",
+    "tools/simulation/hvacsim/__init__.py": "0736e828acad990e13c89321ffc1c27dd5e49d8447481d5e77061f9c47cb01f1",
+    "tools/simulation/hvacsim/cli.py": "b5f8c09dc7ce52cbcdf6353f53bf584e244a8a52f8e12adc25bacdd9a22ac74f",
+    "tools/simulation/hvacsim/data.py": "5fbc92719ec7bffc33ea3599a8d8b9c5101b6a2d4c683f0b6dd5dd488ca04931",
+    "tools/simulation/hvacsim/events.py": "d848dcd05b9419fd7634bc2011842f002c9ea8113250fd9154c71897f13de898",
+    "tools/simulation/hvacsim/model.py": "0305b81850895c0e069f1c0f538478b2605c460bf5c699899544a588791517b6",
+    "tools/simulation/hvacsim/native.py": "cc95e24535f3cfce9417e600519bf9f102fd46a09f1106eb756acbc612ad4ab4",
+    "tools/simulation/hvacsim/notebook.py": "d7e1ed72f935a355bbbb9f65b297a5b6406bf10ed3f65931a1134d41461cf0a8",
+    "tools/simulation/hvacsim/report.py": "fbc682b6a58c04ee1c33f485afc351b36ebfec39e87c1b282a962e10e1fff9d6",
+    "tools/simulation/hvacsim/search.py": "620c0341855a54ff1c6facf2faae9a1a265965fac212757f09e8d68f45491ad6",
+    "tools/simulation/hvacsim/simulate.py": "57295867b0b05b73b8f61449a994af7755a89a9d2fd2fa00ce4d8ec24ecc8bc5",
+    "tools/simulation/hvacsim/validate.py": "f02c340bc417a1a3b43f2f8bb0c940967fcb84096f442f17f79d2bfb2f7cf3dd"
+  },
+  "rooms": {
+    "primary": {
+      "audit": {
+        "opportunity_minutes": 32211.0,
+        "enabled_minutes": 10507.0,
+        "disabled_minutes": 21704.0,
+        "enabled_fraction": 0.32619291546366147,
+        "events": {
+          "hysteresis_consistent_shutdown": {
+            "count": 67,
+            "observed_off_minutes": 9383.0,
+            "censored": 31
+          },
+          "target_change_shutdown": {
+            "count": 2,
+            "observed_off_minutes": 618.0,
+            "censored": 1
+          },
+          "approach": {
+            "count": 38,
+            "observed_off_minutes": 0.0,
+            "censored": 0
+          },
+          "command_reduction": {
+            "count": 767,
+            "observed_off_minutes": 0.0,
+            "censored": 0
+          }
+        },
+        "interpretation": "Heat/cool mode requested, with valid adjacent samples. Off minutes are observed association, not necessarily avoidable loss. Compressor activity is not enablement."
+      },
+      "eligible_by_partition_kind": {
+        "('train', 'hysteresis_consistent_shutdown')": 12,
+        "('validation', 'hysteresis_consistent_shutdown')": 14,
+        "('test', 'target_change_shutdown')": 1,
+        "('train', 'approach')": 10,
+        "('validation', 'approach')": 6,
+        "('train', 'command_reduction')": 9,
+        "('validation', 'command_reduction')": 15
+      },
+      "skipped": {
+        "partition_boundary": 10,
+        "running_gains_missing": 645,
+        "missing_context_or_gap": 5,
+        "running_gains_changed": 147
+      },
+      "replays": [
+        {
+          "kind": "target_change_shutdown",
+          "timestamp": "2026-11-13 15:13:21.143719912+00:00",
+          "end": "2026-11-14 00:37:21.143719912+00:00",
+          "off_minutes": 564.0,
+          "right_censored": true,
+          "directional_error": 1.2398550245497226,
+          "previous_directional_error": 0.9299670325384959,
+          "partition": "test",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 11.777777777777779,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 1.0,
+          "simulated_enabled_minutes": 0.0,
+          "enabled_minutes_error": -1.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.4464723841349291,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 1.0,
+            "simulated_enabled_minutes": 0.0,
+            "enabled_minutes_error": -1.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-03 07:35:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 9.555555555555557,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 99.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 51.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.28848785400390475,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 99.0,
+            "simulated_enabled_minutes": 146.0,
+            "enabled_minutes_error": 47.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              1.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-04 07:26:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 8.444444444444446,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.2853339894612648,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-04 10:15:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 7.6111111111111125,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.21788895924886148,
+          "command_agreement": 0.5933333333333334,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 0.5933333333333334
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-04 13:31:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 7.222222222222222,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 81.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 69.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.3311633809407533,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 81.0,
+            "simulated_enabled_minutes": 68.0,
+            "enabled_minutes_error": -13.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 3,
+            "matched_shutdowns": 2,
+            "false_shutdowns": 1,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-04 10:58:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 6.722222222222223,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.22724703470866037,
+          "command_agreement": 0.5933333333333334,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 0.5933333333333334
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-04 11:15:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 6.666666666666666,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.2515628814697268,
+          "command_agreement": 0.6133333333333333,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 0.6133333333333333
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-04 11:43:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 7.111111111111109,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 135.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 15.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.24628171284993441,
+          "command_agreement": 0.7666666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 135.0,
+            "simulated_enabled_minutes": 135.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 0.7666666666666667
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-04 12:07:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 7.166666666666666,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 130.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 20.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.2784968185424797,
+          "command_agreement": 0.9066666666666666,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 130.0,
+            "simulated_enabled_minutes": 125.0,
+            "enabled_minutes_error": -5.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 1,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 0.9066666666666666
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-03 07:51:21.143719912+00:00",
+          "end": "2026-11-03 08:39:21.143719912+00:00",
+          "off_minutes": 48.0,
+          "right_censored": false,
+          "directional_error": 0.7174587249756108,
+          "previous_directional_error": 0.7418575286865021,
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 9.11111111111111,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 83.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 67.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.28963377634684,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 83.0,
+            "simulated_enabled_minutes": 130.0,
+            "enabled_minutes_error": 47.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              1.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-03 11:55:21.143719912+00:00",
+          "end": "2026-11-03 12:51:21.143719912+00:00",
+          "off_minutes": 56.0,
+          "right_censored": false,
+          "directional_error": 0.8910675048828338,
+          "previous_directional_error": 0.760498046875,
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 9.611111111111109,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 45.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 105.0,
+          "observed_shutdowns": 3,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.263466059366864,
+          "command_agreement": 0.8733333333333333,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 45.0,
+            "simulated_enabled_minutes": 45.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 3,
+            "simulated_shutdowns": 3,
+            "matched_shutdowns": 3,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              1.0,
+              1.0,
+              0.0
+            ],
+            "command_agreement": 0.8733333333333333
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-03 18:36:21.143719912+00:00",
+          "end": "2026-11-04 00:50:21.143719912+00:00",
+          "off_minutes": 374.0,
+          "right_censored": true,
+          "directional_error": 0.7627298567030039,
+          "previous_directional_error": 0.6919290754530039,
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": false,
+          "outdoor": 10.666666666666668,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 14.0,
+          "simulated_enabled_minutes": 0.0,
+          "enabled_minutes_error": -14.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 1.1922268040974955,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 14.0,
+            "simulated_enabled_minutes": 14.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-05 01:00:21.143719912+00:00",
+          "end": "2026-11-05 09:11:21.143719912+00:00",
+          "off_minutes": 491.0,
+          "right_censored": false,
+          "directional_error": 0.7671833038330007,
+          "previous_directional_error": 0.7566566467284979,
+          "partition": "train",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 13.11111111111111,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 10.0,
+          "simulated_enabled_minutes": 0.0,
+          "enabled_minutes_error": -10.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.16500770568847523,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 10.0,
+            "simulated_enabled_minutes": 0.0,
+            "enabled_minutes_error": -10.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-05 14:07:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 10.388888888888891,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 58.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 92.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.4111483383178711,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 58.0,
+            "simulated_enabled_minutes": 26.0,
+            "enabled_minutes_error": -32.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 1,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-06 12:04:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 11.055555555555555,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 91.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 59.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.23358469645182248,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 91.0,
+            "simulated_enabled_minutes": 91.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-07 00:55:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": true,
+          "other_heads_changed": false,
+          "outdoor": 12.388888888888888,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 118.0,
+          "simulated_enabled_minutes": 143.0,
+          "enabled_minutes_error": 25.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.31191596984863235,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 118.0,
+            "simulated_enabled_minutes": 99.0,
+            "enabled_minutes_error": -19.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 1,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-07 02:31:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 12.999999999999998,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 29.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 121.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.22081436157226667,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 29.0,
+            "simulated_enabled_minutes": 29.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-06 07:25:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 11.888888888888888,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 85.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 65.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.18200992584228606,
+          "command_agreement": 0.6,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 85.0,
+            "simulated_enabled_minutes": 85.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 0.6
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-06 08:05:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 11.777777777777779,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 45.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 105.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.1405821990966801,
+          "command_agreement": 0.8,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 45.0,
+            "simulated_enabled_minutes": 45.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 0.8
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-07 05:48:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 12.777777777777777,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 35.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 115.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.18585745493570738,
+          "command_agreement": 0.2,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 35.0,
+            "simulated_enabled_minutes": 34.0,
+            "enabled_minutes_error": -1.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 2,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              1.0
+            ],
+            "command_agreement": 0.48
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-07 13:59:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 10.999999999999998,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 17.0,
+          "simulated_enabled_minutes": 80.0,
+          "enabled_minutes_error": 63.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 1,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 1,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.12473672231038421,
+          "command_agreement": 0.5666666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 17.0,
+            "simulated_enabled_minutes": 17.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-05 09:23:21.143719912+00:00",
+          "end": "2026-11-05 12:25:21.143719912+00:00",
+          "off_minutes": 182.0,
+          "right_censored": false,
+          "directional_error": 0.7954902648925604,
+          "previous_directional_error": 0.6717548370361612,
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 10.944444444444446,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 12.0,
+          "simulated_enabled_minutes": 129.0,
+          "enabled_minutes_error": 117.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.16406548817952676,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 12.0,
+            "simulated_enabled_minutes": 0.0,
+            "enabled_minutes_error": -12.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-06 13:20:21.143719912+00:00",
+          "end": "2026-11-06 15:01:21.143719912+00:00",
+          "off_minutes": 101.0,
+          "right_censored": true,
+          "directional_error": 0.7900924682617223,
+          "previous_directional_error": 0.6525764465332244,
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": false,
+          "outdoor": 10.999999999999998,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 15.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 135.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.23654923756917304,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 15.0,
+            "simulated_enabled_minutes": 15.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-07 07:24:21.143719912+00:00",
+          "end": "2026-11-07 09:12:21.143719912+00:00",
+          "off_minutes": 108.0,
+          "right_censored": false,
+          "directional_error": 0.8516243828667776,
+          "previous_directional_error": 0.7590588463677186,
+          "partition": "validation",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": true,
+          "other_heads_changed": false,
+          "outdoor": 12.999999999999998,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 29.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 121.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.3180218887329088,
+          "command_agreement": 0.16666666666666666,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 29.0,
+            "simulated_enabled_minutes": 49.0,
+            "enabled_minutes_error": 20.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 2,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              1.0,
+              0.0
+            ],
+            "command_agreement": 0.86
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-08 14:59:21.143719912+00:00",
+          "end": "2026-11-08 15:04:21.143719912+00:00",
+          "off_minutes": 5.0,
+          "right_censored": true,
+          "directional_error": 0.8046951293945561,
+          "previous_directional_error": 0.7501087188720525,
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 11.722222222222223,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 15.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 135.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.4141777928670229,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 15.0,
+            "simulated_enabled_minutes": 14.0,
+            "enabled_minutes_error": -1.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              1.0
+            ],
+            "command_agreement": 1.0
+          }
+        }
+      ],
+      "replay_summary": {
+        "train": {
+          "windows": 12,
+          "overlapping_windows_are_not_independent": true,
+          "thermal_closed_loop": {
+            "enabled_minutes_mae": 29.25,
+            "command_agreement": 0.8622222222222221,
+            "recorded_shutdowns": 13,
+            "matched_shutdowns": 0,
+            "extra_shutdowns": 0
+          },
+          "controller_measured_input": {
+            "enabled_minutes_mae": 10.166666666666666,
+            "command_agreement": 0.8622222222222221,
+            "recorded_shutdowns": 13,
+            "matched_shutdowns": 10,
+            "extra_shutdowns": 2
+          }
+        },
+        "validation": {
+          "windows": 12,
+          "overlapping_windows_are_not_independent": true,
+          "thermal_closed_loop": {
+            "enabled_minutes_mae": 96.08333333333333,
+            "command_agreement": 0.7777777777777777,
+            "recorded_shutdowns": 14,
+            "matched_shutdowns": 0,
+            "extra_shutdowns": 1
+          },
+          "controller_measured_input": {
+            "enabled_minutes_mae": 7.083333333333333,
+            "command_agreement": 0.8949999999999999,
+            "recorded_shutdowns": 14,
+            "matched_shutdowns": 12,
+            "extra_shutdowns": 2
+          }
+        },
+        "test": {
+          "windows": 1,
+          "overlapping_windows_are_not_independent": true,
+          "thermal_closed_loop": {
+            "enabled_minutes_mae": 1.0,
+            "command_agreement": 1.0,
+            "recorded_shutdowns": 1,
+            "matched_shutdowns": 0,
+            "extra_shutdowns": 0
+          },
+          "controller_measured_input": {
+            "enabled_minutes_mae": 1.0,
+            "command_agreement": 1.0,
+            "recorded_shutdowns": 1,
+            "matched_shutdowns": 0,
+            "extra_shutdowns": 0
+          }
+        }
+      },
+      "replay_gate": {
+        "qualified": false,
+        "reasons": [
+          "insufficient_hysteresis_consistent_shutdown_replays",
+          "insufficient_recovery_replays",
+          "temperature_response_not_reproduced",
+          "shutdown_timing_not_reproduced"
+        ],
+        "limits": {
+          "min_shutdown_events": 3,
+          "min_recovery_events": 3,
+          "max_enabled_time_error_fraction": 0.1,
+          "min_shutdown_recall": 0.8,
+          "shutdown_tolerance_minutes": 5,
+          "max_temperature_mae": 0.25,
+          "min_command_agreement": 0.8
+        },
+        "meaning": "Provisional incumbent-replay screen only. No gain recommendation or causal claim; thresholds do not define comfort."
+      }
+    },
+    "hailee": {
+      "audit": {
+        "opportunity_minutes": 32213.0,
+        "enabled_minutes": 7234.0,
+        "disabled_minutes": 24979.0,
+        "enabled_fraction": 0.22456772110638562,
+        "events": {
+          "hysteresis_consistent_shutdown": {
+            "count": 142,
+            "observed_off_minutes": 9591.0,
+            "censored": 31
+          },
+          "target_change_shutdown": {
+            "count": 1,
+            "observed_off_minutes": 107.0,
+            "censored": 0
+          },
+          "recovery": {
+            "count": 2,
+            "observed_off_minutes": 0.0,
+            "censored": 0
+          },
+          "approach": {
+            "count": 18,
+            "observed_off_minutes": 0.0,
+            "censored": 0
+          },
+          "command_reduction": {
+            "count": 1243,
+            "observed_off_minutes": 0.0,
+            "censored": 0
+          }
+        },
+        "interpretation": "Heat/cool mode requested, with valid adjacent samples. Off minutes are observed association, not necessarily avoidable loss. Compressor activity is not enablement."
+      },
+      "eligible_by_partition_kind": {
+        "('train', 'hysteresis_consistent_shutdown')": 30,
+        "('validation', 'hysteresis_consistent_shutdown')": 26,
+        "('test', 'hysteresis_consistent_shutdown')": 3,
+        "('train', 'approach')": 9,
+        "('validation', 'approach')": 1,
+        "('train', 'command_reduction')": 11,
+        "('validation', 'command_reduction')": 25,
+        "('test', 'command_reduction')": 1
+      },
+      "skipped": {
+        "missing_context_or_gap": 25,
+        "partition_boundary": 40,
+        "running_gains_missing": 1088,
+        "running_gains_changed": 147
+      },
+      "replays": [
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-10 09:24:21.143719912+00:00",
+          "partition": "test",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": false,
+          "outdoor": 11.222222222222223,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 30.0,
+          "simulated_enabled_minutes": 145.0,
+          "enabled_minutes_error": 115.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.4900956853230765,
+          "command_agreement": 0.6066666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 30.0,
+            "simulated_enabled_minutes": 29.0,
+            "enabled_minutes_error": -1.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 2,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0
+            ],
+            "command_agreement": 0.9933333333333333
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-10 09:25:21.143719912+00:00",
+          "end": "2026-11-10 10:22:21.143719912+00:00",
+          "off_minutes": 57.0,
+          "right_censored": false,
+          "directional_error": 0.8816918267143912,
+          "previous_directional_error": 0.605084313286671,
+          "partition": "test",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": false,
+          "outdoor": 11.222222222222223,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 31.0,
+          "simulated_enabled_minutes": 144.0,
+          "enabled_minutes_error": 113.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.484845492045082,
+          "command_agreement": 0.58,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 31.0,
+            "simulated_enabled_minutes": 30.0,
+            "enabled_minutes_error": -1.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 2,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0
+            ],
+            "command_agreement": 0.9933333333333333
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-11 13:30:21.143719912+00:00",
+          "end": "2026-11-11 15:30:21.143719912+00:00",
+          "off_minutes": 120.0,
+          "right_censored": true,
+          "directional_error": 0.8445938958062165,
+          "previous_directional_error": 0.5503128899468273,
+          "partition": "test",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": false,
+          "outdoor": 13.333333333333332,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 13.0,
+          "simulated_enabled_minutes": 21.0,
+          "enabled_minutes_error": 8.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 1,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 1,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.3659191385904963,
+          "command_agreement": 0.26,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 13.0,
+            "simulated_enabled_minutes": 13.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 0.19333333333333333
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-12 14:27:21.143719912+00:00",
+          "end": "2026-11-12 15:30:21.143719912+00:00",
+          "off_minutes": 63.0,
+          "right_censored": true,
+          "directional_error": 0.7742775811089402,
+          "previous_directional_error": 0.5422600640191071,
+          "partition": "test",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": false,
+          "outdoor": 12.444444444444443,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 11.0,
+          "simulated_enabled_minutes": 62.0,
+          "enabled_minutes_error": 51.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 1,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 1,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.3508665847778321,
+          "command_agreement": 0.8066666666666666,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 11.0,
+            "simulated_enabled_minutes": 11.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 0.5733333333333334
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-02 02:39:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 7.88888888888889,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 26.0,
+          "simulated_enabled_minutes": 143.0,
+          "enabled_minutes_error": 117.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.35577763875325547,
+          "command_agreement": 0.5133333333333333,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 26.0,
+            "simulated_enabled_minutes": 27.0,
+            "enabled_minutes_error": 1.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 2,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0
+            ],
+            "command_agreement": 0.8133333333333334
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-04 08:11:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 7.88888888888889,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 91.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 59.0,
+          "observed_shutdowns": 3,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.4377389653523768,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 91.0,
+            "simulated_enabled_minutes": 93.0,
+            "enabled_minutes_error": 2.0,
+            "observed_shutdowns": 3,
+            "simulated_shutdowns": 3,
+            "matched_shutdowns": 3,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "command_agreement": 0.8933333333333333
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-04 10:15:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 7.6111111111111125,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 93.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 57.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.38472091674804576,
+          "command_agreement": 0.88,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 93.0,
+            "simulated_enabled_minutes": 96.0,
+            "enabled_minutes_error": 3.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 2,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0
+            ],
+            "command_agreement": 0.82
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-04 13:31:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 7.222222222222222,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 40.0,
+          "simulated_enabled_minutes": 135.0,
+          "enabled_minutes_error": 95.0,
+          "observed_shutdowns": 4,
+          "simulated_shutdowns": 1,
+          "matched_shutdowns": 1,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [
+            2.0
+          ],
+          "temperature_mae": 0.31285151163737185,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 40.0,
+            "simulated_enabled_minutes": 40.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 4,
+            "simulated_shutdowns": 3,
+            "matched_shutdowns": 3,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "command_agreement": 0.98
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-02 02:47:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 7.555555555555556,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 25.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 125.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.38872220357259213,
+          "command_agreement": 0.4866666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 25.0,
+            "simulated_enabled_minutes": 26.0,
+            "enabled_minutes_error": 1.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 2,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0
+            ],
+            "command_agreement": 0.76
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-03 05:56:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 9.5,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 27.0,
+          "simulated_enabled_minutes": 149.0,
+          "enabled_minutes_error": 122.0,
+          "observed_shutdowns": 3,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.4214415486653645,
+          "command_agreement": 0.7866666666666666,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 27.0,
+            "simulated_enabled_minutes": 27.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 3,
+            "simulated_shutdowns": 3,
+            "matched_shutdowns": 3,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-04 03:28:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 10.277777777777777,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 5.0,
+          "simulated_enabled_minutes": 122.0,
+          "enabled_minutes_error": 117.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.3481888961791995,
+          "command_agreement": 0.4866666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 5.0,
+            "simulated_enabled_minutes": 0.0,
+            "enabled_minutes_error": -5.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 0.09333333333333334
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-04 12:06:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 7.166666666666666,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 88.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 62.0,
+          "observed_shutdowns": 3,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.3709973653157546,
+          "command_agreement": 0.9533333333333334,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 88.0,
+            "simulated_enabled_minutes": 91.0,
+            "enabled_minutes_error": 3.0,
+            "observed_shutdowns": 3,
+            "simulated_shutdowns": 3,
+            "matched_shutdowns": 3,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "command_agreement": 0.88
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-02 02:48:21.143719912+00:00",
+          "end": "2026-11-02 04:19:21.143719912+00:00",
+          "off_minutes": 91.0,
+          "right_censored": false,
+          "directional_error": 0.890824211968333,
+          "previous_directional_error": 0.616957558525943,
+          "partition": "train",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 7.555555555555556,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 24.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 126.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.38291302998860793,
+          "command_agreement": 0.4866666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 24.0,
+            "simulated_enabled_minutes": 25.0,
+            "enabled_minutes_error": 1.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 2,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0
+            ],
+            "command_agreement": 0.7533333333333333
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-03 09:40:21.143719912+00:00",
+          "end": "2026-11-03 10:28:21.143719912+00:00",
+          "off_minutes": 48.0,
+          "right_censored": false,
+          "directional_error": 0.7924128638373347,
+          "previous_directional_error": 0.5298377143012161,
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 9.277777777777779,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 33.0,
+          "simulated_enabled_minutes": 149.0,
+          "enabled_minutes_error": 116.0,
+          "observed_shutdowns": 3,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.36246898651123066,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 33.0,
+            "simulated_enabled_minutes": 40.0,
+            "enabled_minutes_error": 7.0,
+            "observed_shutdowns": 3,
+            "simulated_shutdowns": 3,
+            "matched_shutdowns": 3,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-04 07:05:21.143719912+00:00",
+          "end": "2026-11-04 07:26:21.143719912+00:00",
+          "off_minutes": 21.0,
+          "right_censored": true,
+          "directional_error": 0.7809552086723883,
+          "previous_directional_error": 0.5648163689507228,
+          "partition": "train",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 8.333333333333334,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 70.0,
+          "simulated_enabled_minutes": 142.0,
+          "enabled_minutes_error": 72.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.4228294754028317,
+          "command_agreement": 0.88,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 70.0,
+            "simulated_enabled_minutes": 70.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 2,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0
+            ],
+            "command_agreement": 0.7933333333333333
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-05 02:40:21.143719912+00:00",
+          "end": "2026-11-05 06:04:21.143719912+00:00",
+          "off_minutes": 204.0,
+          "right_censored": false,
+          "directional_error": 0.7666787041558365,
+          "previous_directional_error": 0.5243843926323883,
+          "partition": "train",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 11.944444444444445,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 9.0,
+          "simulated_enabled_minutes": 0.0,
+          "enabled_minutes_error": -9.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.30475592295329107,
+          "command_agreement": 0.09333333333333334,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 9.0,
+            "simulated_enabled_minutes": 0.0,
+            "enabled_minutes_error": -9.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 0.09333333333333334
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-07 13:49:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 10.999999999999998,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 21.0,
+          "simulated_enabled_minutes": 117.0,
+          "enabled_minutes_error": 96.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 1,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 1,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.43419806162516117,
+          "command_agreement": 0.98,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 21.0,
+            "simulated_enabled_minutes": 21.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 0.98
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-05 10:25:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": false,
+          "outdoor": 11.055555555555555,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 29.0,
+          "simulated_enabled_minutes": 149.0,
+          "enabled_minutes_error": 120.0,
+          "observed_shutdowns": 3,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.4831789271036761,
+          "command_agreement": 0.64,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 29.0,
+            "simulated_enabled_minutes": 34.0,
+            "enabled_minutes_error": 5.0,
+            "observed_shutdowns": 3,
+            "simulated_shutdowns": 3,
+            "matched_shutdowns": 3,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "command_agreement": 0.9866666666666667
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-06 07:01:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 11.722222222222223,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 14.0,
+          "simulated_enabled_minutes": 141.0,
+          "enabled_minutes_error": 127.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.5206067784627262,
+          "command_agreement": 0.66,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 14.0,
+            "simulated_enabled_minutes": 14.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 2,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-06 12:49:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 10.88888888888889,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 26.0,
+          "simulated_enabled_minutes": 140.0,
+          "enabled_minutes_error": 114.0,
+          "observed_shutdowns": 3,
+          "simulated_shutdowns": 1,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 1,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.4580855941772459,
+          "command_agreement": 0.6533333333333333,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 26.0,
+            "simulated_enabled_minutes": 30.0,
+            "enabled_minutes_error": 4.0,
+            "observed_shutdowns": 3,
+            "simulated_shutdowns": 3,
+            "matched_shutdowns": 3,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "command_agreement": 0.9733333333333334
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-08 13:56:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 11.61111111111111,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 7.0,
+          "simulated_enabled_minutes": 72.0,
+          "enabled_minutes_error": 65.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 1,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 1,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.376306559244792,
+          "command_agreement": 0.7666666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 7.0,
+            "simulated_enabled_minutes": 7.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-05 09:16:21.143719912+00:00",
+          "end": "2026-11-05 10:16:21.143719912+00:00",
+          "off_minutes": 60.0,
+          "right_censored": false,
+          "directional_error": 0.9031380547417776,
+          "previous_directional_error": 0.577357186211497,
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": true,
+          "outdoor": 11.055555555555555,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 30.0,
+          "simulated_enabled_minutes": 149.0,
+          "enabled_minutes_error": 119.0,
+          "observed_shutdowns": 3,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.5182242329915343,
+          "command_agreement": 0.4666666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 30.0,
+            "simulated_enabled_minutes": 41.0,
+            "enabled_minutes_error": 11.0,
+            "observed_shutdowns": 3,
+            "simulated_shutdowns": 3,
+            "matched_shutdowns": 3,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "command_agreement": 0.9733333333333334
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-06 11:26:21.143719912+00:00",
+          "end": "2026-11-06 12:43:21.143719912+00:00",
+          "off_minutes": 77.0,
+          "right_censored": false,
+          "directional_error": 0.8185738457573883,
+          "previous_directional_error": 0.6515454186333827,
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 11.38888888888889,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 22.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 128.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.5037616602579739,
+          "command_agreement": 0.62,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 22.0,
+            "simulated_enabled_minutes": 24.0,
+            "enabled_minutes_error": 2.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 2,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0
+            ],
+            "command_agreement": 0.96
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-07 08:55:21.143719912+00:00",
+          "end": "2026-11-07 10:02:21.143719912+00:00",
+          "off_minutes": 67.0,
+          "right_censored": false,
+          "directional_error": 0.889350679185668,
+          "previous_directional_error": 0.5776689317491162,
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": true,
+          "other_heads_changed": false,
+          "outdoor": 12.166666666666666,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 24.0,
+          "simulated_enabled_minutes": 117.0,
+          "enabled_minutes_error": 93.0,
+          "observed_shutdowns": 2,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.4591729736328124,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 24.0,
+            "simulated_enabled_minutes": 24.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 2,
+            "simulated_shutdowns": 2,
+            "matched_shutdowns": 2,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0,
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-08 13:57:21.143719912+00:00",
+          "end": "2026-11-08 15:30:21.143719912+00:00",
+          "off_minutes": 93.0,
+          "right_censored": true,
+          "directional_error": 0.9271153344048351,
+          "previous_directional_error": 0.653740776909725,
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 11.61111111111111,
+          "gains": [
+            1.25,
+            0.0149999996647239,
+            0.0
+          ],
+          "observed_enabled_minutes": 7.0,
+          "simulated_enabled_minutes": 86.0,
+          "enabled_minutes_error": 79.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 1,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 1,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.3989848327636718,
+          "command_agreement": 0.7466666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 7.0,
+            "simulated_enabled_minutes": 7.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        }
+      ],
+      "replay_summary": {
+        "train": {
+          "windows": 12,
+          "overlapping_windows_are_not_independent": true,
+          "thermal_closed_loop": {
+            "enabled_minutes_mae": 89.75,
+            "command_agreement": 0.7138888888888889,
+            "recorded_shutdowns": 28,
+            "matched_shutdowns": 1,
+            "extra_shutdowns": 0
+          },
+          "controller_measured_input": {
+            "enabled_minutes_mae": 2.6666666666666665,
+            "command_agreement": 0.7400000000000001,
+            "recorded_shutdowns": 28,
+            "matched_shutdowns": 25,
+            "extra_shutdowns": 0
+          }
+        },
+        "validation": {
+          "windows": 9,
+          "overlapping_windows_are_not_independent": true,
+          "thermal_closed_loop": {
+            "enabled_minutes_mae": 104.55555555555556,
+            "command_agreement": 0.725925925925926,
+            "recorded_shutdowns": 18,
+            "matched_shutdowns": 0,
+            "extra_shutdowns": 4
+          },
+          "controller_measured_input": {
+            "enabled_minutes_mae": 2.4444444444444446,
+            "command_agreement": 0.9859259259259261,
+            "recorded_shutdowns": 18,
+            "matched_shutdowns": 18,
+            "extra_shutdowns": 0
+          }
+        },
+        "test": {
+          "windows": 4,
+          "overlapping_windows_are_not_independent": true,
+          "thermal_closed_loop": {
+            "enabled_minutes_mae": 71.75,
+            "command_agreement": 0.5633333333333332,
+            "recorded_shutdowns": 6,
+            "matched_shutdowns": 0,
+            "extra_shutdowns": 2
+          },
+          "controller_measured_input": {
+            "enabled_minutes_mae": 0.5,
+            "command_agreement": 0.6883333333333332,
+            "recorded_shutdowns": 6,
+            "matched_shutdowns": 6,
+            "extra_shutdowns": 0
+          }
+        }
+      },
+      "replay_gate": {
+        "qualified": false,
+        "reasons": [
+          "insufficient_recovery_replays",
+          "enabled_time_not_reproduced",
+          "temperature_response_not_reproduced",
+          "commands_not_reproduced",
+          "shutdown_timing_not_reproduced",
+          "extra_simulated_shutdowns"
+        ],
+        "limits": {
+          "min_shutdown_events": 3,
+          "min_recovery_events": 3,
+          "max_enabled_time_error_fraction": 0.1,
+          "min_shutdown_recall": 0.8,
+          "shutdown_tolerance_minutes": 5,
+          "max_temperature_mae": 0.25,
+          "min_command_agreement": 0.8
+        },
+        "meaning": "Provisional incumbent-replay screen only. No gain recommendation or causal claim; thresholds do not define comfort."
+      }
+    },
+    "main": {
+      "audit": {
+        "opportunity_minutes": 32213.0,
+        "enabled_minutes": 10488.0,
+        "disabled_minutes": 21725.0,
+        "enabled_fraction": 0.3255828392263993,
+        "events": {
+          "hysteresis_consistent_shutdown": {
+            "count": 20,
+            "observed_off_minutes": 10601.0,
+            "censored": 18
+          },
+          "target_change_shutdown": {
+            "count": 5,
+            "observed_off_minutes": 1818.0,
+            "censored": 3
+          },
+          "recovery": {
+            "count": 11,
+            "observed_off_minutes": 0.0,
+            "censored": 0
+          },
+          "approach": {
+            "count": 45,
+            "observed_off_minutes": 0.0,
+            "censored": 0
+          },
+          "command_reduction": {
+            "count": 419,
+            "observed_off_minutes": 0.0,
+            "censored": 0
+          }
+        },
+        "interpretation": "Heat/cool mode requested, with valid adjacent samples. Off minutes are observed association, not necessarily avoidable loss. Compressor activity is not enablement."
+      },
+      "eligible_by_partition_kind": {
+        "('train', 'hysteresis_consistent_shutdown')": 1,
+        "('train', 'target_change_shutdown')": 1,
+        "('validation', 'hysteresis_consistent_shutdown')": 4,
+        "('test', 'hysteresis_consistent_shutdown')": 3,
+        "('train', 'recovery')": 3,
+        "('validation', 'recovery')": 1,
+        "('train', 'approach')": 17,
+        "('validation', 'approach')": 5,
+        "('test', 'approach')": 1,
+        "('train', 'command_reduction')": 7,
+        "('validation', 'command_reduction')": 9
+      },
+      "skipped": {
+        "partition_boundary": 11,
+        "running_gains_missing": 354,
+        "running_gains_changed": 65,
+        "missing_context_or_gap": 18
+      },
+      "replays": [
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-11 14:43:21.143719912+00:00",
+          "partition": "test",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 12.999999999999998,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 147.0,
+          "simulated_enabled_minutes": 147.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.30760582306504763,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 147.0,
+            "simulated_enabled_minutes": 147.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-09 20:39:21.143719912+00:00",
+          "end": "2026-11-10 06:18:21.143719912+00:00",
+          "off_minutes": 579.0,
+          "right_censored": true,
+          "directional_error": 0.817765765719944,
+          "previous_directional_error": 0.733367496066613,
+          "partition": "test",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 14.333333333333332,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 15.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 135.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.7321116911887837,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 15.0,
+            "simulated_enabled_minutes": 15.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-11 23:30:21.143719912+00:00",
+          "end": "2026-11-12 07:00:21.143719912+00:00",
+          "off_minutes": 450.0,
+          "right_censored": true,
+          "directional_error": 0.746608310275608,
+          "previous_directional_error": 0.7310596042209418,
+          "partition": "test",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 18.777777777777775,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 15.0,
+          "simulated_enabled_minutes": 55.0,
+          "enabled_minutes_error": 40.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 1,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 1,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.33014228845758553,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 15.0,
+            "simulated_enabled_minutes": 16.0,
+            "enabled_minutes_error": 1.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              1.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-12 20:54:21.143719912+00:00",
+          "end": "2026-11-13 06:33:21.143719912+00:00",
+          "off_minutes": 579.0,
+          "right_censored": true,
+          "directional_error": 0.7734828525119433,
+          "previous_directional_error": 0.7523513370090029,
+          "partition": "test",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 15.833333333333332,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 15.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 135.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.9410698958811737,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 15.0,
+            "simulated_enabled_minutes": 14.0,
+            "enabled_minutes_error": -1.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              1.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-03 15:32:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 9.222222222222223,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.15808762909982904,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-03 22:19:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 14.333333333333332,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.36732136204896826,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-04 02:41:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 10.499999999999998,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.297788697058417,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-05 04:52:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 11.222222222222223,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 144.0,
+          "simulated_enabled_minutes": 144.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 1,
+          "matched_shutdowns": 1,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [
+            0.0
+          ],
+          "temperature_mae": 0.47065180169193144,
+          "command_agreement": 0.8466666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 144.0,
+            "simulated_enabled_minutes": 144.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 0.5733333333333334
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-03 18:25:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 10.777777777777777,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.11439034900928109,
+          "command_agreement": 0.9733333333333334,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 0.9733333333333334
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-04 22:50:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 13.61111111111111,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.2764125748210914,
+          "command_agreement": 0.9333333333333333,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-05 01:24:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 13.11111111111111,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.26360274240142334,
+          "command_agreement": 0.8066666666666666,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 0.8133333333333334
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-05 02:57:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 11.666666666666666,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.4095379622641654,
+          "command_agreement": 0.9333333333333333,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 0.7066666666666667
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-02 14:45:21.143719912+00:00",
+          "end": "2026-11-02 20:02:21.143719912+00:00",
+          "off_minutes": 317.0,
+          "right_censored": true,
+          "directional_error": 0.7662022908528883,
+          "previous_directional_error": 0.7426884969075545,
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 6.111111111111111,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 15.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 135.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.3289326906043604,
+          "command_agreement": 0.9666666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 15.0,
+            "simulated_enabled_minutes": 15.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 0.9933333333333333
+          }
+        },
+        {
+          "kind": "recovery",
+          "timestamp": "2026-11-02 14:31:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 6.333333333333332,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 29.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 121.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.28545598725815613,
+          "command_agreement": 0.9666666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 29.0,
+            "simulated_enabled_minutes": 29.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 0.9933333333333333
+          }
+        },
+        {
+          "kind": "recovery",
+          "timestamp": "2026-11-03 14:31:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 9.722222222222221,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 135.0,
+          "simulated_enabled_minutes": 135.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.48791863687200665,
+          "command_agreement": 0.8333333333333334,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 135.0,
+            "simulated_enabled_minutes": 135.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "recovery",
+          "timestamp": "2026-11-04 14:31:21.143719912+00:00",
+          "partition": "train",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 7.777777777777778,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 135.0,
+          "simulated_enabled_minutes": 135.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.6162797499049751,
+          "command_agreement": 0.7866666666666666,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 135.0,
+            "simulated_enabled_minutes": 135.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 0.9933333333333333
+          }
+        },
+        {
+          "kind": "target_change_shutdown",
+          "timestamp": "2026-11-04 07:01:21.143719912+00:00",
+          "end": "2026-11-04 07:26:21.143719912+00:00",
+          "off_minutes": 25.0,
+          "right_censored": true,
+          "directional_error": 2.780185063680001,
+          "previous_directional_error": 0.33340390523277463,
+          "partition": "train",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 8.555555555555555,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 15.0,
+          "simulated_enabled_minutes": 15.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 1,
+          "matched_shutdowns": 1,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [
+            0.0
+          ],
+          "temperature_mae": 0.6506861278834871,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 15.0,
+            "simulated_enabled_minutes": 15.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-06 15:05:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 10.777777777777777,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.23511101205524407,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-06 15:07:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 10.777777777777777,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.23334843125103788,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-07 14:44:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 10.833333333333334,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 148.0,
+          "simulated_enabled_minutes": 148.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.17039379562721582,
+          "command_agreement": 0.9533333333333334,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 148.0,
+            "simulated_enabled_minutes": 148.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "approach",
+          "timestamp": "2026-11-08 14:35:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 11.944444444444445,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 139.0,
+          "simulated_enabled_minutes": 139.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.20523526001988343,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 139.0,
+            "simulated_enabled_minutes": 139.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-05 19:36:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 12.333333333333334,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 122.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 28.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.17102680482734192,
+          "command_agreement": 0.9866666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 122.0,
+            "simulated_enabled_minutes": 118.0,
+            "enabled_minutes_error": -4.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              4.0
+            ],
+            "command_agreement": 0.9866666666666667
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-06 18:16:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 11.277777777777777,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.1543941107090389,
+          "command_agreement": 0.9066666666666666,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 0.9066666666666666
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-07 20:04:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 13.277777777777777,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.23322848055652615,
+          "command_agreement": 0.8866666666666667,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 0.88
+          }
+        },
+        {
+          "kind": "command_reduction",
+          "timestamp": "2026-11-07 21:17:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 14.888888888888888,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 150.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.14163602907340925,
+          "command_agreement": 0.98,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 150.0,
+            "simulated_enabled_minutes": 150.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 0.98
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-05 21:23:21.143719912+00:00",
+          "end": "2026-11-06 06:34:21.143719912+00:00",
+          "off_minutes": 551.0,
+          "right_censored": true,
+          "directional_error": 0.7246432834201642,
+          "previous_directional_error": 0.7685390048556684,
+          "partition": "validation",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 14.5,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 15.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 135.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.08884572987690616,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 15.0,
+            "simulated_enabled_minutes": 11.0,
+            "enabled_minutes_error": -4.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              4.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-06 21:55:21.143719912+00:00",
+          "end": "2026-11-07 06:32:21.143719912+00:00",
+          "off_minutes": 517.0,
+          "right_censored": true,
+          "directional_error": 0.7685390048556684,
+          "previous_directional_error": 0.7639480166965029,
+          "partition": "validation",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 11.722222222222223,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 15.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 135.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.22022979334353424,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 15.0,
+            "simulated_enabled_minutes": 14.0,
+            "enabled_minutes_error": -1.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              1.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-08 00:42:21.143719912+00:00",
+          "end": "2026-11-08 05:57:21.143719912+00:00",
+          "off_minutes": 315.0,
+          "right_censored": true,
+          "directional_error": 0.7696791754828851,
+          "previous_directional_error": 0.7437506781683894,
+          "partition": "validation",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 14.388888888888888,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 15.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 135.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.15966719782121466,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 15.0,
+            "simulated_enabled_minutes": 15.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              0.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "hysteresis_consistent_shutdown",
+          "timestamp": "2026-11-08 17:08:21.143719912+00:00",
+          "end": "2026-11-09 06:00:21.143719912+00:00",
+          "off_minutes": 772.0,
+          "right_censored": true,
+          "directional_error": 0.8001552157931648,
+          "previous_directional_error": 0.7610316806369468,
+          "partition": "validation",
+          "fireplace_on_or_recent": true,
+          "fusion_transition": false,
+          "other_heads_changed": false,
+          "outdoor": 11.944444444444445,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 15.0,
+          "simulated_enabled_minutes": 150.0,
+          "enabled_minutes_error": 135.0,
+          "observed_shutdowns": 1,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.6028517766406748,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 15.0,
+            "simulated_enabled_minutes": 14.0,
+            "enabled_minutes_error": -1.0,
+            "observed_shutdowns": 1,
+            "simulated_shutdowns": 1,
+            "matched_shutdowns": 1,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [
+              1.0
+            ],
+            "command_agreement": 1.0
+          }
+        },
+        {
+          "kind": "recovery",
+          "timestamp": "2026-11-06 14:31:21.143719912+00:00",
+          "partition": "validation",
+          "fireplace_on_or_recent": false,
+          "fusion_transition": false,
+          "other_heads_changed": true,
+          "outdoor": 10.999999999999998,
+          "gains": [
+            2.5,
+            0.0399999991059303,
+            0.100000001490116
+          ],
+          "observed_enabled_minutes": 135.0,
+          "simulated_enabled_minutes": 135.0,
+          "enabled_minutes_error": 0.0,
+          "observed_shutdowns": 0,
+          "simulated_shutdowns": 0,
+          "matched_shutdowns": 0,
+          "false_shutdowns": 0,
+          "shutdown_timing_errors_minutes": [],
+          "temperature_mae": 0.24602649745569105,
+          "command_agreement": 1.0,
+          "controller_with_measured_temperature": {
+            "observed_enabled_minutes": 135.0,
+            "simulated_enabled_minutes": 135.0,
+            "enabled_minutes_error": 0.0,
+            "observed_shutdowns": 0,
+            "simulated_shutdowns": 0,
+            "matched_shutdowns": 0,
+            "false_shutdowns": 0,
+            "shutdown_timing_errors_minutes": [],
+            "command_agreement": 1.0
+          }
+        }
+      ],
+      "replay_summary": {
+        "train": {
+          "windows": 13,
+          "overlapping_windows_are_not_independent": true,
+          "thermal_closed_loop": {
+            "enabled_minutes_mae": 19.692307692307693,
+            "command_agreement": 0.9266666666666666,
+            "recorded_shutdowns": 4,
+            "matched_shutdowns": 2,
+            "extra_shutdowns": 0
+          },
+          "controller_measured_input": {
+            "enabled_minutes_mae": 0.0,
+            "command_agreement": 0.9266666666666669,
+            "recorded_shutdowns": 4,
+            "matched_shutdowns": 4,
+            "extra_shutdowns": 0
+          }
+        },
+        "validation": {
+          "windows": 13,
+          "overlapping_windows_are_not_independent": true,
+          "thermal_closed_loop": {
+            "enabled_minutes_mae": 43.69230769230769,
+            "command_agreement": 0.977948717948718,
+            "recorded_shutdowns": 5,
+            "matched_shutdowns": 0,
+            "extra_shutdowns": 0
+          },
+          "controller_measured_input": {
+            "enabled_minutes_mae": 0.7692307692307693,
+            "command_agreement": 0.981025641025641,
+            "recorded_shutdowns": 5,
+            "matched_shutdowns": 5,
+            "extra_shutdowns": 0
+          }
+        },
+        "test": {
+          "windows": 4,
+          "overlapping_windows_are_not_independent": true,
+          "thermal_closed_loop": {
+            "enabled_minutes_mae": 77.5,
+            "command_agreement": 1.0,
+            "recorded_shutdowns": 3,
+            "matched_shutdowns": 0,
+            "extra_shutdowns": 1
+          },
+          "controller_measured_input": {
+            "enabled_minutes_mae": 0.5,
+            "command_agreement": 1.0,
+            "recorded_shutdowns": 3,
+            "matched_shutdowns": 3,
+            "extra_shutdowns": 0
+          }
+        }
+      },
+      "replay_gate": {
+        "qualified": false,
+        "reasons": [
+          "insufficient_recovery_replays",
+          "enabled_time_not_reproduced",
+          "temperature_response_not_reproduced",
+          "shutdown_timing_not_reproduced",
+          "extra_simulated_shutdowns"
+        ],
+        "limits": {
+          "min_shutdown_events": 3,
+          "min_recovery_events": 3,
+          "max_enabled_time_error_fraction": 0.1,
+          "min_shutdown_recall": 0.8,
+          "shutdown_tolerance_minutes": 5,
+          "max_temperature_mae": 0.25,
+          "min_command_agreement": 0.8
+        },
+        "meaning": "Provisional incumbent-replay screen only. No gain recommendation or causal claim; thresholds do not define comfort."
+      }
+    }
+  },
+  "purpose": "Optimize enabled time subject to temperature and recovery. Early demand reduction is an experimental mechanism, not the objective.",
+  "limits": "Retrospective, event-conditioned replay. Recorded future targets/weather/fireplace/other heads are scenario inputs. Only incumbent parameters are tested. Historical firmware and hidden state remain uncertain."
+}

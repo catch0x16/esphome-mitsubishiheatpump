@@ -1,0 +1,72 @@
+# Compile check against the upstream Mitsubishi CN105 driver, which is the
+# intended inner climate. Mirrors the configuration in README.md.
+esphome:
+  name: workflow-cn105
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+  baud_rate: 0
+
+external_components:
+  - source: ../../components
+  - source: github://echavet/MitsubishiCN105ESPHome
+    components: [cn105]
+
+uart:
+  id: hp_uart
+  baud_rate: 2400
+  tx_pin: 17
+  rx_pin: 16
+
+sensor:
+  - platform: template
+    id: room_temperature
+    name: "Room temperature"
+    unit_of_measurement: "°C"
+    device_class: temperature
+    update_interval: 60s
+    lambda: return 21.0;
+
+climate:
+  # The device driver. Hidden: the workflow climate is the only one exposed.
+  - platform: cn105
+    id: hp
+    name: "Heat pump device"
+    internal: true
+    uart_id: hp_uart
+    update_interval: 2s
+    remote_temperature_source:
+      sensor_id: room_temperature
+    supports:
+      mode: [COOL, HEAT, FAN_ONLY, DRY]
+      fan_mode: [AUTO, QUIET, LOW, MEDIUM, HIGH]
+      swing_mode: ["OFF", VERTICAL]
+    visual:
+      min_temperature: 18
+      max_temperature: 25.5
+      temperature_step:
+        target_temperature: 0.5
+        current_temperature: 0.1
+    compressor_frequency_sensor:
+      name: "Compressor frequency"
+    outside_air_temperature_sensor:
+      name: "Outside temperature"
+
+  - platform: workflow_climate
+    name: "HVAC"
+    climate_id: hp
+    temperature_sensor: room_temperature
+    update_interval: 2s
+    pid:
+      kp: 1.5
+      ki: 0.015
+      kd: 0.0
+      max_adjustment_under: 2.0
+      max_adjustment_over: 2.0
+    hysteresis:
+      on_threshold: 0.25
+      off_threshold: 0.5

@@ -1,35 +1,52 @@
 esphome:
   name: test-device
 
-esp32:
-  board: esp32dev
-  framework:
-    type: esp-idf
+host:
 
 logger:
-
-uart:
-  id: hp_uart
-  tx_pin: 17
-  rx_pin: 16
-  baud_rate: 2400
-
-sensor:
+  level: DEBUG
 
 external_components:
   - source: components
 
+# Any single-target climate can be wrapped. The demo climate stands in for the
+# real device here; see README.md for the Mitsubishi CN105 configuration.
+demo:
+  climates:
+    - id: inner_climate
+      name: "Inner climate"
+      type: 1
+      internal: true
+      visual:
+        temperature_step:
+          target_temperature: 0.5
+          current_temperature: 0.1
+
+sensor:
+  - platform: template
+    id: room_temperature
+    name: "Room temperature"
+    unit_of_measurement: "°C"
+    device_class: temperature
+    update_interval: 10s
+    lambda: return 21.0;
+
 climate:
-  - platform: mitsubishi_heatpump
+  - platform: workflow_climate
     name: "Test Heatpump"
-    uart_id: hp_uart
+    climate_id: inner_climate
+    temperature_sensor: room_temperature
+    update_interval: 2s
     visual:
       min_temperature: 16
       max_temperature: 31
-      temperature_step:
-        target_temperature: 0.5
-        current_temperature: 0.1
-    control_parameters:
-      kp: 0.0
-      ki: 0.0
+    pid:
+      kp: 1.5
+      ki: 0.015
       kd: 0.0
+      max_adjustment_under: 2.0
+      max_adjustment_over: 2.0
+    hysteresis:
+      on_threshold: 0.25
+      off_threshold: 0.5
+      min_cycle_duration: 60s

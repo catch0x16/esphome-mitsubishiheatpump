@@ -1,0 +1,781 @@
+{
+  "data_sha256": "ae826e02d63c9de254c82a69f50b95301e0dfdf636c771d5dcf4c629f61a0bdf",
+  "config_sha256": "877d01207907e368d77426c3ee0e842794d90eb851276d1d482be01713c3c6a3",
+  "sources": {
+    "components/mitsubishi_heatpump/adaptive_pid.cpp": "1b054da5d5854dea2fdc6a592e9db821ea3979ec4098bf16e82a8dee6cb4c165",
+    "components/mitsubishi_heatpump/adaptive_pid.h": "4816cfb71d583a35e710a9d3d1f8ffc4ba0d1502f3af913bd4bbd03b6d09d93c",
+    "tools/simulation/native/bridge.cpp": "6217b0959a0b7d9e3ddd03d44f14a8ce63e6631f2deb6a4f22664d5fc696ad1b",
+    "tools/simulation/native/fusion_reference.inc": "f7dcb607bfdb26dd1b65d12d95c223702c15385474c44ae745e0baa166328b07",
+    "tools/simulation/native/fusion_provenance.json": "ffa9d06e79de0f6449215f0cf143747b9483fd4ae5d047b4441c2e6f269a235d",
+    "tools/simulation/hvacsim/__init__.py": "0736e828acad990e13c89321ffc1c27dd5e49d8447481d5e77061f9c47cb01f1",
+    "tools/simulation/hvacsim/calibrate.py": "6a9985778eb7b84f9dd7fc75599bb8f93e547be46680706563f8e02b98c15666",
+    "tools/simulation/hvacsim/cli.py": "744fa29fff607bf2ec0760cc6b335ebdc5aa5470927ad739afedbe036e04836e",
+    "tools/simulation/hvacsim/data.py": "5fbc92719ec7bffc33ea3599a8d8b9c5101b6a2d4c683f0b6dd5dd488ca04931",
+    "tools/simulation/hvacsim/events.py": "d848dcd05b9419fd7634bc2011842f002c9ea8113250fd9154c71897f13de898",
+    "tools/simulation/hvacsim/model.py": "0305b81850895c0e069f1c0f538478b2605c460bf5c699899544a588791517b6",
+    "tools/simulation/hvacsim/native.py": "cc95e24535f3cfce9417e600519bf9f102fd46a09f1106eb756acbc612ad4ab4",
+    "tools/simulation/hvacsim/notebook.py": "d7e1ed72f935a355bbbb9f65b297a5b6406bf10ed3f65931a1134d41461cf0a8",
+    "tools/simulation/hvacsim/report.py": "fbc682b6a58c04ee1c33f485afc351b36ebfec39e87c1b282a962e10e1fff9d6",
+    "tools/simulation/hvacsim/search.py": "620c0341855a54ff1c6facf2faae9a1a265965fac212757f09e8d68f45491ad6",
+    "tools/simulation/hvacsim/simulate.py": "57295867b0b05b73b8f61449a994af7755a89a9d2fd2fa00ce4d8ec24ecc8bc5",
+    "tools/simulation/hvacsim/validate.py": "f02c340bc417a1a3b43f2f8bb0c940967fcb84096f442f17f79d2bfb2f7cf3dd"
+  },
+  "original_fitted_sources": {
+    "components/mitsubishi_heatpump/adaptive_pid.cpp": "1b054da5d5854dea2fdc6a592e9db821ea3979ec4098bf16e82a8dee6cb4c165",
+    "components/mitsubishi_heatpump/adaptive_pid.h": "4816cfb71d583a35e710a9d3d1f8ffc4ba0d1502f3af913bd4bbd03b6d09d93c",
+    "tools/simulation/native/bridge.cpp": "6217b0959a0b7d9e3ddd03d44f14a8ce63e6631f2deb6a4f22664d5fc696ad1b",
+    "tools/simulation/native/fusion_reference.inc": "f7dcb607bfdb26dd1b65d12d95c223702c15385474c44ae745e0baa166328b07",
+    "tools/simulation/native/fusion_provenance.json": "ffa9d06e79de0f6449215f0cf143747b9483fd4ae5d047b4441c2e6f269a235d",
+    "tools/simulation/hvacsim/__init__.py": "0736e828acad990e13c89321ffc1c27dd5e49d8447481d5e77061f9c47cb01f1",
+    "tools/simulation/hvacsim/cli.py": "5ac378fc0f2120449f5bf6d85f44090c2d256319af809f38bf2fdc73a6b41e0b",
+    "tools/simulation/hvacsim/data.py": "5fbc92719ec7bffc33ea3599a8d8b9c5101b6a2d4c683f0b6dd5dd488ca04931",
+    "tools/simulation/hvacsim/model.py": "0305b81850895c0e069f1c0f538478b2605c460bf5c699899544a588791517b6",
+    "tools/simulation/hvacsim/native.py": "cc95e24535f3cfce9417e600519bf9f102fd46a09f1106eb756acbc612ad4ab4",
+    "tools/simulation/hvacsim/notebook.py": "d7e1ed72f935a355bbbb9f65b297a5b6406bf10ed3f65931a1134d41461cf0a8",
+    "tools/simulation/hvacsim/report.py": "fbc682b6a58c04ee1c33f485afc351b36ebfec39e87c1b282a962e10e1fff9d6",
+    "tools/simulation/hvacsim/search.py": "5c5c53ee5f26c4f66f64b699d84701e9dc6f5e913de658a3c1ed8add548f9c2f",
+    "tools/simulation/hvacsim/simulate.py": "57295867b0b05b73b8f61449a994af7755a89a9d2fd2fa00ce4d8ec24ecc8bc5",
+    "tools/simulation/hvacsim/validate.py": "f02c340bc417a1a3b43f2f8bb0c940967fcb84096f442f17f79d2bfb2f7cf3dd"
+  },
+  "knobs": [
+    "loss",
+    "hvac",
+    "bias",
+    "tau_hvac"
+  ],
+  "statement": "One training-only output-error correction of four existing thermal parameters. No controller edits or accepted gains.",
+  "validation": "Previously inspected development validation days, NOT fresh final-test confirmation. Final-test days are excluded.",
+  "rooms": {
+    "primary": {
+      "training_events": [
+        "2026-10-24 13:49:21.143719912+00:00",
+        "2026-11-02 05:56:21.143719912+00:00",
+        "2026-11-02 14:38:21.143719912+00:00",
+        "2026-11-03 07:51:21.143719912+00:00",
+        "2026-11-03 13:52:21.143719912+00:00",
+        "2026-11-05 01:00:21.143719912+00:00",
+        "2026-10-24 09:53:21.143719912+00:00",
+        "2026-10-26 06:03:21.143719912+00:00"
+      ],
+      "validation_events": [
+        "2026-11-05 09:23:21.143719912+00:00",
+        "2026-11-06 13:20:21.143719912+00:00",
+        "2026-11-07 07:24:21.143719912+00:00",
+        "2026-11-08 14:59:21.143719912+00:00"
+      ],
+      "original": {
+        "loss": 0.09863487755678212,
+        "mass": 0.06709962477578132,
+        "hvac": 2.534434760026655,
+        "fireplace": 2.5044408646720263e-17,
+        "shared": -3.402792535437906e-23,
+        "bias": 0.7075692844270004,
+        "tau_hvac": 120.0,
+        "tau_mass": 7200.0,
+        "tau_fire": 1800.0,
+        "offset": 0.5,
+        "ceiling_offset": 0.7917210987773852,
+        "ceiling_gain": 0.20641817519951494,
+        "tau_ceiling": 120,
+        "constant_demand": 0.0
+      },
+      "corrected": {
+        "loss": 0.05006486002818943,
+        "mass": 0.06709962477578132,
+        "hvac": 1.520425997057647,
+        "fireplace": 2.5044408646720263e-17,
+        "shared": -3.402792535437906e-23,
+        "bias": 0.5202017065702123,
+        "tau_hvac": 1932.7316160248029,
+        "tau_mass": 7200.0,
+        "tau_fire": 1800.0,
+        "offset": 0.5,
+        "ceiling_offset": 0.7917210987773852,
+        "ceiling_gain": 0.20641817519951494,
+        "tau_ceiling": 120,
+        "constant_demand": 0.0
+      },
+      "fit": {
+        "nfev": 23,
+        "success": true,
+        "scaled_jacobian_singular_values": [
+          41.80114803272675,
+          6.9570382166589795,
+          2.2560014681396674,
+          0.5465759145914055
+        ],
+        "message": "`xtol` termination condition is satisfied.",
+        "training_wall_mae": 0.2513007404567729,
+        "initial_training_wall_mae": 0.40116881366483026
+      },
+      "validation": [
+        {
+          "timestamp": "2026-11-05 09:23:21.143719912+00:00",
+          "kind": "hysteresis_consistent_shutdown",
+          "fireplace": false,
+          "original": {
+            "recorded_remote_wall_mae": 0.24391861792594596,
+            "free_remote_wall_mae": 0.16242365379542795,
+            "fused_mae": 0.1885323079427116,
+            "residual_bias": -0.1868190002441443,
+            "closed_loop": {
+              "observed_enabled_minutes": 12.0,
+              "simulated_enabled_minutes": 129.0,
+              "enabled_minutes_error": 117.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.16406548817952676,
+              "command_agreement": 1.0
+            }
+          },
+          "corrected": {
+            "recorded_remote_wall_mae": 0.18992947525163184,
+            "free_remote_wall_mae": 0.20120003650138057,
+            "fused_mae": 0.20191014607747532,
+            "residual_bias": -0.043726476033532316,
+            "closed_loop": {
+              "observed_enabled_minutes": 12.0,
+              "simulated_enabled_minutes": 0.0,
+              "enabled_minutes_error": -12.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.20295008341471538,
+              "command_agreement": 1.0
+            }
+          }
+        },
+        {
+          "timestamp": "2026-11-06 13:20:21.143719912+00:00",
+          "kind": "hysteresis_consistent_shutdown",
+          "fireplace": false,
+          "original": {
+            "recorded_remote_wall_mae": 0.5336263465991476,
+            "free_remote_wall_mae": 0.4519965443539974,
+            "fused_mae": 0.4021249516805016,
+            "residual_bias": -0.3944322077433274,
+            "closed_loop": {
+              "observed_enabled_minutes": 15.0,
+              "simulated_enabled_minutes": 150.0,
+              "enabled_minutes_error": 135.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.23654923756917304,
+              "command_agreement": 1.0
+            }
+          },
+          "corrected": {
+            "recorded_remote_wall_mae": 0.25096926276753884,
+            "free_remote_wall_mae": 0.25157495969791965,
+            "fused_mae": 0.2206713231404616,
+            "residual_bias": -0.0346776199340826,
+            "closed_loop": {
+              "observed_enabled_minutes": 15.0,
+              "simulated_enabled_minutes": 117.0,
+              "enabled_minutes_error": 102.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 1,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 1,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.25620040893554535,
+              "command_agreement": 1.0
+            }
+          }
+        },
+        {
+          "timestamp": "2026-11-07 07:24:21.143719912+00:00",
+          "kind": "hysteresis_consistent_shutdown",
+          "fireplace": true,
+          "original": {
+            "recorded_remote_wall_mae": 0.1869706031051192,
+            "free_remote_wall_mae": 0.19425158932380496,
+            "fused_mae": 0.227498130798339,
+            "residual_bias": 0.02510659535725947,
+            "closed_loop": {
+              "observed_enabled_minutes": 29.0,
+              "simulated_enabled_minutes": 150.0,
+              "enabled_minutes_error": 121.0,
+              "observed_shutdowns": 2,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.3180218887329088,
+              "command_agreement": 0.16666666666666666
+            }
+          },
+          "corrected": {
+            "recorded_remote_wall_mae": 0.2967758019726624,
+            "free_remote_wall_mae": 0.30313135071909764,
+            "fused_mae": 0.3311896387735996,
+            "residual_bias": 0.07223768870035843,
+            "closed_loop": {
+              "observed_enabled_minutes": 29.0,
+              "simulated_enabled_minutes": 150.0,
+              "enabled_minutes_error": 121.0,
+              "observed_shutdowns": 2,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.5023799260457369,
+              "command_agreement": 0.3
+            }
+          }
+        },
+        {
+          "timestamp": "2026-11-08 14:59:21.143719912+00:00",
+          "kind": "hysteresis_consistent_shutdown",
+          "fireplace": false,
+          "original": {
+            "recorded_remote_wall_mae": 0.501170673125147,
+            "free_remote_wall_mae": 0.5011706687911199,
+            "fused_mae": 0.4141777928670229,
+            "residual_bias": -0.41324258168538197,
+            "closed_loop": {
+              "observed_enabled_minutes": 15.0,
+              "simulated_enabled_minutes": 150.0,
+              "enabled_minutes_error": 135.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.4141777928670229,
+              "command_agreement": 1.0
+            }
+          },
+          "corrected": {
+            "recorded_remote_wall_mae": 0.2466029475776665,
+            "free_remote_wall_mae": 0.2466029503043482,
+            "fused_mae": 0.27018852233886825,
+            "residual_bias": 0.08412312825521047,
+            "closed_loop": {
+              "observed_enabled_minutes": 15.0,
+              "simulated_enabled_minutes": 21.0,
+              "enabled_minutes_error": 6.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 1,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 1,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.27018852233886825,
+              "command_agreement": 1.0
+            }
+          }
+        }
+      ],
+      "summary": {
+        "original": {
+          "recorded_remote_wall_mae": 0.36642156018884,
+          "free_remote_wall_mae": 0.3274606140660875,
+          "fused_mae": 0.3080832958221438,
+          "residual_bias": -0.24234679857889854
+        },
+        "corrected": {
+          "recorded_remote_wall_mae": 0.24606937189237488,
+          "free_remote_wall_mae": 0.2506273243056865,
+          "fused_mae": 0.2559899075826012,
+          "residual_bias": 0.019489180246988497
+        }
+      }
+    },
+    "hailee": {
+      "training_events": [
+        "2026-10-24 09:49:21.143719912+00:00",
+        "2026-10-31 08:58:21.143719912+00:00",
+        "2026-11-01 03:15:21.143719912+00:00",
+        "2026-11-02 07:54:21.143719912+00:00",
+        "2026-11-02 13:20:21.143719912+00:00",
+        "2026-11-03 08:49:21.143719912+00:00",
+        "2026-11-04 07:05:21.143719912+00:00",
+        "2026-10-25 11:45:21.143719912+00:00"
+      ],
+      "validation_events": [
+        "2026-11-06 11:26:21.143719912+00:00",
+        "2026-11-07 10:12:21.143719912+00:00",
+        "2026-11-06 02:59:21.143719912+00:00",
+        "2026-11-08 13:56:21.143719912+00:00"
+      ],
+      "original": {
+        "loss": 0.3349477360350831,
+        "mass": 0.6542832833315093,
+        "hvac": 8.206499835817064,
+        "fireplace": 0.6396831085726918,
+        "shared": -1.353047766422447e-16,
+        "bias": 2.042712842163021,
+        "tau_hvac": 120.0,
+        "tau_mass": 28800.0,
+        "tau_fire": 1800.0,
+        "offset": 1.0,
+        "ceiling_offset": -0.38056687746648965,
+        "ceiling_gain": 0.683409300928543,
+        "tau_ceiling": 120,
+        "constant_demand": 0.49999999999999645
+      },
+      "corrected": {
+        "loss": 0.015318415439321347,
+        "mass": 0.6542832833315093,
+        "hvac": 1.148995962181401,
+        "fireplace": 0.6396831085726918,
+        "shared": -1.353047766422447e-16,
+        "bias": -0.06863359943154697,
+        "tau_hvac": 172.20098931358916,
+        "tau_mass": 28800.0,
+        "tau_fire": 1800.0,
+        "offset": 1.0,
+        "ceiling_offset": -0.38056687746648965,
+        "ceiling_gain": 0.683409300928543,
+        "tau_ceiling": 120,
+        "constant_demand": 0.49999999999999645
+      },
+      "fit": {
+        "nfev": 21,
+        "success": true,
+        "scaled_jacobian_singular_values": [
+          29.300133978229407,
+          6.054564984296516,
+          1.4657146893401976,
+          0.9874686628553049
+        ],
+        "message": "`ftol` termination condition is satisfied.",
+        "training_wall_mae": 0.26566397440019635,
+        "initial_training_wall_mae": 0.6341458056573728
+      },
+      "validation": [
+        {
+          "timestamp": "2026-11-06 11:26:21.143719912+00:00",
+          "kind": "hysteresis_consistent_shutdown",
+          "fireplace": false,
+          "original": {
+            "recorded_remote_wall_mae": 0.2521876123018767,
+            "free_remote_wall_mae": 0.17176509192371653,
+            "fused_mae": 0.1865676752726264,
+            "residual_bias": -0.09853552500407133,
+            "closed_loop": {
+              "observed_enabled_minutes": 22.0,
+              "simulated_enabled_minutes": 150.0,
+              "enabled_minutes_error": 128.0,
+              "observed_shutdowns": 2,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.5037616602579739,
+              "command_agreement": 0.62
+            }
+          },
+          "corrected": {
+            "recorded_remote_wall_mae": 0.2711951498757999,
+            "free_remote_wall_mae": 0.2499641920555187,
+            "fused_mae": 0.2501307678222656,
+            "residual_bias": 0.1201380920410133,
+            "closed_loop": {
+              "observed_enabled_minutes": 22.0,
+              "simulated_enabled_minutes": 150.0,
+              "enabled_minutes_error": 128.0,
+              "observed_shutdowns": 2,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.49621215820312375,
+              "command_agreement": 0.4
+            }
+          }
+        },
+        {
+          "timestamp": "2026-11-07 10:12:21.143719912+00:00",
+          "kind": "hysteresis_consistent_shutdown",
+          "fireplace": false,
+          "original": {
+            "recorded_remote_wall_mae": 0.14507364029857683,
+            "free_remote_wall_mae": 0.14548857832520465,
+            "fused_mae": 0.17253253936767818,
+            "residual_bias": -0.10895440419515043,
+            "closed_loop": {
+              "observed_enabled_minutes": 24.0,
+              "simulated_enabled_minutes": 146.0,
+              "enabled_minutes_error": 122.0,
+              "observed_shutdowns": 2,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.42855822245279873,
+              "command_agreement": 1.0
+            }
+          },
+          "corrected": {
+            "recorded_remote_wall_mae": 0.18953269203797518,
+            "free_remote_wall_mae": 0.1848364721451059,
+            "fused_mae": 0.20713746388753623,
+            "residual_bias": -0.16728880564371815,
+            "closed_loop": {
+              "observed_enabled_minutes": 24.0,
+              "simulated_enabled_minutes": 79.0,
+              "enabled_minutes_error": 55.0,
+              "observed_shutdowns": 2,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.30258304595947244,
+              "command_agreement": 1.0
+            }
+          }
+        },
+        {
+          "timestamp": "2026-11-06 02:59:21.143719912+00:00",
+          "kind": "command_reduction",
+          "fireplace": true,
+          "original": {
+            "recorded_remote_wall_mae": 0.27615692148418397,
+            "free_remote_wall_mae": 0.3178548671349946,
+            "fused_mae": 0.26206012725830236,
+            "residual_bias": -0.15447666168213028,
+            "closed_loop": {
+              "observed_enabled_minutes": 16.0,
+              "simulated_enabled_minutes": 150.0,
+              "enabled_minutes_error": 134.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.26239273071288965,
+              "command_agreement": 0.8533333333333334
+            }
+          },
+          "corrected": {
+            "recorded_remote_wall_mae": 0.27677386485077177,
+            "free_remote_wall_mae": 0.29332430687661554,
+            "fused_mae": 0.26881692250569567,
+            "residual_bias": 0.015006599426268157,
+            "closed_loop": {
+              "observed_enabled_minutes": 16.0,
+              "simulated_enabled_minutes": 150.0,
+              "enabled_minutes_error": 134.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.2681671524047839,
+              "command_agreement": 0.9533333333333334
+            }
+          }
+        },
+        {
+          "timestamp": "2026-11-08 13:56:21.143719912+00:00",
+          "kind": "command_reduction",
+          "fireplace": false,
+          "original": {
+            "recorded_remote_wall_mae": 0.4434315548431677,
+            "free_remote_wall_mae": 0.4489370231601839,
+            "fused_mae": 0.4223710250854515,
+            "residual_bias": -0.32956925710042434,
+            "closed_loop": {
+              "observed_enabled_minutes": 7.0,
+              "simulated_enabled_minutes": 72.0,
+              "enabled_minutes_error": 65.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 1,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 1,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.376306559244792,
+              "command_agreement": 0.7666666666666667
+            }
+          },
+          "corrected": {
+            "recorded_remote_wall_mae": 0.2342902789943103,
+            "free_remote_wall_mae": 0.2380221419144065,
+            "fused_mae": 0.2162387212117531,
+            "residual_bias": -0.09048015594482547,
+            "closed_loop": {
+              "observed_enabled_minutes": 7.0,
+              "simulated_enabled_minutes": 0.0,
+              "enabled_minutes_error": -7.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.23318321228027541,
+              "command_agreement": 0.96
+            }
+          }
+        }
+      ],
+      "summary": {
+        "original": {
+          "recorded_remote_wall_mae": 0.2792124322319513,
+          "free_remote_wall_mae": 0.27101139013602493,
+          "fused_mae": 0.2608828417460146,
+          "residual_bias": -0.1728839619954441
+        },
+        "corrected": {
+          "recorded_remote_wall_mae": 0.2429479964397143,
+          "free_remote_wall_mae": 0.24153677824791167,
+          "fused_mae": 0.23558096885681268,
+          "residual_bias": -0.03065606753031554
+        }
+      }
+    },
+    "main": {
+      "training_events": [
+        "2026-10-24 17:58:21.143719912+00:00",
+        "2026-10-25 07:06:21.143719912+00:00",
+        "2026-10-26 00:03:21.143719912+00:00",
+        "2026-10-26 15:14:21.143719912+00:00",
+        "2026-10-28 17:10:21.143719912+00:00",
+        "2026-10-30 18:21:21.143719912+00:00",
+        "2026-10-31 20:02:21.143719912+00:00",
+        "2026-11-02 14:45:21.143719912+00:00"
+      ],
+      "validation_events": [
+        "2026-11-05 21:23:21.143719912+00:00",
+        "2026-11-06 21:55:21.143719912+00:00",
+        "2026-11-08 00:42:21.143719912+00:00",
+        "2026-11-08 17:08:21.143719912+00:00"
+      ],
+      "original": {
+        "loss": 0.03234579695995207,
+        "mass": 0.088587279482305,
+        "hvac": 1.3701593098585834,
+        "fireplace": 0.23066691318209886,
+        "shared": -6.793134300926649e-14,
+        "bias": 0.0642223618311228,
+        "tau_hvac": 120.0,
+        "tau_mass": 28800.0,
+        "tau_fire": 1800.0,
+        "offset": 1.0,
+        "ceiling_offset": 0,
+        "ceiling_gain": 0,
+        "tau_ceiling": 120,
+        "constant_demand": 0.49999999999999645
+      },
+      "corrected": {
+        "loss": 0.045523675588443786,
+        "mass": 0.088587279482305,
+        "hvac": 2.184160681563759,
+        "fireplace": 0.23066691318209886,
+        "shared": -6.793134300926649e-14,
+        "bias": 0.4561087272302918,
+        "tau_hvac": 1047.5479483755698,
+        "tau_mass": 28800.0,
+        "tau_fire": 1800.0,
+        "offset": 1.0,
+        "ceiling_offset": 0,
+        "ceiling_gain": 0,
+        "tau_ceiling": 120,
+        "constant_demand": 0.49999999999999645
+      },
+      "fit": {
+        "nfev": 29,
+        "success": true,
+        "scaled_jacobian_singular_values": [
+          41.185454776008775,
+          5.194349249809393,
+          2.744713202798774,
+          0.29095863266251026
+        ],
+        "message": "`xtol` termination condition is satisfied.",
+        "training_wall_mae": 0.19127251378460666,
+        "initial_training_wall_mae": 0.3573254657129552
+      },
+      "validation": [
+        {
+          "timestamp": "2026-11-05 21:23:21.143719912+00:00",
+          "kind": "hysteresis_consistent_shutdown",
+          "fireplace": true,
+          "original": {
+            "recorded_remote_wall_mae": 0.08871062767467389,
+            "free_remote_wall_mae": 0.08871062245035788,
+            "fused_mae": 0.08884572987690616,
+            "residual_bias": -0.08403979983709114,
+            "closed_loop": {
+              "observed_enabled_minutes": 15.0,
+              "simulated_enabled_minutes": 150.0,
+              "enabled_minutes_error": 135.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.08884572987690616,
+              "command_agreement": 1.0
+            }
+          },
+          "corrected": {
+            "recorded_remote_wall_mae": 0.25309339596560076,
+            "free_remote_wall_mae": 0.2530933955501119,
+            "fused_mae": 0.252086604342559,
+            "residual_bias": 0.24863491314845892,
+            "closed_loop": {
+              "observed_enabled_minutes": 15.0,
+              "simulated_enabled_minutes": 20.0,
+              "enabled_minutes_error": 5.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 1,
+              "matched_shutdowns": 1,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [
+                5.0
+              ],
+              "temperature_mae": 0.252086604342559,
+              "command_agreement": 1.0
+            }
+          }
+        },
+        {
+          "timestamp": "2026-11-06 21:55:21.143719912+00:00",
+          "kind": "hysteresis_consistent_shutdown",
+          "fireplace": true,
+          "original": {
+            "recorded_remote_wall_mae": 0.2652883790651185,
+            "free_remote_wall_mae": 0.2652883738577719,
+            "fused_mae": 0.26489780662573137,
+            "residual_bias": -0.26489780662573137,
+            "closed_loop": {
+              "observed_enabled_minutes": 15.0,
+              "simulated_enabled_minutes": 150.0,
+              "enabled_minutes_error": 135.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.22022979334353424,
+              "command_agreement": 1.0
+            }
+          },
+          "corrected": {
+            "recorded_remote_wall_mae": 0.12729329924111543,
+            "free_remote_wall_mae": 0.1272933012931081,
+            "fused_mae": 0.12721468689370558,
+            "residual_bias": 0.0966859447530651,
+            "closed_loop": {
+              "observed_enabled_minutes": 15.0,
+              "simulated_enabled_minutes": 58.0,
+              "enabled_minutes_error": 43.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 1,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 1,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.12721468689370558,
+              "command_agreement": 1.0
+            }
+          }
+        },
+        {
+          "timestamp": "2026-11-08 00:42:21.143719912+00:00",
+          "kind": "hysteresis_consistent_shutdown",
+          "fireplace": true,
+          "original": {
+            "recorded_remote_wall_mae": 0.1619338484064487,
+            "free_remote_wall_mae": 0.16193384399350247,
+            "fused_mae": 0.15966719782121466,
+            "residual_bias": -0.14658600229545582,
+            "closed_loop": {
+              "observed_enabled_minutes": 15.0,
+              "simulated_enabled_minutes": 150.0,
+              "enabled_minutes_error": 135.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.15966719782121466,
+              "command_agreement": 1.0
+            }
+          },
+          "corrected": {
+            "recorded_remote_wall_mae": 0.19020689142483588,
+            "free_remote_wall_mae": 0.19020689396506524,
+            "fused_mae": 0.1884815328918845,
+            "residual_bias": 0.17063834960066337,
+            "closed_loop": {
+              "observed_enabled_minutes": 15.0,
+              "simulated_enabled_minutes": 38.0,
+              "enabled_minutes_error": 23.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 1,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 1,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.1884815328918845,
+              "command_agreement": 1.0
+            }
+          }
+        },
+        {
+          "timestamp": "2026-11-08 17:08:21.143719912+00:00",
+          "kind": "hysteresis_consistent_shutdown",
+          "fireplace": true,
+          "original": {
+            "recorded_remote_wall_mae": 0.6439776959081004,
+            "free_remote_wall_mae": 0.6439776907262775,
+            "fused_mae": 0.6418012234674628,
+            "residual_bias": -0.6410163518679659,
+            "closed_loop": {
+              "observed_enabled_minutes": 15.0,
+              "simulated_enabled_minutes": 150.0,
+              "enabled_minutes_error": 135.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 0,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 0,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.6028517766406748,
+              "command_agreement": 1.0
+            }
+          },
+          "corrected": {
+            "recorded_remote_wall_mae": 0.259797657799572,
+            "free_remote_wall_mae": 0.25979765558558915,
+            "fused_mae": 0.2585671643755156,
+            "residual_bias": -0.256488824148342,
+            "closed_loop": {
+              "observed_enabled_minutes": 15.0,
+              "simulated_enabled_minutes": 36.0,
+              "enabled_minutes_error": 21.0,
+              "observed_shutdowns": 1,
+              "simulated_shutdowns": 1,
+              "matched_shutdowns": 0,
+              "false_shutdowns": 1,
+              "shutdown_timing_errors_minutes": [],
+              "temperature_mae": 0.2585671643755156,
+              "command_agreement": 1.0
+            }
+          }
+        }
+      ],
+      "summary": {
+        "original": {
+          "recorded_remote_wall_mae": 0.2899776377635853,
+          "free_remote_wall_mae": 0.2899776327569774,
+          "fused_mae": 0.2888029894478288,
+          "residual_bias": -0.2841349901565611
+        },
+        "corrected": {
+          "recorded_remote_wall_mae": 0.20759781110778103,
+          "free_remote_wall_mae": 0.20759781159846863,
+          "fused_mae": 0.20658749712591618,
+          "residual_bias": 0.06486759583846134
+        }
+      }
+    }
+  }
+}
