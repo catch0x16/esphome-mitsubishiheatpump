@@ -11,6 +11,7 @@
 
 #include "climate_device_adapter.h"
 #include "controller_types.h"
+#include "pid_workflowstep.h"
 
 namespace esphome {
 namespace workflow_climate {
@@ -37,6 +38,9 @@ class WorkflowClimate : public Component, public climate::Climate {
   }
   void set_device_set_point_sensor(sensor::Sensor *sensor) { this->device_set_point_sensor_ = sensor; }
   void set_pid_set_point_sensor(sensor::Sensor *sensor) { this->pid_set_point_sensor_ = sensor; }
+  void set_pid_kp_sensor(sensor::Sensor *sensor) { this->pid_kp_sensor_ = sensor; }
+  void set_pid_ki_sensor(sensor::Sensor *sensor) { this->pid_ki_sensor_ = sensor; }
+  void set_response_rate_sensor(sensor::Sensor *sensor) { this->response_rate_sensor_ = sensor; }
 
   void set_update_interval(uint32_t value) { this->update_interval_ = value; }
   void set_settle_time(uint32_t value) { this->settle_ms_ = value; }
@@ -47,6 +51,12 @@ class WorkflowClimate : public Component, public climate::Climate {
   void set_kd(float value) { this->kd_ = value; }
   void set_max_adjustment_under(float value) { this->max_adjustment_under_ = value; }
   void set_max_adjustment_over(float value) { this->max_adjustment_over_ = value; }
+  void set_pid_adaptive(bool value) { this->tuning_.adaptive = value; }
+  void set_pid_response_time(uint32_t ms) { this->tuning_.response_time_s = ms / 1000.0f; }
+  void set_pid_dead_time(uint32_t ms) { this->tuning_.dead_time_s = ms / 1000.0f; }
+  void set_pid_full_output_gap(float value) { this->tuning_.full_output_gap = value; }
+  void set_pid_kp_min(float value) { this->tuning_.kp_min = value; }
+  void set_pid_kp_max(float value) { this->tuning_.kp_max = value; }
 
   void set_hysteresis_enabled(bool value) { this->hysteresis_enabled_ = value; }
   void set_hysteresis_on(float value) { this->hysteresis_on_ = value; }
@@ -68,6 +78,16 @@ class WorkflowClimate : public Component, public climate::Climate {
     float cool;
   };
 
+  // Learned response rates, degrees per second. Saved so tuning survives a reboot.
+  static constexpr uint32_t TUNING_VERSION = 1;
+  struct StoredTuning {
+    uint32_t version;
+    float heat_rate;
+    float cool_rate;
+  };
+  // At most one flash write per this interval.
+  static constexpr uint32_t TUNING_SAVE_INTERVAL_MS = 60 * 60 * 1000;
+
   climate::ClimateTraits traits() override { return this->traits_; }
   void control(const climate::ClimateCall &call) override;
 
@@ -80,6 +100,9 @@ class WorkflowClimate : public Component, public climate::Climate {
   void adopt_inner_mode_(const char *reason);
   void run_workflows_();
   void publish_diagnostics_();
+  void warn_if_off_step_(const char *name, float value);
+  void load_tuning_();
+  void save_tuning_if_changed_(uint32_t now);
 
   bool is_workflow_mode_(climate::ClimateMode mode) const {
     return mode == climate::CLIMATE_MODE_HEAT || mode == climate::CLIMATE_MODE_COOL;
@@ -106,11 +129,18 @@ class WorkflowClimate : public Component, public climate::Climate {
   sensor::Sensor *device_current_temperature_sensor_{nullptr};
   sensor::Sensor *device_set_point_sensor_{nullptr};
   sensor::Sensor *pid_set_point_sensor_{nullptr};
+  sensor::Sensor *pid_kp_sensor_{nullptr};
+  sensor::Sensor *pid_ki_sensor_{nullptr};
+  sensor::Sensor *response_rate_sensor_{nullptr};
 
   climate::ClimateTraits traits_;
   ClimateDeviceAdapter device_;
   devicestate::WorkflowStep *hysteresis_step_{nullptr};
-  devicestate::WorkflowStep *pid_step_{nullptr};
+  workflow::pid::PidWorkflowStep *pid_step_{nullptr};
+  workflow::pid::TuningConfig tuning_{};
+  ESPPreferenceObject tuning_preference_;
+  StoredTuning stored_tuning_{};
+  uint32_t last_tuning_save_{0};
 
   optional<climate::ClimateDeviceRestoreState> restored_state_;
   ESPPreferenceObject targets_preference_;

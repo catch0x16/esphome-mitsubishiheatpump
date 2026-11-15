@@ -42,7 +42,9 @@ namespace devicestate {
         virtual bool internalTurnOff() = 0;
         virtual bool isInternalPowerOn() = 0;
 
-        virtual bool internalSetCorrectedTemperature(const float value) = 0;
+        // Stage a corrected setpoint. It is rounded to the device's step, and
+        // the rounded value stays inside [minAllowed, maxAllowed].
+        virtual bool internalSetCorrectedTemperature(const float value, const float minAllowed, const float maxAllowed) = 0;
 
         virtual ~IDeviceStateManager() = default;
   };

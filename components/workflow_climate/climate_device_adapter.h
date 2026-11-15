@@ -32,6 +32,9 @@ class ClimateDeviceAdapter : public devicestate::IDeviceStateManager {
 
   float clamp_target(float value) const;
   float quantize_target(float value) const;
+  // As quantize_target, but the result never leaves [min_allowed, max_allowed]:
+  // a value that would round past a limit is rounded the other way.
+  float quantize_within(float value, float min_allowed, float max_allowed) const;
 
   // The wrapper sent a mode to the inner climate on the user's behalf.
   void note_power_command(bool on, uint32_t now) { this->tracker_.command(on, now); }
@@ -62,7 +65,7 @@ class ClimateDeviceAdapter : public devicestate::IDeviceStateManager {
   bool internalTurnOn() override;
   bool internalTurnOff() override;
   bool isInternalPowerOn() override { return this->tracker_.commanded_on(); }
-  bool internalSetCorrectedTemperature(const float value) override;
+  bool internalSetCorrectedTemperature(const float value, const float minAllowed, const float maxAllowed) override;
 
  protected:
   bool throttled_(uint32_t now) const;

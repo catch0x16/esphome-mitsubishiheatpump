@@ -116,6 +116,55 @@ void WorkflowClimate::load_targets_() {
   this->stored_targets_.version = TARGETS_VERSION;
 }
 
+void WorkflowClimate::load_tuning_() {
+  this->stored_tuning_ = StoredTuning{TUNING_VERSION, NAN, NAN};
+  if (this->pid_step_ == nullptr || !this->pid_step_->isAdaptive()) {
+    return;
+  }
+  StoredTuning loaded{};
+  if (this->tuning_preference_.load(&loaded) && loaded.version == TUNING_VERSION &&
+      std::isfinite(loaded.heat_rate) && std::isfinite(loaded.cool_rate) && loaded.heat_rate > 0.0f &&
+      loaded.cool_rate > 0.0f) {
+    this->pid_step_->restoreResponseRate(true, loaded.heat_rate);
+    this->pid_step_->restoreResponseRate(false, loaded.cool_rate);
+    this->stored_tuning_ = loaded;
+    ESP_LOGI(TAG, "Restored learned response rates: heating %.2f C/h, cooling %.2f C/h", loaded.heat_rate * 3600.0f,
+             loaded.cool_rate * 3600.0f);
+  }
+}
+
+void WorkflowClimate::save_tuning_if_changed_(uint32_t now) {
+  if (this->pid_step_ == nullptr || !this->pid_step_->isAdaptive() || this->pid_step_->measurements() == 0) {
+    return;
+  }
+  const float heat = this->pid_step_->responseRate(true);
+  const float cool = this->pid_step_->responseRate(false);
+  if (heat == this->stored_tuning_.heat_rate && cool == this->stored_tuning_.cool_rate) {
+    return;
+  }
+  const bool first = !std::isfinite(this->stored_tuning_.heat_rate);
+  if (!first && static_cast<uint32_t>(now - this->last_tuning_save_) < TUNING_SAVE_INTERVAL_MS) {
+    return;
+  }
+  this->stored_tuning_ = StoredTuning{TUNING_VERSION, heat, cool};
+  this->tuning_preference_.save(&this->stored_tuning_);
+  this->last_tuning_save_ = now;
+}
+
+void WorkflowClimate::warn_if_off_step_(const char *name, float value) {
+  const float step = this->traits_.get_visual_target_temperature_step();
+  if (step <= 0.0f) {
+    return;
+  }
+  const float steps = value / step;
+  if (std::fabs(steps - std::round(steps)) > 0.001f) {
+    ESP_LOGW(TAG,
+             "%s (%.2f) is not a multiple of the device's %.2f step: the setpoint is rounded to the step and kept "
+             "inside the limit, so the effective limit is %.2f",
+             name, value, step, std::floor(steps + 0.001f) * step);
+  }
+}
+
 void WorkflowClimate::setup() {
   if (this->inner_ == nullptr) {
     ESP_LOGE(TAG, "No inner climate configured");
@@ -153,7 +202,7 @@ void WorkflowClimate::setup() {
   if (this->pid_enabled_) {
     this->pid_step_ = new (std::nothrow) workflow::pid::PidWorkflowStep(
         this->update_interval_, this->effective_min_temperature_(), this->effective_max_temperature_(), this->kp_,
-        this->ki_, this->kd_, this->max_adjustment_under_, this->max_adjustment_over_);
+        this->ki_, this->kd_, this->max_adjustment_under_, this->max_adjustment_over_, this->tuning_);
     if (this->pid_step_ == nullptr) {
       ESP_LOGE(TAG, "Failed to allocate the PID step");
       this->mark_failed();
@@ -163,6 +212,8 @@ void WorkflowClimate::setup() {
 
   this->targets_preference_ = this->make_entity_preference<StoredTargets>(0x57464C57UL);
   this->load_targets_();
+  this->tuning_preference_ = this->make_entity_preference<StoredTuning>(0x57464C54UL);
+  this->load_tuning_();
   this->restored_state_ = this->restore_state_();
   this->compatible_ = true;
 
@@ -226,6 +277,11 @@ void WorkflowClimate::initialize_from_inner_() {
   ESP_LOGI(TAG, "Initialized: mode=%s target=%.1f device=%s%s",
            LOG_STR_ARG(climate::climate_mode_to_string(this->mode)), this->target_temperature, ONOFF(inner_on),
            resume_workflow ? " (resuming with the device off)" : "");
+
+  if (this->pid_enabled_) {
+    this->warn_if_off_step_("pid max_adjustment_under", this->max_adjustment_under_);
+    this->warn_if_off_step_("pid max_adjustment_over", this->max_adjustment_over_);
+  }
 
   if (resume_workflow && !this->hysteresis_enabled_) {
     // Nothing else would ever switch the device back on.
@@ -356,6 +412,7 @@ void WorkflowClimate::run_workflows_() {
   }
   if (this->pid_step_ != nullptr) {
     this->pid_step_->run(current, &this->device_);
+    this->save_tuning_if_changed_(millis());
   } else {
     this->device_.sync_target();
   }
@@ -494,6 +551,12 @@ void WorkflowClimate::publish_diagnostics_() {
   publish_value(this->device_current_temperature_sensor_, this->inner_->current_temperature);
   publish_value(this->device_set_point_sensor_, this->inner_->target_temperature);
   publish_value(this->pid_set_point_sensor_, this->device_.corrected_target());
+  if (this->pid_step_ != nullptr) {
+    publish_value(this->pid_kp_sensor_, this->pid_step_->kp());
+    publish_value(this->pid_ki_sensor_, this->pid_step_->ki());
+    // Degrees per hour, for the mode in use.
+    publish_value(this->response_rate_sensor_, this->pid_step_->responseRate() * 3600.0f);
+  }
 }
 
 void WorkflowClimate::dump_config() {
@@ -504,6 +567,19 @@ void WorkflowClimate::dump_config() {
   if (this->pid_enabled_) {
     ESP_LOGCONFIG(TAG, "  PID: kp=%.3f ki=%.4f kd=%.3f, adjustment -%.2f/+%.2f", this->kp_, this->ki_, this->kd_,
                   this->max_adjustment_under_, this->max_adjustment_over_);
+    if (this->tuning_.adaptive) {
+      ESP_LOGCONFIG(TAG, "  PID tuning: adaptive, response time %.0f s, dead time %.0f s, kp %.2f..%.2f",
+                    this->tuning_.response_time_s, this->tuning_.dead_time_s, this->tuning_.kp_min,
+                    this->tuning_.kp_max);
+      if (this->pid_step_ != nullptr) {
+        ESP_LOGCONFIG(TAG, "  PID gains in use: kp: %.3f  ki: %.5f  kd: %.3f", this->pid_step_->kp(),
+                      this->pid_step_->ki(), this->pid_step_->kd());
+      }
+    } else {
+      ESP_LOGCONFIG(TAG, "  PID tuning: fixed gains");
+    }
+    this->warn_if_off_step_("pid max_adjustment_under", this->max_adjustment_under_);
+    this->warn_if_off_step_("pid max_adjustment_over", this->max_adjustment_over_);
   } else {
     ESP_LOGCONFIG(TAG, "  PID: disabled");
   }

@@ -27,6 +27,13 @@ CONF_KD = "kd"
 CONF_MAX_ADJUSTMENT_UNDER = "max_adjustment_under"
 CONF_MAX_ADJUSTMENT_OVER = "max_adjustment_over"
 
+CONF_ADAPTIVE = "adaptive"
+CONF_RESPONSE_TIME = "response_time"
+CONF_DEAD_TIME = "dead_time"
+CONF_FULL_OUTPUT_GAP = "full_output_gap"
+CONF_KP_MIN = "kp_min"
+CONF_KP_MAX = "kp_max"
+
 CONF_HYSTERESIS = "hysteresis"
 CONF_ON_THRESHOLD = "on_threshold"
 CONF_OFF_THRESHOLD = "off_threshold"
@@ -38,6 +45,9 @@ CONF_OPERATING = "operating"
 CONF_DEVICE_CURRENT_TEMPERATURE = "device_current_temperature"
 CONF_DEVICE_SET_POINT = "device_set_point"
 CONF_PID_SET_POINT = "pid_set_point"
+CONF_PID_KP = "pid_kp"
+CONF_PID_KI = "pid_ki"
+CONF_RESPONSE_RATE = "response_rate"
 
 workflow_climate_ns = cg.esphome_ns.namespace("workflow_climate")
 WorkflowClimate = workflow_climate_ns.class_(
@@ -51,8 +61,32 @@ PID_SCHEMA = cv.Schema(
         cv.Optional(CONF_KD, default=0.0): cv.float_,
         cv.Optional(CONF_MAX_ADJUSTMENT_UNDER, default=2.0): cv.positive_float,
         cv.Optional(CONF_MAX_ADJUSTMENT_OVER, default=2.0): cv.positive_float,
+        # Continuous tuning: kp and ki follow the measured response of the room.
+        # The configured kp and ki are then only the starting values.
+        cv.Optional(CONF_ADAPTIVE, default=True): cv.boolean,
+        cv.Optional(
+            CONF_RESPONSE_TIME, default="10min"
+        ): cv.positive_time_period_milliseconds,
+        cv.Optional(
+            CONF_DEAD_TIME, default="5min"
+        ): cv.positive_time_period_milliseconds,
+        cv.Optional(CONF_FULL_OUTPUT_GAP, default=0.75): cv.float_range(
+            min=0.1, max=5.0
+        ),
+        cv.Optional(CONF_KP_MIN, default=0.25): cv.float_range(min=0.01),
+        cv.Optional(CONF_KP_MAX, default=4.0): cv.float_range(min=0.01),
     }
 )
+
+
+def _gain_sensor_schema(decimals, unit=None):
+    kwargs = {"unit_of_measurement": unit} if unit else {}
+    return sensor.sensor_schema(
+        accuracy_decimals=decimals,
+        state_class=STATE_CLASS_MEASUREMENT,
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+        **kwargs,
+    )
 
 HYSTERESIS_SCHEMA = cv.Schema(
     {
@@ -117,6 +151,15 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(
                 CONF_PID_SET_POINT, default={CONF_NAME: "PID Set Point"}
             ): _temperature_sensor_schema(),
+            cv.Optional(CONF_PID_KP, default={CONF_NAME: "PID Kp"}): _gain_sensor_schema(
+                3
+            ),
+            cv.Optional(CONF_PID_KI, default={CONF_NAME: "PID Ki"}): _gain_sensor_schema(
+                5
+            ),
+            cv.Optional(
+                CONF_RESPONSE_RATE, default={CONF_NAME: "Response rate"}
+            ): _gain_sensor_schema(2, "°C/h"),
         }
     )
     .extend(cv.COMPONENT_SCHEMA),
@@ -155,6 +198,12 @@ async def to_code(config):
         cg.add(var.set_kd(conf[CONF_KD]))
         cg.add(var.set_max_adjustment_under(conf[CONF_MAX_ADJUSTMENT_UNDER]))
         cg.add(var.set_max_adjustment_over(conf[CONF_MAX_ADJUSTMENT_OVER]))
+        cg.add(var.set_pid_adaptive(conf[CONF_ADAPTIVE]))
+        cg.add(var.set_pid_response_time(conf[CONF_RESPONSE_TIME]))
+        cg.add(var.set_pid_dead_time(conf[CONF_DEAD_TIME]))
+        cg.add(var.set_pid_full_output_gap(conf[CONF_FULL_OUTPUT_GAP]))
+        cg.add(var.set_pid_kp_min(conf[CONF_KP_MIN]))
+        cg.add(var.set_pid_kp_max(conf[CONF_KP_MAX]))
 
     if CONF_HYSTERESIS in config:
         conf = config[CONF_HYSTERESIS]
@@ -181,3 +230,11 @@ async def to_code(config):
                 await sensor.new_sensor(config[CONF_PID_SET_POINT])
             )
         )
+        cg.add(var.set_pid_kp_sensor(await sensor.new_sensor(config[CONF_PID_KP])))
+        cg.add(var.set_pid_ki_sensor(await sensor.new_sensor(config[CONF_PID_KI])))
+        if config[CONF_PID][CONF_ADAPTIVE]:
+            cg.add(
+                var.set_response_rate_sensor(
+                    await sensor.new_sensor(config[CONF_RESPONSE_RATE])
+                )
+            )

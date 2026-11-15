@@ -145,10 +145,26 @@ bool ClimateDeviceAdapter::internalTurnOff() {
   return true;
 }
 
-bool ClimateDeviceAdapter::internalSetCorrectedTemperature(const float value) {
+float ClimateDeviceAdapter::quantize_within(float value, float min_allowed, float max_allowed) const {
+  float quantized = this->quantize_target(value);
+  if (this->step_ <= 0.0f) {
+    return quantized;
+  }
+  // Rounding to the nearest step may overshoot a limit that is not itself on
+  // the step grid (e.g. target + 0.25 on a 0.5 grid). Step back inside.
+  if (quantized > max_allowed + 0.0001f && quantized - this->step_ >= min_allowed - 0.0001f) {
+    quantized -= this->step_;
+  } else if (quantized < min_allowed - 0.0001f && quantized + this->step_ <= max_allowed + 0.0001f) {
+    quantized += this->step_;
+  }
+  return quantized;
+}
+
+bool ClimateDeviceAdapter::internalSetCorrectedTemperature(const float value, const float minAllowed,
+                                                           const float maxAllowed) {
   const uint32_t now = millis();
-  const float clamped = this->clamp_target(value);
-  const float quantized = this->quantize_target(clamped);
+  const float clamped = this->clamp_target(devicestate::clamp(value, minAllowed, maxAllowed));
+  const float quantized = this->quantize_within(clamped, minAllowed, maxAllowed);
 
   // What the device is believed to be set to. Right after a command the inner
   // climate's report may still be stale, and a device that rounds differently
@@ -190,7 +206,7 @@ void ClimateDeviceAdapter::sync_target() {
   if (!this->tracker_.commanded_on() || !std::isfinite(this->target_)) {
     return;
   }
-  if (this->internalSetCorrectedTemperature(this->target_)) {
+  if (this->internalSetCorrectedTemperature(this->target_, this->min_temp_, this->max_temp_)) {
     this->commit();
   }
 }
